@@ -502,3 +502,4 @@
 .connectionUpdatedAt{display:flex!important;align-items:center;gap:6px;margin-top:8px;color:#91a9bb;font-size:.875rem;line-height:1.5}
 .connectionUpdatedAt svg{flex:0 0 14px}
 @media(max-width:600px){.connectionNotice{align-items:flex-start;flex-wrap:wrap;gap:10px;padding:14px}.connectionNotice>div{flex-basis:calc(100% - 35px)}.connectionNotice button{margin-left:31px}}
+.integrationLogo.brandLogo{padding:8px;background:#fff}.integrationLogo.brandLogo img{width:100%;height:100%;object-fit:contain}

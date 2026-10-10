@@ -10,6 +10,9 @@ type Step='checking'|'store'|'channels'|'connections';
 type Channel='tiendanube'|'mercadolibre';
 type BootstrapResult={organizationId:string;needsChannels?:boolean;error?:string};
 
+const tiendanubeLogo=<span className="integrationLogo brandLogo"><img src="/brands/tiendanube-icon.png" alt=""/></span>;
+const mercadoLibreLogo=<span className="integrationLogo brandLogo"><img src="/brands/mercado-libre-icon.png" alt=""/></span>;
+
 export default function Onboarding() {
   const router=useRouter();
   // A new account's session can be pending until it has an organization;
@@ -26,6 +29,12 @@ export default function Onboarding() {
   const [error,setError]=useState('');
   const [attempt,setAttempt]=useState(0);
   const bootstrap=useRef<{attempt:number;promise:Promise<BootstrapResult>}|null>(null);
+  // Mercado Libre can be connected once its app credentials are configured.
+  const [meliAvailable,setMeliAvailable]=useState(false);
+  useEffect(()=>{
+    if(step!=='connections'||!channels.includes('mercadolibre'))return;
+    fetch('/api/sync/mercadolibre',{cache:'no-store'}).then(response=>response.ok?response.json() as Promise<{available?:boolean}>:null).then(data=>setMeliAvailable(Boolean(data?.available))).catch(()=>setMeliAvailable(false));
+  },[step,channels]);
 
   async function activateStore(data:BootstrapResult) {
     if (!data.organizationId) throw new Error('missing_organization');
@@ -93,11 +102,11 @@ export default function Onboarding() {
     finally {setSaving(false);}
   }
 
-  async function connectTiendanube() {
+  async function connect(provider:Channel) {
     if (saving) return;setSaving(true);setError('');
     try {
       await onboardingRequest('/api/settings',{type:'channels',channels});
-      window.location.href='/api/integrations/tiendanube/start';
+      window.location.href=`/api/integrations/${provider}/start`;
     } catch {setError('No pudimos preparar la conexión. Revisá tu conexión y volvé a intentarlo.');}
     finally {setSaving(false);}
   }
@@ -116,11 +125,11 @@ export default function Onboarding() {
         <form className="storeSetupForm" onSubmit={createStore}><label>Tu nombre<input value={name} onChange={event=>setName(event.target.value)} placeholder="Ej. Martina García" required/></label><label>Nombre de la tienda<input value={store} onChange={event=>setStore(event.target.value)} placeholder="Ej. Casa Norte" required/></label><label>Celular de contacto <small>Opcional</small><div className="phoneField"><span>AR&nbsp;&nbsp;+54</span><input value={phone} inputMode="tel" onChange={event=>setPhone(event.target.value)} placeholder="11 5555 5555"/></div><em>No bloquea tu registro. La verificación por SMS se habilitará con un proveedor compatible en Argentina.</em></label>{error&&<p className="formError" role="alert">{error}</p>}<button className="button" disabled={saving}>{saving?'Creando tienda…':'Continuar →'}</button></form>
       </>:step==='channels'?<>
         <span className="tag">TUS CANALES</span><h1>¿Dónde vendés hoy?</h1><p className="onboardingLead">Elegí uno o ambos. Esto adapta Rentia a tu operación; conectar las cuentas sigue siendo opcional.</p>
-        <div className="channelChoices"><button disabled={saving} aria-pressed={channels.includes('tiendanube')} className={channels.includes('tiendanube')?'selected':''} onClick={()=>toggleChannel('tiendanube')}><span className="integrationLogo tn">tn</span><div><b>Tiendanube</b><small>Tienda, órdenes, productos y stock.</small></div><i>✓</i></button><button disabled={saving} aria-pressed={channels.includes('mercadolibre')} className={channels.includes('mercadolibre')?'selected':''} onClick={()=>toggleChannel('mercadolibre')}><span className="integrationLogo ml">ML</span><div><b>Mercado Libre</b><small>Próximamente: marketplace, publicaciones y comisiones.</small></div><i>✓</i></button></div>
+        <div className="channelChoices"><button disabled={saving} aria-pressed={channels.includes('tiendanube')} className={channels.includes('tiendanube')?'selected':''} onClick={()=>toggleChannel('tiendanube')}>{tiendanubeLogo}<div><b>Tiendanube</b><small>Tienda, órdenes, productos y stock.</small></div><i>✓</i></button><button disabled={saving} aria-pressed={channels.includes('mercadolibre')} className={channels.includes('mercadolibre')?'selected':''} onClick={()=>toggleChannel('mercadolibre')}>{mercadoLibreLogo}<div><b>Mercado Libre</b><small>Marketplace, publicaciones y comisiones.</small></div><i>✓</i></button></div>
         {error&&<p className="formError" role="alert">{error}</p>}<div className="onboardingActions"><button className="outline" disabled={saving} onClick={skipOnboarding}>Configurar después</button><button className="button" disabled={saving||!channels.length} onClick={()=>persistChannels('connections')}>{saving?'Guardando…':'Continuar →'}</button></div>
       </>:<>
         <span className="tag">CONEXIONES OPCIONALES</span><h1>Conectá ahora o después</h1><p className="onboardingLead">Enlazar un canal sólo autoriza la lectura de datos. Envíos, impuestos y costos se revisan después desde Configuración.</p>
-        <div className="onboardingIntegrations">{channels.includes('tiendanube')&&<article><span className="integrationLogo tn">tn</span><div><b>Tiendanube</b><small>Órdenes, productos, costos y stock en tiempo real.</small></div><button className="button" disabled={saving} onClick={connectTiendanube}>Conectar</button></article>}{channels.includes('mercadolibre')&&<article className="disabled"><span className="integrationLogo ml">ML</span><div><b>Mercado Libre</b><small>Ventas, publicaciones y comisiones. Disponible próximamente.</small></div><button disabled>Próximamente</button></article>}</div>
+        <div className="onboardingIntegrations">{channels.includes('tiendanube')&&<article>{tiendanubeLogo}<div><b>Tiendanube</b><small>Órdenes, productos, costos y stock en tiempo real.</small></div><button className="button" disabled={saving} onClick={()=>connect('tiendanube')}>Conectar</button></article>}{channels.includes('mercadolibre')&&<article className={meliAvailable?undefined:'disabled'}>{mercadoLibreLogo}<div><b>Mercado Libre</b><small>{meliAvailable?'Ventas, publicaciones, comisiones y costos de envío.':'Ventas, publicaciones y comisiones. Disponible próximamente.'}</small></div>{meliAvailable?<button className="button" disabled={saving} onClick={()=>connect('mercadolibre')}>Conectar</button>:<button disabled>Próximamente</button>}</article>}</div>
         {error&&<p className="formError" role="alert">{error}</p>}<div className="onboardingActions"><button className="outline" disabled={saving} onClick={()=>setStep('channels')}>← Volver</button><button className="button" disabled={saving} onClick={()=>persistChannels('panel')}>Ir al panel sin conectar →</button></div>
       </>}
     </section>
