@@ -3,10 +3,11 @@ import { NextResponse } from 'next/server';
 import { getAccount, getAccountByEmail, getSettings, getStoreIdentityByOrganization, getStoreIdentityByOwner, saveAccount, saveAccountContact, saveStoreIdentityLink } from '../../../../db/database';
 
 async function bootstrap(request:Request) {
-  const {userId,orgId}=await auth();
+  // Pending sessions (no organization yet) are expected here: this creates it.
+  const {userId,orgId}=await auth({treatPendingAsSignedOut:false});
   if (!userId) return NextResponse.json({error:'unauthorized'},{status:401});
 
-  const clerkUser=await currentUser();
+  const clerkUser=await currentUser({treatPendingAsSignedOut:false});
   if (!clerkUser) return NextResponse.json({error:'unauthorized'},{status:401});
   const client=await clerkClient();
   // Resolve only organizations Clerk confirms this user belongs to. An invited

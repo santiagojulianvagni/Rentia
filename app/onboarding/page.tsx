@@ -12,7 +12,9 @@ type BootstrapResult={organizationId:string;needsChannels?:boolean;error?:string
 
 export default function Onboarding() {
   const router=useRouter();
-  const {isLoaded,isSignedIn}=useAuth();
+  // A new account's session can be pending until it has an organization;
+  // onboarding is where that organization is created, so it counts as signed in.
+  const {isLoaded,isSignedIn}=useAuth({treatPendingAsSignedOut:false});
   const {setActive}=useClerk();
   const {user}=useUser();
   const [step,setStep]=useState<Step>('checking');
