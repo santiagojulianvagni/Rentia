@@ -41,7 +41,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ClerkProvider localization={esES}>
+        {/* Rentia's own pages, so every Clerk flow (Google, email links) returns here. */}
+        <ClerkProvider localization={esES} signInUrl="/ingresar" signUpUrl="/registro" signInFallbackRedirectUrl="/onboarding" signUpFallbackRedirectUrl="/onboarding">
           {children}
         </ClerkProvider>
       </body>
