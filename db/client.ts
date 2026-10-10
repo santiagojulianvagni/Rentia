@@ -79,12 +79,18 @@ export class Database {
 let override:Driver|null=null;
 let production:Driver|null=null;
 
+// pg already treats sslmode=require as verify-full and warns about it on every
+// connection; naming the mode it actually uses keeps the logs clean.
+export function strictSsl(url:string|undefined) {
+  return url?.replace(/([?&]sslmode=)(prefer|require|verify-ca)(?=&|$)/,'$1verify-full');
+}
+
 async function pgDriver():Promise<Driver> {
   const {Pool,types}=await import('pg');
   // COUNT/SUM return int8/numeric; the app expects JS numbers, as with SQLite.
   types.setTypeParser(20,value=>Number(value));
   types.setTypeParser(1700,value=>Number(value));
-  const connectionString=process.env.DATABASE_URL;
+  const connectionString=strictSsl(process.env.DATABASE_URL);
   if(!connectionString) throw new Error('DATABASE_URL is not configured');
   const pool=new Pool({connectionString,max:5});
   return {

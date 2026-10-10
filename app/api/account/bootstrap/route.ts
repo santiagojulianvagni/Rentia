@@ -2,7 +2,7 @@ import { auth, clerkClient, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { getAccount, getAccountByEmail, getSettings, getStoreIdentityByOrganization, getStoreIdentityByOwner, saveAccount, saveAccountContact, saveStoreIdentityLink } from '../../../../db/database';
 
-export async function POST(request:Request) {
+async function bootstrap(request:Request) {
   const {userId,orgId}=await auth();
   if (!userId) return NextResponse.json({error:'unauthorized'},{status:401});
 
@@ -66,4 +66,15 @@ export async function POST(request:Request) {
   }
 
   return NextResponse.json({ok:true,organizationId:organization.id,account:await getAccount(storeUserId),migrated:Boolean(legacyAccount),needsChannels:true});
+}
+
+// Clerk and database failures are logged with the provider's error code, so a
+// failed onboarding can be diagnosed from the deployment logs.
+export async function POST(request:Request) {
+  try { return await bootstrap(request); }
+  catch (error) {
+    const clerk=(error as {errors?:Array<{code?:string;message?:string}>})?.errors?.[0];
+    console.error(JSON.stringify({level:'error',route:'account/bootstrap',message:error instanceof Error?error.message:String(error),clerkCode:clerk?.code,clerkMessage:clerk?.message}));
+    return NextResponse.json({error:'bootstrap_failed'},{status:500});
+  }
 }

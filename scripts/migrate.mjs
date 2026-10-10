@@ -4,7 +4,8 @@
 import {readFileSync,readdirSync} from 'node:fs';
 import pg from 'pg';
 
-const connectionString=process.env.DATABASE_URL_UNPOOLED||process.env.DATABASE_URL;
+// Same sslmode as db/client.ts: pg treats require as verify-full and warns otherwise.
+const connectionString=(process.env.DATABASE_URL_UNPOOLED||process.env.DATABASE_URL)?.replace(/([?&]sslmode=)(prefer|require|verify-ca)(?=&|$)/,'$1verify-full');
 if(!connectionString) {
   console.error('Falta DATABASE_URL (o DATABASE_URL_UNPOOLED). Conectá Neon al proyecto de Vercel o completalo en .env.local.');
   process.exit(1);
