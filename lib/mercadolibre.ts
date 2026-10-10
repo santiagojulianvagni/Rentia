@@ -14,12 +14,20 @@ export function mercadoLibreRuntime():Runtime { return env as unknown as Runtime
 
 export function mercadoLibreOrigin() { return publicOrigin(); }
 
+// Names (never values) of the settings that are missing or malformed, so the
+// panel can say what to fix in the hosting instead of a generic "not ready".
+export function mercadoLibreMissingConfig() {
+  const runtime=mercadoLibreRuntime(),missing:string[]=[];
+  if(!runtime.MELI_APP_ID||!/^\d+$/.test(runtime.MELI_APP_ID))missing.push('MELI_APP_ID');
+  if(!runtime.MELI_APP_SECRET)missing.push('MELI_APP_SECRET');
+  try { if(atob(runtime.TOKEN_ENCRYPTION_KEY||'').length!==32)missing.push('TOKEN_ENCRYPTION_KEY'); }
+  catch { missing.push('TOKEN_ENCRYPTION_KEY'); }
+  try { mercadoLibreOrigin(); } catch { missing.push('RENTIA_PUBLIC_ORIGIN'); }
+  return missing;
+}
+
 export function mercadoLibreConfigured() {
-  const runtime=mercadoLibreRuntime();
-  try {
-    mercadoLibreOrigin();
-    return !!runtime.MELI_APP_ID&&/^\d+$/.test(runtime.MELI_APP_ID)&&!!runtime.MELI_APP_SECRET&&!!runtime.TOKEN_ENCRYPTION_KEY&&atob(runtime.TOKEN_ENCRYPTION_KEY).length===32;
-  } catch { return false; }
+  return mercadoLibreMissingConfig().length===0;
 }
 
 function base64url(bytes:Uint8Array) {

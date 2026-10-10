@@ -1,5 +1,5 @@
 // Browser-safe status only: no tokens, raw progress, seller resources or lease IDs.
-export type MeliView={available:boolean;connection:{status:string;sellerId:string}|null;phase:'orders'|'products'|'done'|null;pending:boolean;retryAt:number;leaseExpiresAt?:number;batchUpdatedAt?:string|null;orders:number;products:number;pendingEvents:number;status:{last_completed_at:string|null;last_error:string|null;webhook_status:string}|null};
+export type MeliView={available:boolean;missingConfig?:string[];connection:{status:string;sellerId:string}|null;phase:'orders'|'products'|'done'|null;pending:boolean;retryAt:number;leaseExpiresAt?:number;batchUpdatedAt?:string|null;orders:number;products:number;pendingEvents:number;status:{last_completed_at:string|null;last_error:string|null;webhook_status:string}|null};
 
 const reviewErrors=['mercadolibre_invalid_progress','mercadolibre_dense_window','mercadolibre_resource_owner','mercadolibre_order_owner','mercadolibre_shipment_owner'];
 export function meliAutoSyncDue(view:MeliView|null,canManage:boolean,now=Date.now()) {
@@ -16,7 +16,7 @@ export function meliSyncAction(view:MeliView|null,running:boolean,canManage:bool
   return {label,badge,disabled:!canManage||!view?.available||review||paused||importing||running||activeLease,busy:!review&&!paused&&(importing||running||activeLease)};
 }
 export function meliSyncMessage(view:MeliView|null,now=Date.now()) {
-  if(!view?.available)return 'Estamos preparando la conexión segura con Mercado Libre.';
+  if(!view?.available)return view?.missingConfig?.length?`Falta configurar en el hosting: ${view.missingConfig.join(', ')}.`:'Estamos preparando la conexión segura con Mercado Libre.';
   if(view.connection?.status==='reauthorization_required')return 'Volvé a autorizar la cuenta para continuar. Conservamos el historial importado.';
   if(!view.connection)return 'Conexión de consulta · compatible con Tiendanube';
   if(view.status?.last_error==='mercadolibre_permission_missing')return 'Falta un permiso de Mercado Libre. Revisá los accesos de la aplicación.';

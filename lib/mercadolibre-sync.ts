@@ -1,6 +1,6 @@
 import {claimImportJob,checkpointImportJob,getIntegrations,getSyncStatus,markSyncCompleted,markSyncFailed,markSyncPending,markSyncStarted,releaseImportJob} from '../db/database';
 import {claimMeliEvent,completeMeliImport,finishMeliEvent,getMeliCredentials,getMeliProgress,meliCounts,meliOrdersMissingCosts,queueMeliShipmentOrders,replaceMeliCredentials,requireMeliReauthorization,saveMeliOrder,saveMeliProduct,type MeliCredentials,type MeliEvent} from '../db/mercadolibre';
-import {mercadoLibreConfigured,mercadoLibreRuntime} from './mercadolibre';
+import {mercadoLibreConfigured,mercadoLibreMissingConfig,mercadoLibreRuntime} from './mercadolibre';
 import {IMPORT_HISTORY_MONTHS,importHistoryStart} from './import-history';
 import {allocateMeliShipment,MELI_IMPORT_VERSION,MELI_PAGE_SIZE,MELI_WINDOW_SIZE,meliId,meliItemId,meliList,meliRecord,meliShipmentOrderIds,newMeliProgress,normalizeMeliOrder,normalizeMeliProduct,readMeliProgress,splitMeliWindow,type MeliProgress} from './mercadolibre-data';
 import {decryptToken,encryptToken} from './token-crypto';
@@ -286,7 +286,8 @@ export async function getMeliSyncView(userId:string) {
   const connection=integrations.results.find(row=>row.provider==='mercadolibre'&&row.status!=='disconnected');
   let state:MeliProgress|null=null;
   try {if(progress&&connection)state=readMeliProgress(progress.state_json,String(connection.external_store_id));}catch{/* Surface a recoverable error, never the raw state or encrypted tokens. */}
-  return {available:mercadoLibreConfigured(),connection:connection?{status:connection.status,sellerId:connection.external_store_id}:null,phase:state?.phase||null,pending:!!connection&&(state?.phase!=='done'||counts.pendingEvents>0),retryAt:state?.retryAt||0,leaseExpiresAt:progress?.lease_expires_at||0,batchUpdatedAt:progress?.updated_at||null,status,historyMonths:IMPORT_HISTORY_MONTHS,...counts};
+  const missingConfig=mercadoLibreMissingConfig();
+  return {available:missingConfig.length===0,missingConfig,connection:connection?{status:connection.status,sellerId:connection.external_store_id}:null,phase:state?.phase||null,pending:!!connection&&(state?.phase!=='done'||counts.pendingEvents>0),retryAt:state?.retryAt||0,leaseExpiresAt:progress?.lease_expires_at||0,batchUpdatedAt:progress?.updated_at||null,status,historyMonths:IMPORT_HISTORY_MONTHS,...counts};
 }
 
 // Request-lifetime background work only. A durable scheduled invocation of the
