@@ -356,6 +356,7 @@ function PanelApp() {
   const [taxes,setTaxes]=useState('');
   const [pagoNubePayoutDays,setPagoNubePayoutDays]=useState('');
   const [pagoNubePlan,setPagoNubePlan]=useState('');
+  const [detectedPlan,setDetectedPlan]=useState<string|null>(null);
   const [settingsState,setSettingsState]=useState('');
   const [settingsLoaded,setSettingsLoaded]=useState(false);
   const [costsLoaded,setCostsLoaded]=useState(false);
@@ -506,7 +507,7 @@ function PanelApp() {
           const automaticNotice=result.automatic===false?' La conexión en tiempo real quedó pendiente y volveremos a intentarlo.':'';
           setSyncMessage(`Listo: ${result.orders||0} órdenes y ${result.products||0} productos actualizados.${commissionNotice}${automaticNotice}`);
         }
-        await Promise.all([loadDashboard(periodDaysRef.current),loadProductCosts(),loadProductAnalytics(periodDaysRef.current),fetch('/api/settings').then(r=>r.ok?r.json() as Promise<{settings?:CostSettings}>:null).then(data=>{setPagoNubePlan(String(data?.settings?.pago_nube_plan_override||''));})]);
+        await Promise.all([loadDashboard(periodDaysRef.current),loadProductCosts(),loadProductAnalytics(periodDaysRef.current),fetch('/api/settings').then(r=>r.ok?r.json() as Promise<{settings?:CostSettings}>:null).then(data=>{setPagoNubePlan(String(data?.settings?.pago_nube_plan_override||''));setDetectedPlan(data?.settings?.tiendanube_plan_name||null);})]);
       } else setSyncMessage(result.error||'No pudimos sincronizar Tiendanube.');
     } catch {
       setSyncMessage('La importación quedó pendiente. El avance está guardado; volvé a actualizar para continuar sin empezar de cero.');
@@ -590,7 +591,7 @@ function PanelApp() {
       setAccessRole(role==='owner'||role==='admin'?role:'member');
       managementRef.current=role==='owner'||role==='admin';
     }).catch(()=>window.location.href='/onboarding');
-    fetch('/api/settings').then(response=>{if(!response.ok)throw new Error('settings');return response.json() as Promise<{settings?:CostSettings}>;}).then(data=>{const settings=data?.settings;if(!settings)throw new Error('settings');setShipping(String(settings.shipping_cost_ars||''));setShippingMode(settings.shipping_mode==='average_only'?'average_only':'actual');setFees(String(settings.commission_percent||''));setTaxes(String(settings.tax_percent||''));setPagoNubePayoutDays(settings.pago_nube_payout_days?String(settings.pago_nube_payout_days):'');setPagoNubePlan(String(settings.pago_nube_plan_override||''));setSettingsLoaded(true);}).catch(()=>setSettingsState('No pudimos cargar los valores guardados. Recargá la página antes de editarlos.'));
+    fetch('/api/settings').then(response=>{if(!response.ok)throw new Error('settings');return response.json() as Promise<{settings?:CostSettings}>;}).then(data=>{const settings=data?.settings;if(!settings)throw new Error('settings');setShipping(String(settings.shipping_cost_ars||''));setShippingMode(settings.shipping_mode==='average_only'?'average_only':'actual');setFees(String(settings.commission_percent||''));setTaxes(String(settings.tax_percent||''));setPagoNubePayoutDays(settings.pago_nube_payout_days?String(settings.pago_nube_payout_days):'');setPagoNubePlan(String(settings.pago_nube_plan_override||''));setDetectedPlan(settings.tiendanube_plan_name||null);setSettingsLoaded(true);}).catch(()=>setSettingsState('No pudimos cargar los valores guardados. Recargá la página antes de editarlos.'));
     fetch('/api/integrations').then(r=>r.ok?r.json() as Promise<{integrations?:Integration[]}>:null).then(async data=>{
       if(!data?.integrations)return;
       const connected:Integration[]=data.integrations; setIntegrations(connected);setIntegrationsLoaded(true);
@@ -782,7 +783,7 @@ function PanelApp() {
       :active==='plan'?<SubscriptionSection/>
       :active==='configuracion'?<section className="settingsPage deliveryPage">
         <header className="deliveryPageHeading"><span className="muted">CÁLCULO DE RENTABILIDAD</span><h2>Envíos y comisiones</h2><p>Todos tus costos, en un solo lugar. Elegí cómo calcularlos y separá los importados de los personalizados.</p></header>
-        <ShippingCommissionSettings shipping={shipping} shippingMode={shippingMode} fees={fees} taxes={taxes} pagoNubePlan={pagoNubePlan} pagoNubePayoutDays={pagoNubePayoutDays} connected={integrations.some(item=>item.provider==='tiendanube'&&item.status==='connected')} loaded={settingsLoaded} saving={savingSettings} message={settingsState}
+        <ShippingCommissionSettings shipping={shipping} shippingMode={shippingMode} fees={fees} taxes={taxes} pagoNubePlan={pagoNubePlan} detectedPlan={detectedPlan} pagoNubePayoutDays={pagoNubePayoutDays} connected={integrations.some(item=>item.provider==='tiendanube'&&item.status==='connected')} loaded={settingsLoaded} saving={savingSettings} message={settingsState}
           onShipping={value=>{setShipping(value);setSettingsState('')}} onShippingMode={value=>{setShippingMode(value);setSettingsState('')}} onFees={value=>{setFees(value);setSettingsState('')}} onTaxes={value=>{setTaxes(value);setSettingsState('')}} onPlan={value=>{setPagoNubePlan(value);setSettingsState('')}} onPayout={value=>{setPagoNubePayoutDays(value);setSettingsState('')}} onSubmit={saveSettings}/>
         <AdvancedCostRules rules={costRules} paymentMethods={dashboard?.paymentMethods||[]} onChanged={refreshCostConfiguration}/>
       </section>

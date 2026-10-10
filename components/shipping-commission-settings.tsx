@@ -1,6 +1,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
+import { pagoNubePlan } from '../lib/pago-nube-fees';
 import { Check, ChevronDown, ReceiptText, ShieldCheck, Truck } from 'lucide-react';
 import ThemedSelect from './themed-select';
 
@@ -10,6 +11,8 @@ type Props = {
   fees: string;
   taxes: string;
   pagoNubePlan: string;
+  // Plan name as Tiendanube reports it during the import (null until it does).
+  detectedPlan: string | null;
   pagoNubePayoutDays: string;
   connected: boolean;
   loaded: boolean;
@@ -23,6 +26,17 @@ type Props = {
   onPayout: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 };
+
+const planLabels: Record<string, string> = { inicial: 'Inicial', esencial: 'Esencial', impulso: 'Impulso', escala: 'Escala' };
+
+// The default option shows which plan Tiendanube reported, so it is clear
+// whether the estimate already has a plan or one has to be chosen.
+function detectedPlanOption(detected: string | null) {
+  const plan = pagoNubePlan(detected);
+  if (plan) return { label: `Detectado: ${planLabels[plan]}`, description: 'Informado por Tiendanube al importar' };
+  if (detected) return { label: 'Plan no reconocido', description: `Tiendanube informa "${detected}"; elegí tu plan` };
+  return { label: 'Sin plan detectado', description: 'Tiendanube todavía no informó el plan; elegilo para estimar' };
+}
 
 export default function ShippingCommissionSettings(props: Props) {
   const actual = props.shippingMode === 'actual';
@@ -66,7 +80,7 @@ export default function ShippingCommissionSettings(props: Props) {
         <details className="deliveryDetails" open={Boolean(props.pagoNubePlan || props.pagoNubePayoutDays) || undefined}>
           <summary><span>Estimación de Pago Nube <small>Respaldo opcional</small></span><ChevronDown size={18}/></summary>
           <div className="deliveryDetailsBody"><p>No es necesaria para importar los cargos reales. Usala solo si conocés el plan y el plazo de tu tienda; las tarifas públicas pueden diferir de tu acuerdo.</p><div className="deliveryFieldPair">
-            <ThemedSelect label="Plan de Tiendanube" value={props.pagoNubePlan} disabled={!props.loaded||props.saving} onChange={props.onPlan} options={[{value:'',label:'Plan informado por la tienda',description:'Sin reemplazar el plan importado'},{value:'inicial',label:'Inicial'},{value:'esencial',label:'Esencial'},{value:'impulso',label:'Impulso'},{value:'escala',label:'Escala'}]}/>
+            <ThemedSelect label="Plan de Tiendanube" value={props.pagoNubePlan} disabled={!props.loaded||props.saving} onChange={props.onPlan} options={[{value:'',...detectedPlanOption(props.detectedPlan)},{value:'inicial',label:'Inicial'},{value:'esencial',label:'Esencial'},{value:'impulso',label:'Impulso'},{value:'escala',label:'Escala'}]}/>
             <ThemedSelect label="Plazo de acreditación" value={props.pagoNubePayoutDays} disabled={!props.loaded||props.saving} onChange={props.onPayout} options={[{value:'',label:'Sin plazo de respaldo',description:'No estimar cargos de tarjetas sin plazo'},{value:'1',label:'1 día'},{value:'7',label:'7 días'},{value:'14',label:'14 días'}]}/>
           </div><small>El plan debe estar identificado; para tarjetas también se requiere el plazo. Cuotas y otros cargos pueden no estar incluidos. La comisión real tiene prioridad cuando llega.</small></div>
         </details>
