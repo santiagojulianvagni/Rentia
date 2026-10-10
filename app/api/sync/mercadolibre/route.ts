@@ -14,7 +14,7 @@ export const POST=route({access:'manager',headers},async({user,request,url})=>{
   assertOrigin(request,mercadoLibreOrigin());
   try {
     const work=reconcileMercadoLibre(user.id,url.searchParams.get('force')==='1');
-    // Register this same bounded promise with Workerd's waitUntil immediately,
+    // Register this same bounded promise with after() (the platform's waitUntil) immediately,
     // before awaiting it. Reloading/closing the tab must not cancel a claimed
     // batch and leave its lease behind. This does not start a second import.
     after(work.then(()=>undefined,()=>undefined));

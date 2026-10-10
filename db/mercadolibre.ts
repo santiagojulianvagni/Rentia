@@ -1,10 +1,9 @@
-import {env} from 'cloudflare:workers';
+import {database} from './client';
 import type {MercadoLibreNotice} from '../lib/mercadolibre';
 import type {MeliOrder} from '../lib/mercadolibre-data';
 import type {SyncedProduct} from './database';
 import {ITEM_COST_JOINS,ITEM_COST_MISSING_SQL} from '../lib/commerce-queries';
 
-function database() { return (env as unknown as {DB:D1Database}).DB; }
 
 // Single-use consumption is one statement, including expiry and tenant checks.
 export async function consumeMercadoLibreState(state:string,userId:string) {
@@ -28,7 +27,7 @@ export async function enqueueMercadoLibreNotice(notice:MercadoLibreNotice) {
   // minimal metadata for already authorized sellers. The consumer must GET
   // the allowlisted resource with that seller's token and verify ownership.
   // No network fetch or business-data mutation runs on this public endpoint.
-  const inserted=await database().prepare("INSERT OR IGNORE INTO webhook_events (provider,event_key,user_id,external_store_id,event_type,resource_id,payload_json,status,received_at,updated_at) SELECT 'mercadolibre',?,i.user_id,i.external_store_id,?,?,?,'pending',?,? FROM integrations i WHERE i.provider='mercadolibre' AND i.external_store_id=? AND i.status IN ('authorized','connected') AND NOT EXISTS (SELECT 1 FROM webhook_events e WHERE e.provider=i.provider AND e.user_id=i.user_id AND e.resource_id=? AND e.status='pending') LIMIT 1 RETURNING user_id")
+  const inserted=await database().prepare("INSERT INTO webhook_events (provider,event_key,user_id,external_store_id,event_type,resource_id,payload_json,status,received_at,updated_at) SELECT 'mercadolibre',?,i.user_id,i.external_store_id,?,?,?,'pending',?,? FROM integrations i WHERE i.provider='mercadolibre' AND i.external_store_id=? AND i.status IN ('authorized','connected') AND NOT EXISTS (SELECT 1 FROM webhook_events e WHERE e.provider=i.provider AND e.user_id=i.user_id AND e.resource_id=? AND e.status='pending') LIMIT 1 ON CONFLICT DO NOTHING RETURNING user_id")
     .bind(eventKey,notice.topic,notice.resource,JSON.stringify(notice),now,now,notice.sellerId,notice.resource).first<{user_id:string}>();
   return inserted?.user_id||null;
 }
@@ -53,7 +52,7 @@ const writeGuard="EXISTS (SELECT 1 FROM sync_jobs j JOIN integrations i ON i.use
 function guardValues(userId:string,lease:string,sellerId:string) { return [userId,lease,Date.now(),sellerId]; }
 export async function saveMeliOrder(userId:string,sellerId:string,lease:string,order:MeliOrder) {
   const now=new Date().toISOString(),guard=guardValues(userId,lease,sellerId);
-  const accepted="EXISTS (SELECT 1 FROM orders o WHERE o.user_id=? AND o.provider='mercadolibre' AND o.external_order_id=? AND o.source_updated_at IS ? AND o.synced_at=?)";
+  const accepted="EXISTS (SELECT 1 FROM orders o WHERE o.user_id=? AND o.provider='mercadolibre' AND o.external_order_id=? AND o.source_updated_at IS NOT DISTINCT FROM ? AND o.synced_at=?)";
   const statements=[database().prepare(`INSERT INTO orders (user_id,provider,external_order_id,order_number,currency,status,payment_status,payment_method,payment_type,payment_installments,shipping_status,source_shipping_cost,source_commission_cost,source_commission_checked_at,total,subtotal,discount,source_created_at,source_updated_at,synced_at) SELECT ?,'mercadolibre',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE ${writeGuard} ON CONFLICT(user_id,provider,external_order_id) DO UPDATE SET order_number=excluded.order_number,currency=excluded.currency,status=excluded.status,payment_status=excluded.payment_status,payment_method=excluded.payment_method,payment_type=excluded.payment_type,payment_installments=excluded.payment_installments,shipping_status=excluded.shipping_status,source_shipping_cost=excluded.source_shipping_cost,source_commission_cost=excluded.source_commission_cost,source_commission_checked_at=excluded.source_commission_checked_at,total=excluded.total,subtotal=excluded.subtotal,discount=excluded.discount,source_updated_at=excluded.source_updated_at,synced_at=excluded.synced_at WHERE orders.source_updated_at IS NULL OR excluded.source_updated_at>=orders.source_updated_at`)
     .bind(userId,order.externalId,order.number,order.currency,order.status,order.paymentStatus,order.paymentMethod,order.paymentType,order.paymentInstallments,order.shippingStatus,order.shippingCost,order.commissionCost,now,order.total,order.subtotal,order.discount,order.createdAt,order.updatedAt,now,...guard),
     database().prepare(`DELETE FROM order_items WHERE user_id=? AND provider='mercadolibre' AND external_order_id=? AND ${writeGuard} AND ${accepted}`).bind(userId,order.externalId,...guard,userId,order.externalId,order.updatedAt,now)];
@@ -81,12 +80,12 @@ export async function completeMeliImport(userId:string,sellerId:string,lease:str
     .bind(new Date().toISOString(),userId,sellerId,...guardValues(userId,lease,sellerId)).run();
 }
 export async function meliCounts(userId:string) {
-  const row=await database().prepare("SELECT (SELECT COUNT(*) FROM orders WHERE user_id=? AND provider='mercadolibre') AS orders,(SELECT COUNT(*) FROM products WHERE user_id=? AND provider='mercadolibre') AS products,(SELECT COUNT(*) FROM webhook_events WHERE user_id=? AND provider='mercadolibre' AND status IN ('pending','processing','failed')) AS pendingEvents")
+  const row=await database().prepare("SELECT (SELECT COUNT(*) FROM orders WHERE user_id=? AND provider='mercadolibre') AS orders,(SELECT COUNT(*) FROM products WHERE user_id=? AND provider='mercadolibre') AS products,(SELECT COUNT(*) FROM webhook_events WHERE user_id=? AND provider='mercadolibre' AND status IN ('pending','processing','failed')) AS \"pendingEvents\"")
     .bind(userId,userId,userId).first<{orders:number;products:number;pendingEvents:number}>();
   return row||{orders:0,products:0,pendingEvents:0};
 }
 export async function meliOrdersMissingCosts(userId:string) {
-  const rows=await database().prepare(`SELECT external_order_id FROM orders o WHERE user_id=? AND provider='mercadolibre' AND ((payment_status='paid' AND status<>'cancelled' AND (source_shipping_cost IS NULL OR source_commission_cost IS NULL OR EXISTS (SELECT 1 FROM order_items oi ${ITEM_COST_JOINS} WHERE oi.user_id=o.user_id AND oi.provider=o.provider AND oi.external_order_id=o.external_order_id AND ${ITEM_COST_MISSING_SQL}))) OR json_array_length(meli_post_sale_json,'$.claims')>0 OR payment_status IN ('refunded','partially_refunded','charged_back')) AND (source_commission_checked_at IS NULL OR source_commission_checked_at<?) ORDER BY source_commission_checked_at,source_created_at LIMIT 2`)
+  const rows=await database().prepare(`SELECT external_order_id FROM orders o WHERE user_id=? AND provider='mercadolibre' AND ((payment_status='paid' AND status<>'cancelled' AND (source_shipping_cost IS NULL OR source_commission_cost IS NULL OR EXISTS (SELECT 1 FROM order_items oi ${ITEM_COST_JOINS} WHERE oi.user_id=o.user_id AND oi.provider=o.provider AND oi.external_order_id=o.external_order_id AND ${ITEM_COST_MISSING_SQL}))) OR (CASE WHEN jsonb_typeof(meli_post_sale_json::jsonb->'claims')='array' THEN jsonb_array_length(meli_post_sale_json::jsonb->'claims') ELSE 0 END)>0 OR payment_status IN ('refunded','partially_refunded','charged_back')) AND (source_commission_checked_at IS NULL OR source_commission_checked_at<?) ORDER BY source_commission_checked_at,source_created_at LIMIT 2`)
     .bind(userId,new Date(Date.now()-24*60*60*1000).toISOString()).all<{external_order_id:string}>();
   return rows.results.map(row=>row.external_order_id);
 }
@@ -94,14 +93,14 @@ export async function queueMeliShipmentOrders(userId:string,sellerId:string,leas
   // A shipment may have many orders. Durable fan-out, not one unbounded network
   // loop, lets each order finish under a separate request's execution budget.
   const now=new Date().toISOString();
-  await database().prepare(`INSERT OR IGNORE INTO webhook_events (provider,event_key,user_id,external_store_id,event_type,resource_id,payload_json,status,received_at,updated_at) SELECT 'mercadolibre',?||value,?,?,'orders_v2','/orders/'||value,'{}','pending',?,? FROM json_each(?) WHERE ${writeGuard}`)
+  await database().prepare(`INSERT INTO webhook_events (provider,event_key,user_id,external_store_id,event_type,resource_id,payload_json,status,received_at,updated_at) SELECT 'mercadolibre',?||ids.value,?,?,'orders_v2','/orders/'||ids.value,'{}','pending',?,? FROM jsonb_array_elements_text(?::jsonb) AS ids(value) WHERE ${writeGuard} ON CONFLICT DO NOTHING`)
     .bind(`mercadolibre:shipment:${eventId}:`,userId,sellerId,now,now,JSON.stringify(ids),...guardValues(userId,lease,sellerId)).run();
 }
 export async function getMeliProgress(userId:string) {
   return database().prepare("SELECT state_json,updated_at,CASE WHEN lease_token IS NOT NULL THEN lease_expires_at ELSE 0 END AS lease_expires_at FROM sync_jobs WHERE user_id=? AND provider='mercadolibre'").bind(userId).first<{state_json:string;updated_at:string;lease_expires_at:number}>();
 }
 export async function meliUsersForReconciliation(staleBefore:string,limit=5) {
-  const rows=await database().prepare("SELECT DISTINCT i.user_id FROM integrations i LEFT JOIN sync_status s ON s.user_id=i.user_id AND s.provider=i.provider LEFT JOIN sync_jobs j ON j.user_id=i.user_id AND j.provider=i.provider WHERE i.provider='mercadolibre' AND i.status IN ('authorized','connected') AND (s.last_completed_at IS NULL OR s.last_completed_at<? OR json_extract(j.state_json,'$.phase')<>'done' OR EXISTS (SELECT 1 FROM webhook_events e WHERE e.user_id=i.user_id AND e.provider=i.provider AND e.status IN ('pending','failed','processing') AND (e.next_retry_at IS NULL OR e.next_retry_at<=?))) ORDER BY COALESCE(s.last_completed_at,'') LIMIT ?")
+  const rows=await database().prepare("SELECT i.user_id FROM integrations i LEFT JOIN sync_status s ON s.user_id=i.user_id AND s.provider=i.provider LEFT JOIN sync_jobs j ON j.user_id=i.user_id AND j.provider=i.provider WHERE i.provider='mercadolibre' AND i.status IN ('authorized','connected') AND (s.last_completed_at IS NULL OR s.last_completed_at<? OR (j.state_json::jsonb->>'phase')<>'done' OR EXISTS (SELECT 1 FROM webhook_events e WHERE e.user_id=i.user_id AND e.provider=i.provider AND e.status IN ('pending','failed','processing') AND (e.next_retry_at IS NULL OR e.next_retry_at<=?))) GROUP BY i.user_id ORDER BY MIN(COALESCE(s.last_completed_at,'')) LIMIT ?")
     .bind(staleBefore,new Date().toISOString(),limit).all<{user_id:string}>();
   return rows.results.map(row=>row.user_id);
 }

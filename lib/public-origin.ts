@@ -1,4 +1,4 @@
-import {env} from 'cloudflare:workers';
+import {env} from './env';
 
 // The app's public https origin (RENTIA_PUBLIC_ORIGIN). OAuth redirect URIs and
 // browser Origin checks on sensitive mutations compare against it.

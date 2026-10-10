@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers';
+import { env } from '../../../../../lib/env';
 import { NextResponse } from 'next/server';
 import { consumeOAuthState, ensureTiendanubeAccount, getIntegrationUser, saveIntegration } from '../../../../../db/database';
 import { encryptToken } from '../../../../../lib/token-crypto';

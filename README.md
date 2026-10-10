@@ -1,41 +1,43 @@
 # Rentia
 
-Código de la aplicación Rentia: ventas, rentabilidad, productos, publicidad e informes para e-commerce.
+Ventas, rentabilidad, productos, publicidad e informes para e-commerce.
 
 ## Tecnología
 
-- React y TypeScript, con estructura de Next.js y compilación mediante Vinext.
-- Cloudflare Workers para el servidor y Cloudflare D1 para la base de datos.
+- Next.js 16 (App Router), React y TypeScript.
+- Vercel para el hosting y Postgres de Neon para la base de datos.
 - Clerk para las cuentas y la autenticación.
 - Integraciones con Tiendanube, Mercado Libre, Product Ads y Meta Ads.
+
+## Publicar en Vercel
+
+1. Importar este repositorio en Vercel (New Project).
+2. En el proyecto: **Storage → Create Database → Neon**. Eso carga `DATABASE_URL` y `DATABASE_URL_UNPOOLED`.
+3. Completar el resto de las variables de `.env.example` en **Settings → Environment Variables**.
+4. Deploy. En cada deploy, `npm run vercel-build` aplica las migraciones de `migrations/` y después compila.
+
+Después del primer deploy hay que actualizar las URLs de retorno (callback) en Tiendanube, Mercado Libre y Meta con el dominio nuevo, y completar `RENTIA_PUBLIC_ORIGIN` con ese dominio.
 
 ## Desarrollo
 
 ```sh
 npm ci
-```
-
-Crear un archivo local `.env.local` tomando como referencia `.env.example` y completar las credenciales necesarias. Nunca subir ese archivo al repositorio.
-
-```sh
+npm run db:migrate   # con DATABASE_URL en .env.local
 npm run dev
-npm run build
 ```
 
-La aplicación necesita los bindings de Cloudflare y una base D1 con las migraciones de `drizzle/`. El código actual no es un servidor Node.js autónomo: subirlo a GitHub no configura el alojamiento ni copia la base de datos de producción.
+- `npm test`: tests unitarios y de escala contra un Postgres en memoria (PGlite).
+- `npm run test:integration`: verificaciones de Mercado Libre, facturación, Product Ads y OAuth, también sobre PGlite.
+- Los tests requieren Node 24.
 
 ## Carpetas
 
 - `app/`: páginas, estilos y API.
 - `components/`: interfaz de usuario.
 - `lib/`: lógica de negocio e integraciones.
-- `db/`: acceso a la base de datos.
-- `drizzle/`: migraciones SQL.
-- `public/`: logos, imágenes y favicon.
+- `db/`: acceso a la base de datos (`db/client.ts` es la conexión).
+- `server/http/`: autenticación, validación y errores de la API.
+- `migrations/`: esquema de Postgres.
 - `tests/` y `scripts/`: pruebas y verificaciones.
 
-## Seguridad y alcance de esta copia
-
-Esta copia contiene el código actual, sin el historial anterior de desarrollo. No incluye claves reales, `.env.local`, datos de las tiendas, bases de datos locales, `node_modules`, compilaciones ni archivos de trabajo.
-
-`.openai/hosting.json` identifica el proyecto existente en Sites y sus bindings lógicos; no contiene las credenciales de producción. Los secretos y permisos de las integraciones se configuran en el entorno de alojamiento, no en GitHub.
+Algunos documentos de `docs/` describen la etapa anterior en Cloudflare (Workers y D1).

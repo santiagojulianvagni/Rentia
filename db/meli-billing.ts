@@ -1,7 +1,6 @@
-import {env} from 'cloudflare:workers';
+import {database} from './client';
 import {billingJob,readBillingProgress,type BillingEntry,type BillingGroup} from '../lib/meli-billing-data';
 
-function database(){return (env as unknown as {DB:D1Database}).DB;}
 export async function billingState(userId:string,sellerId:string,group:BillingGroup,period:string) {
   const row=await database().prepare('SELECT state_json,lease_expires_at FROM sync_jobs WHERE user_id=? AND provider=?').bind(userId,billingJob(group,period)).first<{state_json:string;lease_expires_at:number}>();
   return {progress:readBillingProgress(row?.state_json||null,sellerId),leaseExpiresAt:row?.lease_expires_at||0};
@@ -24,8 +23,8 @@ export async function billingReport(userId:string,sellerId:string,group:BillingG
   const {progress,leaseExpiresAt}=await billingState(userId,sellerId,group,period);
   const base='user_id=? AND seller_id=? AND period=? AND billing_group=? AND generation=?';
   const values=[userId,sellerId,period,group,progress?.generation||''];
-  const totals=await database().prepare(`SELECT currency,direction,COUNT(*) AS count,SUM(amount_cents) AS amountCents FROM meli_billing_entries WHERE ${base} GROUP BY currency,direction`).bind(...values).all<{currency:string;direction:string;count:number;amountCents:number}>();
-  const filter=query?" AND (instr(lower(name),lower(?))>0 OR instr(lower(code),lower(?))>0 OR detail_id=? OR EXISTS (SELECT 1 FROM json_each(order_ids) WHERE value=?))":'';
+  const totals=await database().prepare(`SELECT currency,direction,COUNT(*) AS count,SUM(amount_cents) AS "amountCents" FROM meli_billing_entries WHERE ${base} GROUP BY currency,direction`).bind(...values).all<{currency:string;direction:string;count:number;amountCents:number}>();
+  const filter=query?" AND (strpos(lower(name),lower(?::text))>0 OR strpos(lower(code),lower(?::text))>0 OR detail_id=? OR EXISTS (SELECT 1 FROM jsonb_array_elements_text(order_ids::jsonb) AS ids(value) WHERE ids.value=?))":'';
   const bindings=query?[...values,query,query,query,query]:values;
   const count=await database().prepare(`SELECT COUNT(*) AS total FROM meli_billing_entries WHERE ${base}${filter}`).bind(...bindings).first<{total:number}>();
   const total=count?.total||0,current=Math.max(1,Math.min(page,Math.ceil(total/100)||1));

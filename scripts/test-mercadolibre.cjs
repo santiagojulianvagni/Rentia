@@ -1,13 +1,11 @@
 // Offline integration checks: real SQL migrations + synthetic API fixtures.
 // No live network, real credentials, customer stores, or persistent test data.
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),vm=require('node:vm');
-const ts=require('typescript'),{DatabaseSync}=require('node:sqlite');
-const sqlite=new DatabaseSync(':memory:');
-for(const file of fs.readdirSync('drizzle').filter(name=>name.endsWith('.sql')).sort())sqlite.exec(fs.readFileSync(path.join('drizzle',file),'utf8'));
+const ts=require('typescript');
+const {createPostgres}=require('./lib/harness.cjs');
+let sql;
 const now=new Date().toISOString();
-for(const id of ['fixture-store','other-store'])sqlite.prepare('INSERT INTO accounts(user_id,email,owner_name,store_name,trial_started_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?)').run(id,`${id}@example.invalid`,'Fixture','Test only',now,now,now);
-const d1={prepare(sql){let values=[];return {bind(...args){values=args;return this;},async run(){const result=sqlite.prepare(sql).run(...values);return {success:true,meta:{changes:Number(result.changes),last_row_id:Number(result.lastInsertRowid)}};},async first(){return sqlite.prepare(sql).get(...values)||null;},async all(){return {results:sqlite.prepare(sql).all(...values)};}};},async batch(statements){sqlite.exec('BEGIN');try{const results=[];for(const statement of statements)results.push(await statement.run());sqlite.exec('COMMIT');return results;}catch(error){sqlite.exec('ROLLBACK');throw error;}}};
-const env={DB:d1,MELI_APP_ID:'12345',MELI_APP_SECRET:'synthetic-secret',TOKEN_ENCRYPTION_KEY:Buffer.alloc(32,7).toString('base64'),RENTIA_PUBLIC_ORIGIN:'https://rentia.example.invalid'};
+const env={MELI_APP_ID:'12345',MELI_APP_SECRET:'synthetic-secret',TOKEN_ENCRYPTION_KEY:Buffer.alloc(32,7).toString('base64'),RENTIA_PUBLIC_ORIGIN:'https://rentia.example.invalid'};
 let user={id:'fixture-store',role:'owner'};
 class NextResponse extends Response {static json(value,init={}){return new NextResponse(JSON.stringify(value),{...init,headers:{'content-type':'application/json',...init.headers}});}}
 const loaded=new Map(),lifetimePromises=[];
@@ -15,10 +13,10 @@ function load(filename){
   const absolute=path.resolve(filename);if(loaded.has(absolute))return loaded.get(absolute).exports;
   const module={exports:{}};loaded.set(absolute,module);
   const requireLocal=specifier=>{
-    if(specifier==='cloudflare:workers')return {env};
     if(specifier==='next/server')return {NextResponse,after:promise=>lifetimePromises.push(promise)};
     if(!specifier.startsWith('.'))return require(specifier);
     const resolved=path.resolve(path.dirname(absolute),specifier)+'.ts';
+    if(resolved===path.resolve('lib/env.ts'))return {env};
     if(resolved===path.resolve('lib/session.ts'))return {getRentiaUser:async()=>user,canManageRentia:value=>['owner','admin'].includes(value.role)};
     return load(resolved);
   };
@@ -78,10 +76,12 @@ global.fetch=async(input,options)=>{
   if(/^\/items\/[A-Z]{3}\d+$/.test(url.pathname))return Response.json(products.find(item=>item.id===url.pathname.split('/')[2]));
   throw new Error(`Unexpected fixture route ${url.pathname}`);
 };
-function state(){return JSON.parse(sqlite.prepare("SELECT state_json FROM sync_jobs WHERE user_id='fixture-store' AND provider='mercadolibre'").get().state_json);}
-function replaceState(value){sqlite.prepare("UPDATE sync_jobs SET state_json=? WHERE user_id='fixture-store' AND provider='mercadolibre'").run(JSON.stringify(value));}
-async function drain(limit=400){for(let index=0;index<limit;index++){const result=await sync.reconcileMercadoLibre('fixture-store');assert.ok(!result.error,result.error);if(!result.pending)return;const progress=state();if(progress.phase==='products'&&progress.scrollId&&!productScanExpired&&scanRestarts===1)productScanExpired=true;}throw new Error('Fixture import did not finish');}
+async function state(){return JSON.parse((await sql.get("SELECT state_json FROM sync_jobs WHERE user_id='fixture-store' AND provider='mercadolibre'")).state_json);}
+async function replaceState(value){await sql.run("UPDATE sync_jobs SET state_json=? WHERE user_id='fixture-store' AND provider='mercadolibre'",JSON.stringify(value));}
+async function drain(limit=400){for(let index=0;index<limit;index++){const result=await sync.reconcileMercadoLibre('fixture-store');assert.ok(!result.error,result.error);if(!result.pending)return;const progress=(await state());if(progress.phase==='products'&&progress.scrollId&&!productScanExpired&&scanRestarts===1)productScanExpired=true;}throw new Error('Fixture import did not finish');}
 async function main(){
+  sql=await createPostgres();load('db/client.ts').setDatabase(sql.driver);
+  for(const id of ['fixture-store','other-store'])await sql.run('INSERT INTO accounts(user_id,email,owner_name,store_name,trial_started_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?)',id,`${id}@example.invalid`,'Fixture','Test only',now,now,now);
   const encrypted=await cryptoHelper.encryptToken(JSON.stringify({version:1,accessToken:access,refreshToken:refresh,expiresAt:Date.now()-1,sellerId:'999'}),env.TOKEN_ENCRYPTION_KEY);
   assert.equal(await db.saveMercadoLibreConnection({userId:'fixture-store',sellerId:'999',encryptedToken:encrypted.encryptedToken,iv:encrypted.iv,scopes:'read offline_access'}),true);
   const allocations=data.allocateMeliShipment({senders:[{user_id:999,cost:12.01}]},[{order_id:1,seller_id:999,quantity:2},{order_id:2,seller_id:999,quantity:1}],'999');
@@ -101,14 +101,14 @@ async function main(){
   // A lost request keeps its checkpoint. An active lease prevents duplicate
   // work; expiry permits automatic recovery, while the old writer is fenced.
   const lostBatch=await database.claimImportJob('fixture-store','mercadolibre','{}',60_000);
-  const beforeRecovery=state();
+  const beforeRecovery=(await state());
   await database.checkpointImportJob('fixture-store','mercadolibre',lostBatch.token,JSON.stringify(beforeRecovery),false,60_000);
   const held=await db.getMeliProgress('fixture-store');
   assert.ok(held.lease_expires_at>Date.now()+55_000&&held.lease_expires_at<=Date.now()+60_000);
   const heldView=await sync.getMeliSyncView('fixture-store');
   assert.equal(presentation.meliAutoSyncDue(heldView,true),false);
   assert.equal((await sync.reconcileMercadoLibre('fixture-store')).busy,true);
-  assert.deepEqual(state(),beforeRecovery);
+  assert.deepEqual((await state()),beforeRecovery);
   assert.equal(presentation.meliSyncAction(heldView,false,true).label,'Importando…');
   assert.deepEqual(presentation.meliSyncAction(heldView,false,true),presentation.meliSyncAction(heldView,true,true),'batch boundaries must not toggle the label, style state or disabled state');
   assert.match(presentation.meliSyncMessage({...heldView,orders:1} ),/1 orden guardada\./);
@@ -118,24 +118,24 @@ async function main(){
   assert.equal(presentation.meliAutoSyncDue({...heldView,retryAt:expiry+60000},true,expiry+1),false);
   assert.equal(presentation.meliSyncAction({...heldView,retryAt:expiry+60000},false,true,expiry+1).badge,'En pausa');
   assert.match(presentation.meliSyncMessage({...heldView,batchUpdatedAt:new Date(Date.now()-120000).toISOString()}),/Esperando que se libere el lote anterior/);
-  sqlite.prepare("UPDATE sync_jobs SET lease_expires_at=? WHERE user_id='fixture-store' AND provider='mercadolibre'").run(Date.now()-1);
+  await sql.run("UPDATE sync_jobs SET lease_expires_at=? WHERE user_id='fixture-store' AND provider='mercadolibre'",Date.now()-1);
   const recovered=await sync.reconcileMercadoLibre('fixture-store');assert.ok(!recovered.busy&&!recovered.error);
   await assert.rejects(()=>database.checkpointImportJob('fixture-store','mercadolibre',lostBatch.token,JSON.stringify(beforeRecovery),false,60_000));
   assert.equal(await db.saveMeliOrder('fixture-store','999',lostBatch.token,data.normalizeMeliOrder({...orders[0],id:99997},'999',0,null)),false);
   const otherLease=await database.claimImportJob('fixture-store','tiendanube','{}');
-  assert.ok(sqlite.prepare("SELECT lease_expires_at FROM sync_jobs WHERE provider='tiendanube'").get().lease_expires_at>Date.now()+590000,'other providers retain their lease budget');
+  assert.ok((await sql.get("SELECT lease_expires_at FROM sync_jobs WHERE provider='tiendanube'")).lease_expires_at>Date.now()+590000,'other providers retain their lease budget');
   await database.releaseImportJob('fixture-store','tiendanube',otherLease.token);
   rateLimit=true;
   const failed=await sync.reconcileMercadoLibre('fixture-store');assert.equal(failed.error,'mercadolibre_rate_limit');assert.ok(failed.retryAt>=Date.now()+85000);assert.ok(!JSON.stringify(failed).includes(access));
-  const retry=state(),pendingBefore=retry.pendingOrders.length;assert.ok(pendingBefore>0);
-  const paused=await sync.reconcileMercadoLibre('fixture-store');assert.equal(paused.retryAt,failed.retryAt);assert.equal(state().pendingOrders.length,pendingBefore);
-  retry.retryAt=0;replaceState(retry);await drain();
+  const retry=(await state()),pendingBefore=retry.pendingOrders.length;assert.ok(pendingBefore>0);
+  const paused=await sync.reconcileMercadoLibre('fixture-store');assert.equal(paused.retryAt,failed.retryAt);assert.equal((await state()).pendingOrders.length,pendingBefore);
+  retry.retryAt=0;await replaceState(retry);await drain();
   const counts=await db.meliCounts('fixture-store');assert.equal(counts.orders,1205);assert.equal(counts.products,1002);assert.ok(scanRestarts>=2);
-  assert.equal(sqlite.prepare("SELECT status FROM integrations WHERE user_id='fixture-store'").get().status,'connected');
-  const first=sqlite.prepare("SELECT * FROM orders WHERE external_order_id='10001'").get(),second=sqlite.prepare("SELECT * FROM orders WHERE external_order_id='10002'").get();
+  assert.equal((await sql.get("SELECT status FROM integrations WHERE user_id='fixture-store'")).status,'connected');
+  const first=(await sql.get("SELECT * FROM orders WHERE external_order_id='10001'")),second=(await sql.get("SELECT * FROM orders WHERE external_order_id='10002'"));
   assert.equal(first.source_shipping_cost+second.source_shipping_cost,12.01);assert.equal(first.source_commission_cost,200);
-  assert.equal(sqlite.prepare("SELECT source_shipping_cost FROM orders WHERE external_order_id='10003'").get().source_shipping_cost,null);
-  const imported=sqlite.prepare("SELECT * FROM integrations WHERE user_id='fixture-store'").get();
+  assert.equal((await sql.get("SELECT source_shipping_cost FROM orders WHERE external_order_id='10003'")).source_shipping_cost,null);
+  const imported=(await sql.get("SELECT * FROM integrations WHERE user_id='fixture-store'"));
   const stored=JSON.parse(await cryptoHelper.decryptToken(imported.encrypted_access_token,imported.token_iv,env.TOKEN_ENCRYPTION_KEY));assert.equal(stored.refreshToken,refresh);assert.ok(!imported.encrypted_access_token.includes(refresh));
   assert.equal(await db.saveMercadoLibreConnection({userId:'other-store',sellerId:'999',encryptedToken:'fixture',iv:'fixture',scopes:'read'}),false);
   assert.equal((await db.meliCounts('other-store')).orders,0);
@@ -146,7 +146,7 @@ async function main(){
   await db.requireMeliReauthorization(previous);
   assert.equal((await db.getMeliCredentials('fixture-store')).status,'connected');
   // Simulate losing a scroll response after the provider advanced its cursor.
-  const lost=state();lost.phase='products';lost.pendingItems=[];lost.scrollId='fixture-500';lost.scrollExpires=Date.now()+60000;lost.scanInFlight=true;replaceState(lost);
+  const lost=(await state());lost.phase='products';lost.pendingItems=[];lost.scrollId='fixture-500';lost.scrollExpires=Date.now()+60000;lost.scanInFlight=true;await replaceState(lost);
   const starts=scanRestarts;await drain();assert.ok(scanRestarts>starts);assert.equal((await db.meliCounts('fixture-store')).products,1002);
   // Duplicate delivery, forged ownership, stale order versions, lost leases.
   const notice={id:'fixture-notice',topic:'orders_v2',resource:'/orders/10001',sellerId:'999',applicationId:'12345',sent:now};
@@ -154,38 +154,38 @@ async function main(){
   assert.equal((await db.meliCounts('fixture-store')).pendingEvents,1);
   orders[0]={...orders[0],status:'cancelled',date_last_updated:'2026-10-04T00:00:00.000Z'};
   await sync.reconcileMercadoLibre('fixture-store');
-  assert.equal(sqlite.prepare("SELECT payment_status FROM orders WHERE external_order_id='10001'").get().payment_status,'cancelled');
+  assert.equal((await sql.get("SELECT payment_status FROM orders WHERE external_order_id='10001'")).payment_status,'cancelled');
   await db.enqueueMercadoLibreNotice({...notice,id:'shared-shipment',topic:'shipments',resource:'/shipments/1'});
   await sync.reconcileMercadoLibre('fixture-store');
-  assert.equal(sqlite.prepare("SELECT count(*) AS total FROM webhook_events WHERE event_key LIKE 'mercadolibre:shipment:%'").get().total,2);
+  assert.equal((await sql.get("SELECT count(*) AS total FROM webhook_events WHERE event_key LIKE 'mercadolibre:shipment:%'")).total,2);
   assert.equal((await db.meliCounts('fixture-store')).pendingEvents,0);
   await db.enqueueMercadoLibreNotice({...notice,id:'forged',resource:'/orders/99999'});await sync.reconcileMercadoLibre('fixture-store');
-  assert.equal(sqlite.prepare("SELECT status FROM webhook_events WHERE resource_id='/orders/99999'").get().status,'ignored');
-  assert.equal(sqlite.prepare("SELECT count(*) AS total FROM orders WHERE external_order_id='99999'").get().total,0);
+  assert.equal((await sql.get("SELECT status FROM webhook_events WHERE resource_id='/orders/99999'")).status,'ignored');
+  assert.equal((await sql.get("SELECT count(*) AS total FROM orders WHERE external_order_id='99999'")).total,0);
   for(const mode of ['quantity_missing','cost_missing','foreign']) {
     shipmentFixture=mode;
     await db.enqueueMercadoLibreNotice({...notice,id:`shipping-${mode}`});
     const result=await sync.reconcileMercadoLibre('fixture-store');assert.ok(!result.error,result.error);
-    const row=sqlite.prepare("SELECT source_shipping_cost,shipping_status FROM orders WHERE external_order_id='10001'").get();
+    const row=(await sql.get("SELECT source_shipping_cost,shipping_status FROM orders WHERE external_order_id='10001'"));
     assert.equal(row.source_shipping_cost,null,'unverifiable costs must not become zero or buyer charges');
     assert.equal(row.shipping_status,mode==='foreign'?null:'delivered');
-    assert.equal(sqlite.prepare("SELECT status FROM webhook_events WHERE event_key=?").get(`mercadolibre:999:orders_v2:shipping-${mode}`).status,'processed','a verified order must not stall on optional shipping');
+    assert.equal((await sql.get("SELECT status FROM webhook_events WHERE event_key=?",`mercadolibre:999:orders_v2:shipping-${mode}`)).status,'processed','a verified order must not stall on optional shipping');
   }
   await db.enqueueMercadoLibreNotice({...notice,id:'foreign-shipment',topic:'shipments',resource:'/shipments/1'});
   await sync.reconcileMercadoLibre('fixture-store');
-  assert.equal(sqlite.prepare("SELECT status FROM webhook_events WHERE event_key='mercadolibre:999:shipments:foreign-shipment'").get().status,'ignored');
+  assert.equal((await sql.get("SELECT status FROM webhook_events WHERE event_key='mercadolibre:999:shipments:foreign-shipment'")).status,'ignored');
   shipmentFixture='modern';await db.enqueueMercadoLibreNotice({...notice,id:'shipping-restored'});await sync.reconcileMercadoLibre('fixture-store');
-  assert.equal(sqlite.prepare("SELECT source_shipping_cost FROM orders WHERE external_order_id='10001'").get().source_shipping_cost,8.01);
+  assert.equal((await sql.get("SELECT source_shipping_cost FROM orders WHERE external_order_id='10001'")).source_shipping_cost,8.01);
   const lease=await database.claimImportJob('fixture-store','mercadolibre','{}');
   const staleOrder=data.normalizeMeliOrder({...orders[0],status:'paid',date_last_updated:fixtureDate},'999',0,null);
   await db.saveMeliOrder('fixture-store','999',lease.token,staleOrder);
-  assert.equal(sqlite.prepare("SELECT payment_status FROM orders WHERE external_order_id='10001'").get().payment_status,'cancelled');
-  sqlite.prepare("UPDATE product_variants SET manual_cost=77 WHERE external_variant_id='MLA100000'").run();
+  assert.equal((await sql.get("SELECT payment_status FROM orders WHERE external_order_id='10001'")).payment_status,'cancelled');
+  await sql.run("UPDATE product_variants SET manual_cost=77 WHERE external_variant_id='MLA100000'");
   await db.saveMeliProduct('fixture-store','999',lease.token,data.normalizeMeliProduct(products[0],'999'));
-  assert.equal(sqlite.prepare("SELECT manual_cost FROM product_variants WHERE external_variant_id='MLA100000'").get().manual_cost,77);
+  assert.equal((await sql.get("SELECT manual_cost FROM product_variants WHERE external_variant_id='MLA100000'")).manual_cost,77);
   await database.releaseImportJob('fixture-store','mercadolibre',lease.token);
   assert.equal(await db.saveMeliOrder('fixture-store','999',lease.token,data.normalizeMeliOrder({...orders[0],id:99998},'999',0,null)),false);
-  assert.equal(sqlite.prepare("SELECT count(*) AS total FROM order_items WHERE external_order_id='99998'").get().total,0);
+  assert.equal((await sql.get("SELECT count(*) AS total FROM order_items WHERE external_order_id='99998'")).total,0);
   const settings={shipping_mode:'average_only',shipping_cost_ars:999,commission_percent:20,tax_percent:0};
   const known=cost.calculateOrderCosts({provider:'mercadolibre',total:1000,source_shipping_cost:5,source_commission_cost:100,source_created_at:fixtureDate},settings,[]);assert.equal(known.shipping,5);assert.match(known.commissionSource,/Mercado Libre/);
   const unknown=cost.calculateOrderCosts({provider:'mercadolibre',total:1000,source_shipping_cost:null,source_commission_cost:null,source_created_at:fixtureDate},settings,[]);assert.equal(unknown.shippingSource,'pendiente');assert.equal(unknown.commissionSource,'Mercado Libre · cargo pendiente');
@@ -224,7 +224,7 @@ async function main(){
   assert.ok(!dashboardBody.channels.some(row=>row.provider==='tiendanube'),'no fake Tiendanube channel for a marketplace-only store');
   assert.equal(dashboardBody.channels.find(row=>row.provider==='mercadolibre').revenue,dashboardBody.metrics.revenue);
   const archiveRoute=load('app/api/products/archive/route.ts');
-  const product=sqlite.prepare("SELECT id FROM products WHERE user_id='fixture-store' LIMIT 1").get();
+  const product=(await sql.get("SELECT id FROM products WHERE user_id='fixture-store' LIMIT 1"));
   const archiveRequest=(body,origin=env.RENTIA_PUBLIC_ORIGIN)=>new Request(`${env.RENTIA_PUBLIC_ORIGIN}/api/products/archive`,{method:'PATCH',headers:{origin,'content-type':'application/json'},body:JSON.stringify(body)});
   const archiveBody={productId:product.id,archived:true,confirmation:'ARCHIVAR'};
   const beforeArchive=await (await dashboardRoute.GET(new Request(`${env.RENTIA_PUBLIC_ORIGIN}/api/dashboard?start=2026-10-01&end=2026-10-02`))).json();
@@ -238,9 +238,9 @@ async function main(){
   assert.deepEqual(afterArchive.metrics,beforeArchive.metrics,'archive never removes sales or waives missing historical costs');
   assert.deepEqual(afterArchive.quality,beforeArchive.quality);
   await database.upsertProducts(user.id,'mercadolibre',[{externalId:'MLA100000',name:'Updated fixture',imageUrl:null,published:true,createdAt:null,updatedAt:null,variants:[]}]);
-  assert.equal(sqlite.prepare('SELECT rentia_archived FROM products WHERE id=?').get(product.id).rentia_archived,1,'provider refresh cannot undo local archive');
+  assert.equal((await sql.get('SELECT rentia_archived FROM products WHERE id=?',product.id)).rentia_archived,1,'provider refresh cannot undo local archive');
   assert.equal((await archiveRoute.PATCH(archiveRequest({...archiveBody,archived:false,confirmation:'RESTAURAR'}))).status,200);
-  assert.equal(sqlite.prepare('SELECT rentia_archived FROM products WHERE id=?').get(product.id).rentia_archived,0);
+  assert.equal((await sql.get('SELECT rentia_archived FROM products WHERE id=?',product.id)).rentia_archived,0);
   user.role='member';assert.equal((await route.POST(new Request(`${env.RENTIA_PUBLIC_ORIGIN}/api/sync/mercadolibre`,{method:'POST',headers:{origin:env.RENTIA_PUBLIC_ORIGIN}}))).status,403);
   user.role='owner';assert.equal((await route.POST(new Request(`${env.RENTIA_PUBLIC_ORIGIN}/api/sync/mercadolibre`,{method:'POST',headers:{origin:'https://evil.invalid'}}))).status,403);
   assert.equal(lifetimePromises.length,0,'rejected requests must not schedule imports');
@@ -255,7 +255,7 @@ async function main(){
   const fixtureFetch=global.fetch;
   global.fetch=async(input,options)=>{if(new URL(String(input)).pathname==='/oauth/token')throw new Error('fixture ambiguous timeout');return fixtureFetch(input,options);};
   const ambiguous=await sync.reconcileMercadoLibre('fixture-store');assert.equal(ambiguous.error,'mercadolibre_reauthorize');
-  assert.equal(sqlite.prepare("SELECT status FROM integrations WHERE user_id='fixture-store'").get().status,'reauthorization_required');
+  assert.equal((await sql.get("SELECT status FROM integrations WHERE user_id='fixture-store'")).status,'reauthorization_required');
   assert.equal(await db.saveMercadoLibreConnection({userId:'other-store',sellerId:'999',encryptedToken:'fixture',iv:'fixture',scopes:'read'}),false);
   global.fetch=fixtureFetch;
   env.MELI_APP_SECRET='';assert.equal((await route.POST(new Request(`${env.RENTIA_PUBLIC_ORIGIN}/api/sync/mercadolibre`,{method:'POST'}))).status,503);
@@ -278,7 +278,7 @@ async function postSaleChecks(settings,mixedSummary,dashboardBody) {
   assert.throws(()=>post.normalizeMeliClaims({paging:{total:2},data:[openClaim]},'10003','999'),/incomplete_claims/);
   assert.throws(()=>post.normalizeMeliClaims({paging:{total:1},data:[{...openClaim,players:[{role:'respondent',user_id:555}]}]},'10003','999'),/resource_owner/);
   assert.equal(post.normalizeMeliClaims({paging:{total:1},data:[{...openClaim,resource:'payment'}]},'10003','999').length,0);
-  const row=sqlite.prepare("SELECT * FROM order_items WHERE external_order_id='10003' LIMIT 1").get();
+  const row=(await sql.get("SELECT * FROM order_items WHERE external_order_id='10003' LIMIT 1"));
   const input={provider:'mercadolibre',orderId:'10003',lineId:row.external_line_id,cost:2500};
   user.role='member';assert.equal((await costRoute.POST(body('/api/orders/item-cost',input))).status,403);assert.equal((await reviewRoute.POST(body('/api/orders/mercadolibre-review',{orderId:'10003'}))).status,403);
   user.role='owner';assert.equal((await costRoute.POST(body('/api/orders/item-cost',input,'https://evil.invalid'))).status,403);assert.equal((await reviewRoute.POST(body('/api/orders/mercadolibre-review',{orderId:'10003'},'https://evil.invalid'))).status,403);
@@ -289,18 +289,18 @@ async function postSaleChecks(settings,mixedSummary,dashboardBody) {
   let page=await database.getOrdersPage(user.id,365,{start:'2026-10-01',end:'2026-10-02'},1,'10003');assert.equal(page.orders[0].product_cost,2500);assert.equal(page.orders[0].items[0].cost_source,'orden_manual');assert.equal(page.orders[0].missing_product_costs,0);
   claimFixtures.set('10003',[openClaim]);orders[2]={...orders[2],date_last_updated:'2026-10-06T00:00:00.000Z'};
   const reviewed=await reviewRoute.POST(body('/api/orders/mercadolibre-review',{orderId:'10003'}));assert.equal(reviewed.status,200);assert.equal((await reviewed.json()).postSale.claims[0].status,'opened');
-  assert.equal(sqlite.prepare("SELECT payment_status FROM orders WHERE external_order_id='10003'").get().payment_status,'paid','an open claim must not manufacture a refund');
+  assert.equal((await sql.get("SELECT payment_status FROM orders WHERE external_order_id='10003'")).payment_status,'paid','an open claim must not manufacture a refund');
   page=await database.getOrdersPage(user.id,365,{start:'2026-10-01',end:'2026-10-02'},1,'10003');assert.equal(page.orders[0].product_cost,2500,'manual historical cost survives provider resync');
   async function* claimedSource(){yield {...page.orders[0],item_count:1,missing_product_costs:0,source_shipping_cost:0,meli_post_sale_json:JSON.stringify({...partial,refundStatus:'none',refundAmount:null,claims:[openClaim],claimsChecked:true})};}
   const claimed=await summary.summarizeOrders(claimedSource(),settings,[],30,{orders:1,revenue:1000},true,new Date());assert.equal(claimed.quality.postSale.openClaims,1);assert.equal(claimed.quality.completeOrders,0);assert.equal(claimed.channelTimelines.mercadolibre[0].profit,0,'open claims do not contribute confirmed profit');assert.equal(claimed.quality.dimensions.products.missing,0,'claim is not missing product cost');
-  const beforePartial=sqlite.prepare("SELECT meli_post_sale_json FROM orders WHERE external_order_id='10003'").get().meli_post_sale_json;
+  const beforePartial=(await sql.get("SELECT meli_post_sale_json FROM orders WHERE external_order_id='10003'")).meli_post_sale_json;
   claimsPartialResponse=true;assert.equal((await reviewRoute.POST(body('/api/orders/mercadolibre-review',{orderId:'10003'}))).status,502);claimsPartialResponse=false;
-  assert.equal(sqlite.prepare("SELECT meli_post_sale_json FROM orders WHERE external_order_id='10003'").get().meli_post_sale_json,beforePartial,'206 cannot erase a known open claim');
+  assert.equal((await sql.get("SELECT meli_post_sale_json FROM orders WHERE external_order_id='10003'")).meli_post_sale_json,beforePartial,'206 cannot erase a known open claim');
   orders[2]={...orders[2],date_last_updated:'2026-10-06T01:00:00.000Z',payments:[{id:102,status:'refunded',currency_id:'ARS',collector:{id:999},transaction_amount_refunded:1000}]};claimFixtures.set('10003',[{...openClaim,status:'closed',resolution:{reason:'payment_refunded'}}]);
   const core=load('lib/mercadolibre.ts');assert.equal(core.parseMercadoLibreNotice({_id:'claims-fixture',topic:'claims',resource:'/post-purchase/v1/claims/55',user_id:999,application_id:12345,sent:now}).topic,'claims');
   await db.enqueueMercadoLibreNotice({id:'claims-fixture',topic:'claims',resource:'/post-purchase/v1/claims/55',sellerId:'999',applicationId:'12345',sent:now});
   const result=await sync.reconcileMercadoLibre(user.id);assert.ok(!result.error,result.error);
-  const saved=sqlite.prepare("SELECT payment_status,meli_post_sale_json FROM orders WHERE external_order_id='10003'").get();assert.equal(saved.payment_status,'refunded');assert.equal(JSON.parse(saved.meli_post_sale_json).refundAmount,1000);
+  const saved=(await sql.get("SELECT payment_status,meli_post_sale_json FROM orders WHERE external_order_id='10003'"));assert.equal(saved.payment_status,'refunded');assert.equal(JSON.parse(saved.meli_post_sale_json).refundAmount,1000);
   assert.equal((await costRoute.POST(body('/api/orders/item-cost',{...input,cost:0}))).status,200);page=await database.getOrdersPage(user.id,365,{start:'2026-10-01',end:'2026-10-02'},1,'10003');assert.equal(page.orders[0].product_cost,0);assert.equal(page.orders[0].missing_product_costs,0,'explicit zero is a known cost');
   assert.equal((await costRoute.POST(body('/api/orders/item-cost',{...input,cost:null}))).status,200);
   assert.equal(mixedSummary.channelTimelines.tiendanube[0].orders,1);assert.equal(mixedSummary.channelTimelines.mercadolibre[0].orders,1);assert.equal(mixedSummary.quality.postSale.refundOrders,1);
@@ -309,14 +309,14 @@ async function postSaleChecks(settings,mixedSummary,dashboardBody) {
 }
 async function historicalCostChecks() {
   const tenant='historical-cost-store',provider='mercadolibre',productId='MLA800000',range={start:'2026-10-01',end:'2026-10-02'};
-  sqlite.prepare('INSERT INTO accounts(user_id,email,owner_name,store_name,trial_started_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?)').run(tenant,`${tenant}@example.invalid`,'Fixture','Test only',now,now,now);
+  await sql.run('INSERT INTO accounts(user_id,email,owner_name,store_name,trial_started_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?)',tenant,`${tenant}@example.invalid`,'Fixture','Test only',now,now,now);
   const product=(externalId,variants)=>({externalId,name:'Identical name is not a cost match',imageUrl:null,published:true,createdAt:fixtureDate,updatedAt:fixtureDate,variants:variants.map(externalId=>({externalId,sku:'SAME-SKU',price:10000,cost:0,stock:1,stockManagement:true}))});
   const makeOrder=(externalId,pid=productId,variantId=`${pid}:retired`)=>({...data.normalizeMeliOrder(orders[0],'999',0,null),externalId,number:externalId,status:'paid',paymentStatus:'paid',createdAt:fixtureDate,updatedAt:fixtureDate,total:20000,items:[{externalLineId:'historical-line',productId:pid,variantId,name:'Identical name is not a cost match',sku:'SAME-SKU',quantity:2,unitPrice:10000,unitCost:0}]});
   await database.upsertProducts(tenant,provider,[product(productId,[productId,`${productId}:live`,`${productId}:zero`,`${productId}:unknown`]),product('MLA800001',['MLA800001'])]);
   await database.upsertProducts('other-store',provider,[product(productId,[productId]),product('MLA800002',['MLA800002'])]);
   await database.upsertProducts(tenant,'tiendanube',[product(productId,[productId])]);
   async function saveCatalog(owner,channel,variant,costValue) {
-    const row=sqlite.prepare('SELECT id FROM product_variants WHERE user_id=? AND provider=? AND external_variant_id=?').get(owner,channel,variant);
+    const row=(await sql.get('SELECT id FROM product_variants WHERE user_id=? AND provider=? AND external_variant_id=?',owner,channel,variant));
     await database.saveManualProductCosts(owner,[{variantId:row.id,manualCost:costValue}]);return row.id;
   }
   const baseId=await saveCatalog(tenant,provider,productId,7000);
@@ -325,7 +325,7 @@ async function historicalCostChecks() {
   await saveCatalog(tenant,'tiendanube',productId,11000);
   const historic=makeOrder('19900001');
   await database.upsertOrders(tenant,provider,[historic]);
-  sqlite.prepare('UPDATE orders SET source_commission_cost=0,source_commission_checked_at=NULL WHERE user_id=?').run(tenant);
+  await sql.run('UPDATE orders SET source_commission_cost=0,source_commission_checked_at=NULL WHERE user_id=?',tenant);
   assert.deepEqual(await db.meliOrdersMissingCosts(tenant),[],'the repair queue must not repeatedly fetch an order with its inherited catalog cost');
   await database.upsertOrders(tenant,provider,[makeOrder('19900002',productId,`${productId}:live`),makeOrder('19900003',productId,`${productId}:zero`),makeOrder('19900004',productId,`${productId}:unknown`),makeOrder('19900005','MLA800001'),makeOrder('19900006','MLA800002'),makeOrder('19900007','MLA800003')]);
   await database.upsertOrders(tenant,'tiendanube',[makeOrder('19900008')]);
@@ -341,7 +341,7 @@ async function historicalCostChecks() {
   for await(const entry of analytics.sales)if(entry.external_order_id===historic.externalId)sale=entry;
   assert.equal(sale.variant_id,baseId,'historical sales aggregate under the same catalog publication');assert.equal(sale.unit_cost,7000);
   const query=load('lib/commerce-queries.ts');
-  const aggregate=sqlite.prepare(query.ORDER_ANALYTICS_BATCH_SQL).get(tenant,fixtureDate,'2026-10-03T00:00:00.000Z',historic.externalId,'','',0,5000);
+  const aggregate=(await sql.get(query.ORDER_ANALYTICS_BATCH_SQL,tenant,fixtureDate,'2026-10-03T00:00:00.000Z',historic.externalId,'','',0,5000));
   assert.equal(aggregate.product_cost,14000);assert.equal(aggregate.missing_product_costs,0,'dashboard and export agree with order detail');
   await database.saveOrderItemCost(tenant,provider,historic.externalId,'historical-line',1250);row=await page(historic.externalId);assert.equal(row.product_cost,2500);assert.equal(row.items[0].cost_source,'orden_manual');
   await database.upsertOrders(tenant,provider,[historic]);assert.equal((await page(historic.externalId)).product_cost,2500,'resync retains per-sale precedence');
@@ -351,4 +351,4 @@ async function historicalCostChecks() {
   await saveCatalog(tenant,provider,productId,null);row=await page(historic.externalId);assert.equal(row.product_cost,0);assert.equal(row.missing_product_costs,1,'an unknown base cost does not silence the warning');
   console.log('PASS: retired Mercado Libre variation inherits only its exact publication, all readers agree, current variants and per-sale/zero costs win, resync preserves overrides, tenant/provider/product isolation. Offline fixtures only.');
 }
-main().then(historicalCostChecks).catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>{global.fetch=originalFetch;sqlite.close();});
+main().then(historicalCostChecks).catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{global.fetch=originalFetch;await sql?.close();});

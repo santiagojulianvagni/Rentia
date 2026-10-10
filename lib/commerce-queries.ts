@@ -15,7 +15,7 @@ export const ORDER_ANALYTICS_SELECT=`SELECT o.id AS cursor_id,o.provider,o.exter
   FROM orders o LEFT JOIN order_items oi ON oi.user_id=o.user_id AND oi.provider=o.provider AND oi.external_order_id=o.external_order_id
   ${ITEM_COST_JOINS}`;
 export const ORDER_SCOPE='o.user_id=? AND o.source_created_at>=? AND o.source_created_at<?';
-export const ORDER_SEARCH="instr(lower(COALESCE(o.order_number,'') || ' ' || o.external_order_id || ' ' || COALESCE(o.payment_method,'')),lower(?))>0";
+export const ORDER_SEARCH="strpos(lower(COALESCE(o.order_number,'') || ' ' || o.external_order_id || ' ' || COALESCE(o.payment_method,'')),lower(?::text))>0";
 export const ORDER_ANALYTICS_BATCH_SQL=`${ORDER_ANALYTICS_SELECT} WHERE ${ORDER_SCOPE} AND ${ORDER_SEARCH} AND (o.source_created_at>? OR (o.source_created_at=? AND o.id>?)) GROUP BY o.id ORDER BY o.source_created_at,o.id LIMIT ?`;
 export const ORDER_PAGE_SQL=`${ORDER_ANALYTICS_SELECT} WHERE ${ORDER_SCOPE} AND ${ORDER_SEARCH} GROUP BY o.id ORDER BY o.source_created_at DESC,o.id DESC LIMIT ? OFFSET ?`;
 export const ORDER_COUNT_SQL=`SELECT COUNT(*) AS total FROM orders o WHERE ${ORDER_SCOPE} AND ${ORDER_SEARCH}`;

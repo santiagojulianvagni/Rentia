@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers';
+import { env } from '../../../../lib/env';
 import { NextResponse } from 'next/server';
 import { getTiendanubeUsersForReconciliation } from '../../../../db/database';
 import { reconcileTiendanube } from '../../../../lib/tiendanube';
@@ -15,7 +15,8 @@ function secureEqual(left:string,right:string) {
 }
 
 export async function POST(request:Request) {
-  const secret=(env as unknown as {RENTIA_CRON_SECRET?:string}).RENTIA_CRON_SECRET;
+  // Vercel Cron sends CRON_SECRET as a Bearer token; RENTIA_CRON_SECRET is the older name.
+  const secret=env.CRON_SECRET||env.RENTIA_CRON_SECRET;
   const authorization=request.headers.get('authorization')||'';
   const supplied=authorization.startsWith('Bearer ')?authorization.slice(7):'';
   if (!secret) return NextResponse.json({error:'cron_not_configured'},{status:503});
@@ -40,3 +41,6 @@ export async function POST(request:Request) {
   const productAds=mercadoLibreConfigured()?await Promise.all((await meliAdsUsersForReconciliation()).map(async userId=>({userId,...await syncMeliAds(userId)}))):[];
   return NextResponse.json({ok:true,processed:results.length+mercadolibre.length+productAds.length,results,mercadolibre,productAds});
 }
+
+// Vercel Cron Jobs call the path with GET.
+export const GET=POST;

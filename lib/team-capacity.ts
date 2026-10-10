@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers';
+import { database as db } from '../db/client';
 import { clerkClient } from '@clerk/nextjs/server';
 import { getOrCreateSubscription } from '../db/database';
 import { teamEntitlement } from './plans';
@@ -39,8 +39,6 @@ export async function teamSnapshot(client:Client,user:RentiaUser) {
   return {memberships,invitations:pending,capacity};
 }
 
-type TeamDb={prepare:(sql:string)=>{bind:(...values:unknown[])=>{run:()=>Promise<{meta?:{changes?:number}}>}}};
-function db(){return (env as unknown as {DB:TeamDb}).DB;}
 
 export async function acquireTeamAdmission(userId:string) {
   const token=crypto.randomUUID();

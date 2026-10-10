@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers';
+import { env } from '../../../../../lib/env';
 import { NextResponse } from 'next/server';
 import { createOAuthState } from '../../../../../db/database';
 import { canManageRentia, getRentiaUser } from '../../../../../lib/session';

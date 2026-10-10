@@ -2,7 +2,7 @@ import type {ZodType} from 'zod';
 
 // Shared request pipeline for authenticated API routes: session, role, origin,
 // JSON body validation and error handling live here instead of being repeated
-// in every route. It has no Clerk/D1 imports so it can be tested with node:test.
+// in every route. It has no Clerk or database imports so it can be tested with node:test.
 
 export class HttpError extends Error {
   readonly status:number;

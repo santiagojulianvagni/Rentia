@@ -25,7 +25,7 @@ jobs:
       # The whole project still has lint errors in the panel and landing pages.
       # Code already cleaned up is linted here so it stays clean.
       - name: Lint (API and server)
-        run: npx eslint app/api server tests scripts
+        run: npx eslint app/api server tests scripts db
       - run: npm test
       - run: npm run test:integration
       - run: npm run build

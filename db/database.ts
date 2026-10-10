@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers';
+import { database, type Statement } from './client';
 import {ITEM_COST_JOINS,ITEM_UNIT_COST_SQL,ITEM_COST_SOURCE_SQL,ORDER_ANALYTICS_BATCH_SQL,ORDER_COUNT_SQL,ORDER_PAGE_SQL,PAID_TOTAL_SQL,PRODUCT_SALES_BATCH_SQL} from '../lib/commerce-queries';
 import type {AnalyticsOrder} from '../lib/order-calculations';
 import {atomicBatches} from '../lib/atomic-batches';
@@ -55,19 +55,13 @@ export type WebhookEventRecord = {
   last_error:string|null; next_retry_at:string|null; received_at:string; processed_at:string|null; updated_at:string;
 };
 
-function database() {
-  return (env as unknown as { DB: D1Database }).DB;
-}
-
-async function runInChunks(statements:D1PreparedStatement[],size=50) {
+async function runInChunks(statements:Statement[],size=50) {
   for (let index=0;index<statements.length;index+=size) await database().batch(statements.slice(index,index+size));
 }
 
-// Sites applies the SQL files in /drizzle when a version is deployed. Running
-// every CREATE TABLE / CREATE INDEX statement again from each Worker isolate
-// can leave normal API requests waiting on DDL locks, which prevents users from
-// entering the app. Keep the call sites lightweight and let deployments own
-// schema changes.
+// Schema changes are applied by scripts/migrate.mjs on every deploy. Running
+// DDL from request handlers could leave API requests waiting on locks, so the
+// call sites stay lightweight and deployments own schema changes.
 export async function ensureSchema() {
   return;
 }
@@ -249,7 +243,7 @@ export async function getIntegrationCredentials(userId:string,provider:string) {
 export async function registerWebhookEvent(input:{provider:string;eventKey:string;userId:string|null;storeId:string;eventType:string;resourceId:string|null;payloadJson:string}) {
   await ensureSchema();
   const now=new Date().toISOString();
-  await database().prepare("INSERT OR IGNORE INTO webhook_events (provider,event_key,user_id,external_store_id,event_type,resource_id,payload_json,status,received_at,updated_at) VALUES (?,?,?,?,?,?,?,'pending',?,?)")
+  await database().prepare("INSERT INTO webhook_events (provider,event_key,user_id,external_store_id,event_type,resource_id,payload_json,status,received_at,updated_at) VALUES (?,?,?,?,?,?,?,'pending',?,?) ON CONFLICT DO NOTHING")
     .bind(input.provider,input.eventKey,input.userId,input.storeId,input.eventType,input.resourceId,input.payloadJson,now,now).run();
   if (input.userId) await database().prepare('UPDATE webhook_events SET user_id=COALESCE(user_id,?) WHERE event_key=?').bind(input.userId,input.eventKey).run();
   const event=await database().prepare('SELECT * FROM webhook_events WHERE event_key=?').bind(input.eventKey).first<WebhookEventRecord>();
@@ -312,9 +306,9 @@ export async function getSyncReliability(userId:string,provider:string) {
 
 export async function startReconciliationRun(userId:string,provider:string,triggerSource:string) {
   await ensureSchema();
-  const result=await database().prepare("INSERT INTO reconciliation_runs (user_id,provider,trigger_source,status,started_at) VALUES (?,?,?,'running',?)")
-    .bind(userId,provider,triggerSource,new Date().toISOString()).run();
-  return Number(result.meta.last_row_id);
+  const run=await database().prepare("INSERT INTO reconciliation_runs (user_id,provider,trigger_source,status,started_at) VALUES (?,?,?,'running',?) RETURNING id")
+    .bind(userId,provider,triggerSource,new Date().toISOString()).first<{id:number}>();
+  return Number(run?.id);
 }
 
 export async function finishReconciliationRun(runId:number,status:'success'|'failed'|'pending',summary:unknown,error:string|null=null) {
@@ -325,7 +319,7 @@ export async function finishReconciliationRun(runId:number,status:'success'|'fai
 
 export async function getTiendanubeUsersForReconciliation(staleBefore:string,limit=25) {
   await ensureSchema();
-  const rows=await database().prepare("SELECT DISTINCT i.user_id FROM integrations i LEFT JOIN sync_status s ON s.user_id=i.user_id AND s.provider=i.provider LEFT JOIN sync_jobs j ON j.user_id=i.user_id AND j.provider=i.provider WHERE i.provider='tiendanube' AND i.status='connected' AND (s.last_completed_at IS NULL OR s.last_completed_at<? OR s.status='error' OR s.webhook_status='error' OR json_extract(j.state_json,'$.done')=0) ORDER BY COALESCE(s.last_completed_at,'') LIMIT ?")
+  const rows=await database().prepare("SELECT i.user_id FROM integrations i LEFT JOIN sync_status s ON s.user_id=i.user_id AND s.provider=i.provider LEFT JOIN sync_jobs j ON j.user_id=i.user_id AND j.provider=i.provider WHERE i.provider='tiendanube' AND i.status='connected' AND (s.last_completed_at IS NULL OR s.last_completed_at<? OR s.status='error' OR s.webhook_status='error' OR (j.state_json::jsonb->>'done') IN ('false','0')) GROUP BY i.user_id ORDER BY MIN(COALESCE(s.last_completed_at,'')) LIMIT ?")
     .bind(staleBefore,limit).all<{user_id:string}>();
   return rows.results.map(row=>row.user_id);
 }
@@ -333,7 +327,7 @@ export async function getTiendanubeUsersForReconciliation(staleBefore:string,lim
 export async function claimImportJob(userId:string,provider:string,initialState:string,leaseMs=10*60*1000) {
   const now=Date.now(),token=crypto.randomUUID();
   const duration=Math.max(30_000,Math.min(10*60*1000,leaseMs));
-  await database().prepare('INSERT OR IGNORE INTO sync_jobs (user_id,provider,state_json,updated_at) VALUES (?,?,?,?)').bind(userId,provider,initialState,new Date(now).toISOString()).run();
+  await database().prepare('INSERT INTO sync_jobs (user_id,provider,state_json,updated_at) VALUES (?,?,?,?) ON CONFLICT DO NOTHING').bind(userId,provider,initialState,new Date(now).toISOString()).run();
   const row=await database().prepare('UPDATE sync_jobs SET lease_token=?,lease_expires_at=? WHERE user_id=? AND provider=? AND (lease_token IS NULL OR lease_expires_at<?) RETURNING state_json').bind(token,now+duration,userId,provider,now).first<{state_json:string}>();
   return row?{token,stateJson:row.state_json}:null;
 }
@@ -429,7 +423,7 @@ export async function disconnectIntegrationByStore(provider:string,storeId:strin
 export async function upsertProducts(userId:string,provider:string,products:SyncedProduct[]) {
   await ensureSchema();
   const now=new Date().toISOString();
-  const statements:D1PreparedStatement[]=[];
+  const statements:Statement[]=[];
   for (const product of products) {
     statements.push(database().prepare("INSERT INTO products (user_id,provider,external_product_id,name,image_url,published,source_created_at,source_updated_at,synced_at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,provider,external_product_id) DO UPDATE SET name=excluded.name,image_url=excluded.image_url,published=excluded.published,source_updated_at=excluded.source_updated_at,synced_at=excluded.synced_at")
       .bind(userId,provider,product.externalId,product.name,product.imageUrl,product.published?1:0,product.createdAt,product.updatedAt,now));
@@ -442,13 +436,13 @@ export async function upsertProducts(userId:string,provider:string,products:Sync
 export async function upsertOrders(userId:string,provider:string,orders:SyncedOrder[]) {
   await ensureSchema();
   const now=new Date().toISOString();
-  const groups:D1PreparedStatement[][]=[];
+  const groups:Statement[][]=[];
   for (const order of orders) {
-    const statements:D1PreparedStatement[]=[];
-    statements.push(database().prepare("INSERT INTO orders (user_id,provider,external_order_id,order_number,currency,status,payment_status,payment_method,payment_type,payment_installments,shipping_status,source_shipping_cost,total,subtotal,discount,source_created_at,source_updated_at,synced_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,provider,external_order_id) DO UPDATE SET order_number=excluded.order_number,currency=excluded.currency,status=excluded.status,payment_status=excluded.payment_status,payment_method=excluded.payment_method,payment_type=COALESCE(excluded.payment_type,orders.payment_type),payment_installments=COALESCE(excluded.payment_installments,orders.payment_installments),shipping_status=excluded.shipping_status,source_shipping_cost=excluded.source_shipping_cost,source_commission_cost=CASE WHEN orders.source_updated_at IS NOT excluded.source_updated_at THEN NULL ELSE orders.source_commission_cost END,source_commission_checked_at=CASE WHEN orders.source_updated_at IS NOT excluded.source_updated_at THEN NULL ELSE orders.source_commission_checked_at END,total=excluded.total,subtotal=excluded.subtotal,discount=excluded.discount,source_updated_at=excluded.source_updated_at,synced_at=excluded.synced_at")
+    const statements:Statement[]=[];
+    statements.push(database().prepare("INSERT INTO orders (user_id,provider,external_order_id,order_number,currency,status,payment_status,payment_method,payment_type,payment_installments,shipping_status,source_shipping_cost,total,subtotal,discount,source_created_at,source_updated_at,synced_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,provider,external_order_id) DO UPDATE SET order_number=excluded.order_number,currency=excluded.currency,status=excluded.status,payment_status=excluded.payment_status,payment_method=excluded.payment_method,payment_type=COALESCE(excluded.payment_type,orders.payment_type),payment_installments=COALESCE(excluded.payment_installments,orders.payment_installments),shipping_status=excluded.shipping_status,source_shipping_cost=excluded.source_shipping_cost,source_commission_cost=CASE WHEN orders.source_updated_at IS DISTINCT FROM excluded.source_updated_at THEN NULL ELSE orders.source_commission_cost END,source_commission_checked_at=CASE WHEN orders.source_updated_at IS DISTINCT FROM excluded.source_updated_at THEN NULL ELSE orders.source_commission_checked_at END,total=excluded.total,subtotal=excluded.subtotal,discount=excluded.discount,source_updated_at=excluded.source_updated_at,synced_at=excluded.synced_at")
       .bind(userId,provider,order.externalId,order.number,order.currency,order.status,order.paymentStatus,order.paymentMethod,order.paymentType,order.paymentInstallments,order.shippingStatus,order.shippingCost,order.total,order.subtotal,order.discount,order.createdAt,order.updatedAt,now));
     statements.push(database().prepare("DELETE FROM order_items WHERE user_id=? AND provider=? AND external_order_id=?").bind(userId,provider,order.externalId));
-    // Nine lines use 99 parameters, below D1's 100-parameter limit.
+    // Nine lines use 99 parameters per statement, which keeps each insert small.
     for(let index=0;index<order.items.length;index+=9) {
       const items=order.items.slice(index,index+9);
       statements.push(database().prepare(`INSERT INTO order_items (user_id,provider,external_order_id,external_line_id,external_product_id,external_variant_id,name,sku,quantity,unit_price,unit_cost) VALUES ${items.map(()=>'(?,?,?,?,?,?,?,?,?,?,?)').join(',')}`)
@@ -549,7 +543,7 @@ export async function getOrdersPage(userId:string,days:number,range:AnalyticsDat
   const current=Math.min(pages,Math.max(1,Math.floor(page)));
   const rows=await database().prepare(ORDER_PAGE_SQL).bind(userId,since,until,query,100,(current-1)*100).all<AnalyticsOrder>();
   const orders=[];
-  // At most 75 ids per statement keeps D1's 100-parameter limit intact.
+  // At most 75 ids per statement keeps each query small.
   const itemsByOrder=new Map<string,Record<string,unknown>[]>();
   const byProvider=new Map<string,string[]>();
   for (const row of rows.results) byProvider.set(row.provider,[...(byProvider.get(row.provider)||[]),row.external_order_id]);
@@ -586,7 +580,7 @@ export async function getExternalRevenue(userId:string,from:string,to:string) {
 export async function saveExternalRevenueMonth(userId:string,month:string,entries:ExternalRevenueEntry[]) {
   await ensureSchema();
   const now=new Date().toISOString();
-  const statements:D1PreparedStatement[]=[database().prepare("DELETE FROM external_revenue WHERE user_id=? AND revenue_date LIKE ?").bind(userId,`${month}-%`)];
+  const statements:Statement[]=[database().prepare("DELETE FROM external_revenue WHERE user_id=? AND revenue_date LIKE ?").bind(userId,`${month}-%`)];
   for (const entry of entries) {
     if (entry.orderCount===0&&entry.revenue===0) continue;
     statements.push(database().prepare("INSERT INTO external_revenue (user_id,revenue_date,order_count,revenue,currency,updated_at) VALUES (?,?,?,?,?,?)")
@@ -659,7 +653,7 @@ export async function selectMetaAdAccount(userId:string,externalAccountId:string
 export async function replaceMetaCampaignsAndInsights(userId:string,accountId:string,campaigns:MetaCampaignInput[],insights:MetaInsightInput[],fromDate:string) {
   await ensureSchema();
   const now=new Date().toISOString();
-  const statements:D1PreparedStatement[]=[
+  const statements:Statement[]=[
     database().prepare("DELETE FROM meta_insights_daily WHERE user_id=? AND external_account_id=? AND insight_date>=?").bind(userId,accountId,fromDate),
   ];
   for (const campaign of campaigns) statements.push(database().prepare("INSERT INTO meta_campaigns (user_id,external_account_id,external_campaign_id,name,status,effective_status,daily_budget,lifetime_budget,synced_at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,external_campaign_id) DO UPDATE SET external_account_id=excluded.external_account_id,name=excluded.name,status=excluded.status,effective_status=excluded.effective_status,daily_budget=excluded.daily_budget,lifetime_budget=excluded.lifetime_budget,synced_at=excluded.synced_at")

@@ -64,13 +64,13 @@ test('HttpError keeps its status, code and extra fields',async()=>{
 
 test('unexpected errors are logged and hidden from the client',async()=>{
   logs.length=0;
-  const handler=routeFor(owner)({headers:{'cache-control':'no-store'}},()=>{throw new Error('D1 exploded: SELECT * FROM secrets');});
+  const handler=routeFor(owner)({headers:{'cache-control':'no-store'}},()=>{throw new Error('DB exploded: SELECT * FROM secrets');});
   const response=await handler(request(undefined));
   assert.equal(response.status,500);
   assert.equal(response.headers.get('cache-control'),'no-store');
   assert.deepEqual(await response.json(),{error:'internal_error'});
   assert.equal(logs.length,1);
-  assert.match(logs[0].message,/D1 exploded/);
+  assert.match(logs[0].message,/DB exploded/);
 });
 
 test('handlers may return their own Response untouched',async()=>{

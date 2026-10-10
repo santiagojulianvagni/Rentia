@@ -2,7 +2,7 @@ import { clerkClient } from '@clerk/nextjs/server';
 import { z } from 'zod';
 import { canManageRentia } from '../../../lib/session';
 import { HttpError, route } from '../../../server/http/route';
-import { env } from 'cloudflare:workers';
+import { env } from '../../../lib/env';
 import { rentiaInvitationUrl } from '../../../lib/invitation-url';
 import { acquireTeamAdmission, releaseTeamAdmission, renewTeamAdmission, teamSnapshot } from '../../../lib/team-capacity';
 import { getOrCreateSubscription } from '../../../db/database';

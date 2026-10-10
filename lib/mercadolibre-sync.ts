@@ -32,8 +32,8 @@ async function accessToken(userId:string,deadline:number,rejectedToken?:string) 
   if(!row)throw new MeliError('mercadolibre_reauthorize');
   let value=await readTokens(row);
   if(value.expiresAt>Date.now()+60_000&&(!rejectedToken||value.accessToken!==rejectedToken))return {row,value};
-  // Refresh tokens are single-use. The dedicated D1 lease serializes renewal
-  // across isolates; compare-and-swap prevents clobbering a fresh OAuth login.
+  // Refresh tokens are single-use. The dedicated database lease serializes renewal
+  // across function instances; compare-and-swap prevents clobbering a fresh OAuth login.
   const lease=await claimImportJob(userId,'mercadolibre_token','{}');
   if(!lease)throw new MeliError('mercadolibre_refresh_busy',8);
   try {

@@ -4,31 +4,28 @@ const path=require('node:path');
 const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const ts=require('../node_modules/typescript');
-const {DatabaseSync}=require('node:sqlite');
-const sqlite=new DatabaseSync(':memory:');
-for(const file of fs.readdirSync(path.resolve('drizzle')).filter(name=>name.endsWith('.sql')).sort()) sqlite.exec(fs.readFileSync(path.resolve('drizzle',file),'utf8'));
+const {createPostgres}=require('./lib/harness.cjs');
 const now=new Date().toISOString();
-sqlite.prepare('INSERT INTO accounts(user_id,email,owner_name,store_name,trial_started_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?)').run('test-store','fixture@example.invalid','Fixture','Test only',now,now,now);
-sqlite.prepare('INSERT INTO accounts(user_id,email,owner_name,store_name,trial_started_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?)').run('other-store','other@example.invalid','Fixture','Test only',now,now,now);
-const d1={prepare(sql){let values=[];return {bind(...args){values=args;return this;},async run(){const result=sqlite.prepare(sql).run(...values);return {meta:{changes:Number(result.changes)}};},async first(){return sqlite.prepare(sql).get(...values)||null;}};}};
-const env={DB:d1,MELI_APP_ID:'12345',MELI_APP_SECRET:'synthetic-not-a-real-secret',TOKEN_ENCRYPTION_KEY:Buffer.alloc(32,7).toString('base64'),RENTIA_PUBLIC_ORIGIN:'https://rentia.example.invalid'};
+let sql;
+const env={MELI_APP_ID:'12345',MELI_APP_SECRET:'synthetic-not-a-real-secret',TOKEN_ENCRYPTION_KEY:Buffer.alloc(32,7).toString('base64'),RENTIA_PUBLIC_ORIGIN:'https://rentia.example.invalid'};
 let user={id:'test-store',clerkUserId:'test-actor',role:'owner'};
 let exchanges=0;
 let exchangeMode='success';
-// Use the installed runtime's real cookie serialization/parsing. The old mock
+// Use Next.js's real cookie serialization/parsing. The old mock
 // omitted percent-encoding and could not reproduce the production callback bug.
-let NextResponse,NextRequest,createTrackedAppRouteRequest;
+let NextResponse,NextRequest;
 const loaded=new Map();
 function load(filename){
   const absolute=path.resolve(filename);
   if(loaded.has(absolute)) return loaded.get(absolute).exports;
   const module={exports:{}};loaded.set(absolute,module);
   const customRequire=(specifier)=>{
-    if(specifier==='cloudflare:workers') return {env};
+    if(!specifier.startsWith('.')&&specifier!=='next/server') return require(specifier);
     if(specifier==='next/server') return {NextResponse,NextRequest,after:()=>{}};
     const resolved=path.resolve(path.dirname(absolute),specifier)+'.ts';
+    if(resolved===path.resolve('lib/env.ts')) return {env};
     if(resolved===path.resolve('lib/session.ts')) return {getRentiaUser:async()=>user,canManageRentia:value=>value.role==='owner'||value.role==='admin'};
-    if(resolved===path.resolve('db/database.ts')) return {createOAuthState:async(userId,provider,state)=>{sqlite.prepare('INSERT INTO oauth_states(state,user_id,provider,expires_at,created_at) VALUES(?,?,?,?,?)').run(state,userId,provider,new Date(Date.now()+600000).toISOString(),now);}};
+    if(resolved===path.resolve('db/database.ts')) return {createOAuthState:async(userId,provider,state)=>{await sql.run('INSERT INTO oauth_states(state,user_id,provider,expires_at,created_at) VALUES(?,?,?,?,?)',state,userId,provider,new Date(Date.now()+600000).toISOString(),now);}};
     return load(resolved);
   };
   const js=ts.transpileModule(fs.readFileSync(absolute,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
@@ -69,11 +66,12 @@ async function attempt(){
   return {cookie,url:`${env.RENTIA_PUBLIC_ORIGIN}/api/integrations/mercadolibre/callback?code=test-code&state=${authorization.searchParams.get('state')}`};
 }
 async function main(){
-  ({NextResponse,NextRequest}=await import('../node_modules/vinext/dist/shims/server.js'));
-  ({createTrackedAppRouteRequest}=await import('../node_modules/vinext/dist/server/app-route-handler-runtime.js'));
+  sql=await createPostgres();load('db/client.ts').setDatabase(sql.driver);
+  for(const [id,email] of [['test-store','fixture@example.invalid'],['other-store','other@example.invalid']])await sql.run('INSERT INTO accounts(user_id,email,owner_name,store_name,trial_started_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?)',id,email,'Fixture','Test only',now,now,now);
+  ({NextResponse,NextRequest}=require('next/server'));
   start=load('app/api/integrations/mercadolibre/start/route.ts');
   const callbackRoute=load('app/api/integrations/mercadolibre/callback/route.ts');
-  callback={GET:request=>callbackRoute.GET(createTrackedAppRouteRequest(request).request)};
+  callback={GET:request=>callbackRoute.GET(new NextRequest(request))};
   webhook=load('app/api/webhooks/mercadolibre/route.ts');
   assert.equal(helper.mercadoLibreConfigured(),true);
   const savedId=env.MELI_APP_ID;env.MELI_APP_ID='';
@@ -115,7 +113,7 @@ async function main(){
   const connected=await callback.GET(new Request(ready.url,{headers:{cookie:ready.cookie}}));
   assert.match(connected.headers.get('location'),/setup=mercadolibre_import/);
   assert.ok(!connected.headers.get('location').includes('synthetic-access'));
-  const row=sqlite.prepare("SELECT * FROM integrations WHERE provider='mercadolibre'").get();
+  const row=(await sql.get("SELECT * FROM integrations WHERE provider='mercadolibre'"));
   assert.equal(row.status,'authorized');
   assert.ok(!row.encrypted_access_token.includes('synthetic-access'));
   const decrypted=JSON.parse(await tokens.decryptToken(row.encrypted_access_token,row.token_iv,env.TOKEN_ENCRYPTION_KEY));
@@ -145,7 +143,7 @@ async function main(){
     assert.equal(new URL(failed.headers.get('location')).searchParams.get('error'),message);
     assert.equal(failed.status,307);
     assert.deepEqual(diagnostics.at(-1),['[mercadolibre_oauth]',{reason:'connection_failed',stage:'token_exchange',category,status}]);
-    assert.equal(sqlite.prepare("SELECT encrypted_access_token FROM integrations WHERE provider='mercadolibre'").get().encrypted_access_token,originalStoredToken);
+    assert.equal((await sql.get("SELECT encrypted_access_token FROM integrations WHERE provider='mercadolibre'")).encrypted_access_token,originalStoredToken);
   }
   exchangeMode='success';
   assert.equal(await db.saveMercadoLibreConnection({userId:'other-store',sellerId:'999',encryptedToken:'fixture',iv:'fixture',scopes:'read'}),false);
@@ -157,16 +155,16 @@ async function main(){
   assert.equal((await post({...notice,extra:'x'.repeat(9000)})).status,413);
   assert.equal((await post(notice)).status,200);assert.equal((await post(notice)).status,200);
   assert.equal((await post({...notice,_id:'unknown-seller',user_id:555})).status,200);
-  const queued=sqlite.prepare("SELECT * FROM webhook_events WHERE provider='mercadolibre'").all();
+  const queued=(await sql.all("SELECT * FROM webhook_events WHERE provider='mercadolibre'"));
   assert.equal(queued.length,1);assert.equal(queued[0].user_id,'test-store');assert.equal(queued[0].status,'pending');
   assert.ok(!queued[0].payload_json.includes('untrustedRevenue'));
-  assert.equal(sqlite.prepare('SELECT count(*) as total FROM orders').get().total,0);
+  assert.equal((await sql.get('SELECT count(*) as total FROM orders')).total,0);
   assert.equal((await webhook.GET()).status,200);
   assert.ok(diagnostics.length>0);
   for(const [label,detail] of diagnostics){assert.equal(label,'[mercadolibre_oauth]');assert.ok(Object.keys(detail).every(key=>['reason','stage','category','status'].includes(key)));}
   assert.ok(!JSON.stringify(diagnostics).includes('test-code'));
   assert.ok(!JSON.stringify(diagnostics).includes(env.MELI_APP_SECRET));
   assert.ok(!JSON.stringify(diagnostics).includes('unsafe-fixture-secret-body'));
-  console.log('PASS: real Vinext cookie roundtrip, OAuth security, encrypted tokens, replay prevention, tenant isolation and webhooks; 13 token rejection/transport fixtures with sanitized diagnostics and unchanged saved credentials; no live network or store mutation.');
+  console.log('PASS: real Next.js cookie roundtrip, OAuth security, encrypted tokens, replay prevention, tenant isolation and webhooks; 13 token rejection/transport fixtures with sanitized diagnostics and unchanged saved credentials; no live network or store mutation.');
 }
-main().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>{global.fetch=originalFetch;console.warn=originalWarn;sqlite.close();});
+main().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{global.fetch=originalFetch;console.warn=originalWarn;await sql?.close();});
