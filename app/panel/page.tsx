@@ -350,13 +350,6 @@ function PanelApp() {
   const [paletteOpen,setPaletteOpen]=useState(false);
   const [paletteQuery,setPaletteQuery]=useState('');
   const [paletteIndex,setPaletteIndex]=useState(0);
-  const anyMenuOpen=periodOpen||customRangeOpen||currencyOpen||languageOpen||dashboardMenuOpen||profileOpen;
-  useEffect(()=>{
-    if(!anyMenuOpen)return;
-    const outside=(event:PointerEvent)=>{const target=event.target as Element|null;if(target?.closest('.p-ctrl,.p-datePanel,.p-selectMenu'))return;setPeriodOpen(false);setCustomRangeOpen(false);setCurrencyOpen(false);setLanguageOpen(false);setDashboardMenuOpen(false);setProfileOpen(false);};
-    document.addEventListener('pointerdown',outside);
-    return()=>document.removeEventListener('pointerdown',outside);
-  },[anyMenuOpen]);
   useEffect(()=>{const open=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();setPaletteQuery('');setPaletteIndex(0);setPaletteOpen(true);}};window.addEventListener('keydown',open);return()=>window.removeEventListener('keydown',open);},[]);
   const toolbarRef=useRef<HTMLElement>(null);
   const [notice,setNotice]=useState('');
@@ -699,8 +692,8 @@ function PanelApp() {
   useEffect(()=>{
     if (!periodOpen&&!customRangeOpen&&!currencyOpen&&!languageOpen&&!dashboardMenuOpen&&!profileOpen) return;
     const close=()=>{setPeriodOpen(false);setCustomRangeOpen(false);setCurrencyOpen(false);setLanguageOpen(false);setDashboardMenuOpen(false);setProfileOpen(false);};
-    const outside=(event:PointerEvent)=>{if(event.target instanceof Node&&!toolbarRef.current?.contains(event.target))close();};
-    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){const trigger=toolbarRef.current?.querySelector<HTMLButtonElement>('button[aria-expanded="true"]');close();trigger?.focus();}};
+    const outside=(event:PointerEvent)=>{if(event.target instanceof Element&&event.target.closest('.p-datePanel,.p-selectMenu'))return;if(event.target instanceof Node&&!toolbarRef.current?.contains(event.target))close();};
+    const escape=(event:KeyboardEvent)=>{if(event.target instanceof Element&&event.target.closest('.p-datePanel,.p-selectMenu'))return;if(event.key==='Escape'){const trigger=toolbarRef.current?.querySelector<HTMLButtonElement>('button[aria-expanded="true"]');close();trigger?.focus();}};
     document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);
     return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};
   },[periodOpen,customRangeOpen,currencyOpen,languageOpen,dashboardMenuOpen,profileOpen]);

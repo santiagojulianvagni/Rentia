@@ -220,3 +220,5 @@
 .p-dateFoot{display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid #1a2e43}
 .p-dateFoot button{padding:6px 10px;border:0;border-radius:8px;background:none;color:#21d4c2;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
 .p-dateFoot button:hover{background:#13253a}
+.p-dateHead b{display:inline-block;text-transform:none}
+.p-dateHead b::first-letter{text-transform:uppercase}
