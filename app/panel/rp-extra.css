@@ -277,3 +277,8 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-clampWrap{display:inline-grid;grid-template-columns:minmax(0,1fr);gap:1px;width:auto}
 .p-root .p-clampMore{justify-self:start}
 .p-root .p-clampWrap{width:min(340px,46vw)}
+.p-root .p-showSm{display:none}
+@media (max-width:900px){.p-root .p-showSm{display:block}}
+.p-root .p-menuSeg{display:flex;gap:4px;padding:2px 8px 8px}
+.p-root .p-menu .p-menuSeg button{flex:1;justify-content:center;height:34px;padding:0;border:1px solid var(--line);border-radius:9px;font-weight:700}
+.p-root .p-menu .p-menuSeg button.p-on{border-color:var(--cyan);background:rgba(33,212,194,.1);color:var(--cyan)}
