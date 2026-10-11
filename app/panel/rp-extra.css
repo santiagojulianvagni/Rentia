@@ -171,3 +171,7 @@
 .p-root input[type=range]{cursor:pointer}
 .p-root input[type=range][data-dragging=true]::-webkit-slider-thumb{transform:scale(1.12)}
 @media (max-width:760px){.p-root .p-cfgRow{grid-template-columns:1fr}.p-root .p-rates{grid-template-columns:repeat(2,1fr)}}
+.p-root .p-eyebrow{display:flex;align-items:center;gap:6px}
+.p-root .p-eyebrow .p-mini{margin:0}
+.p-root .p-warnLine svg{display:inline-block}
+@media (max-width:560px){.p-root .p-crumbs{display:none}.p-root .p-g4{grid-template-columns:repeat(2,minmax(0,1fr))}.p-root .p-mSection .p-g4{grid-template-columns:1fr}}
