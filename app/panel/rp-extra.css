@@ -88,3 +88,33 @@
 .p-root .p-soon .p-ring{margin:0 auto 18px}
 .p-root tr.p-click:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px}
 .p-root .p-btn.p-spin svg{animation:p-rot 1s linear infinite}
+.p-root .p-g6{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media (max-width:1280px){.p-root .p-g6{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){.p-root .p-g6{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.p-root .p-eyebrow .p-mini{width:16px;height:16px;vertical-align:-3px;margin-right:4px}
+.p-root .p-insight.p-warnInsight{border-color:rgba(245,196,81,.35);background:linear-gradient(160deg,rgba(245,196,81,.07),var(--surface2))}
+.p-root .p-integCard .p-meta>b{font-size:15px}
+.p-root .p-integCard .p-meta>.p-chip{margin-left:8px;vertical-align:1px}
+.p-root .p-integCard .p-meta small{display:flex;align-items:center;gap:6px;margin-top:4px}
+.p-root .p-integCard .p-actions{align-self:flex-start}
+.p-root .p-integCard .p-linkBtn{margin-top:8px}
+.p-root .p-metaPick{flex-direction:column;align-items:stretch}
+.p-root .p-billDetail td{white-space:normal;background:#0b1828}
+/* Selector de cuenta de Meta con el estilo nuevo */
+.p-root .metaAccountPicker{position:relative;display:grid;gap:6px;min-width:240px}
+.p-root .metaAccountLabel{color:var(--muted);font-size:12px;font-weight:600}
+.p-root .metaAccountTrigger{display:flex;align-items:center;gap:8px;width:100%;height:40px;padding:0 12px;border:1px solid var(--line2);border-radius:11px;background:var(--bg);color:var(--text);font-weight:600;cursor:pointer;transition:border-color .2s}
+.p-root .metaAccountTrigger:hover:not(:disabled){border-color:#36607f}
+.p-root .metaAccountTrigger:disabled{opacity:.5;cursor:not-allowed}
+.p-root .metaAccountTrigger img{width:18px;height:18px;object-fit:contain}
+.p-root .metaAccountTrigger>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.p-root .metaAccountTrigger small{padding:2px 7px;border-radius:99px;background:#16283a;color:var(--muted);font-size:11px}
+.p-root .metaAccountTrigger svg{width:16px;height:16px}
+.p-root .metaAccountOptions{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:40;display:grid;gap:2px;padding:6px;border:1px solid var(--line2);border-radius:14px;background:#0d1a2a;box-shadow:var(--shadow);animation:p-toastIn .2s var(--ease)}
+.p-root .metaAccountOptions button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:9px;background:none;color:#cfdce6;text-align:left;cursor:pointer}
+.p-root .metaAccountOptions button:hover,.p-root .metaAccountOptions button:focus-visible,.p-root .metaAccountOptions button[aria-selected=true]{background:#13253a;color:var(--text);outline:0}
+.p-root .metaAccountOptions button>span:first-child{display:grid;flex:1}
+.p-root .metaAccountOptions small{color:var(--dim);font-size:11px}
+.p-root .metaAccountCurrency{padding:2px 7px;border-radius:99px;background:#16283a;color:var(--muted);font-size:11px}
+.p-root .metaAccountOptions svg{width:16px;height:16px;color:var(--cyan)}
+.p-root .metaAccountCheckSpace{width:16px}

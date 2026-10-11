@@ -1,4 +1,5 @@
 'use client';
+import {Receipt,RefreshCw} from 'lucide-react';
 
 import {useEffect,useRef,useState} from 'react';
 import {meliAutoSyncDue,meliSyncAction,meliSyncMessage,type MeliView} from '../lib/mercadolibre-status';
@@ -66,9 +67,9 @@ export function MercadoLibreIntegration({state,canManage,onBilling}:{state:Retur
   const {view,running,error,run}=state;
   const connected=view?.connection?.status==='connected',reauthorize=view?.connection?.status==='reauthorization_required';
   const action=meliSyncAction(view,running,canManage);
-  return <article className={`mercadoLibreIntegration ${connected?'integrationConnected':''}`}>
-    <span className="integrationLogo ml"><img src="/brands/mercado-libre-icon.png" alt="" aria-hidden="true"/></span>
-    <div><h3>Mercado Libre</h3><p>Ventas, publicaciones, tarifas de venta y costos de envío informados.</p><small aria-live="polite">{error||meliSyncMessage(view)}</small>{view?.connection&&<><ConnectionUpdatedAt value={view.status?.last_completed_at}/><small className="integrationFootnote">Hasta 12 meses de historial inicial · costos por SKU · devoluciones en revisión.</small>{onBilling&&<button className="meliBillingLink" type="button" onClick={onBilling}>Ver desglose de cargos</button>}</>}</div>
-    {view?.connection&&!reauthorize?<div className="integrationActions"><span className="statusPill">{connected?'✓ ':''}{action.badge}</span><button type="button" className="outline" onClick={()=>void run(true)} disabled={action.disabled} aria-busy={action.busy}>{action.label}</button></div>:view?.available&&canManage?<a className="button" href="/api/integrations/mercadolibre/start">{reauthorize?'Volver a autorizar':'Conectar'}</a>:<button disabled>{canManage?'En preparación':'Acceso de consulta'}</button>}
-  </article>;
+  return <div className="p-card p-reveal p-integCard" style={{'--i':1} as React.CSSProperties}><div className="p-integ">
+    <img className="p-logo32 p-lg" src="/brands/mercado-libre-icon.png" alt=""/>
+    <div className="p-meta"><b>Mercado Libre</b>{view?.connection&&!reauthorize&&<span className={`p-chip ${connected?'p-g':'p-a'}`}>{connected?'✓ ':''}{action.badge}</span>}<p>Ventas, publicaciones, tarifas de venta y costos de envío informados.</p><small aria-live="polite">{error||meliSyncMessage(view)}</small>{view?.connection&&<><ConnectionUpdatedAt value={view.status?.last_completed_at}/><small>Hasta 12 meses de historial inicial · costos por SKU · devoluciones en revisión.</small>{onBilling&&<button className="p-linkBtn" type="button" onClick={onBilling}><Receipt className="p-i" aria-hidden="true"/>Ver desglose de cargos</button>}</>}</div>
+    <div className="p-actions">{view?.connection&&!reauthorize?<button type="button" className={`p-btn ${action.busy?'p-spin':''}`} onClick={()=>void run(true)} disabled={action.disabled} aria-busy={action.busy}><RefreshCw className="p-i" aria-hidden="true"/>{action.label}</button>:view?.available&&canManage?<a className="p-btn p-primary" href="/api/integrations/mercadolibre/start">{reauthorize?'Volver a autorizar':'Conectar'}</a>:<button type="button" className="p-btn" disabled>{canManage?'En preparación':'Acceso de consulta'}</button>}</div>
+  </div></div>;
 }
