@@ -42,7 +42,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {/* Rentia's own pages, so every Clerk flow (Google, email links) returns here. */}
-        <ClerkProvider localization={esES} signInUrl="/ingresar" signUpUrl="/registro" signInFallbackRedirectUrl="/onboarding" signUpFallbackRedirectUrl="/onboarding">
+        <ClerkProvider localization={esES} signInUrl="/ingresar" signUpUrl="/registro" signInFallbackRedirectUrl="/onboarding" signUpFallbackRedirectUrl="/onboarding" taskUrls={{'choose-organization':'/onboarding'}}>
           {children}
         </ClerkProvider>
       </body>

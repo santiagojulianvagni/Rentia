@@ -2,7 +2,6 @@
 
 import { useAuth, useClerk, useUser } from '@clerk/nextjs';
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { onboardingRequest, OnboardingRequestError } from '../../lib/onboarding-request';
 
@@ -14,7 +13,6 @@ const tiendanubeLogo=<span className="integrationLogo brandLogo"><img src="/bran
 const mercadoLibreLogo=<span className="integrationLogo brandLogo"><img src="/brands/mercado-libre-icon.png" alt=""/></span>;
 
 export default function Onboarding() {
-  const router=useRouter();
   // A new account's session can be pending until it has an organization;
   // onboarding is where that organization is created, so it counts as signed in.
   const {isLoaded,isSignedIn}=useAuth({treatPendingAsSignedOut:false});
@@ -28,6 +26,7 @@ export default function Onboarding() {
   const [saving,setSaving]=useState(false);
   const [error,setError]=useState('');
   const [attempt,setAttempt]=useState(0);
+  const [signedOut,setSignedOut]=useState(false);
   const bootstrap=useRef<{attempt:number;promise:Promise<BootstrapResult>}|null>(null);
   // Mercado Libre can be connected once its app credentials are configured.
   const [meliAvailable,setMeliAvailable]=useState(false);
@@ -43,7 +42,9 @@ export default function Onboarding() {
 
   useEffect(()=>{
     if (!isLoaded) return;
-    if (!isSignedIn) { router.replace('/registro'); return; }
+    // Después de volver de Google la sesión puede tardar un instante en activarse: esperamos
+    // antes de dar por cerrada la sesión, y no redirigimos solos para no rebotar entre páginas.
+    if (!isSignedIn) { const timer=window.setTimeout(()=>setSignedOut(true),3000); return ()=>window.clearTimeout(timer); }
     let cancelled=false;
     setError('');
     // Reuse the first request across effect replays instead of creating a
@@ -59,11 +60,11 @@ export default function Onboarding() {
     }).catch(reason=>{
       if (cancelled) return;
       if (reason instanceof OnboardingRequestError&&reason.status===409&&reason.code==='store_required') {setName(current=>current||user?.fullName||'');setStep('store');return;}
-      if (reason instanceof OnboardingRequestError&&reason.status===401) {router.replace('/ingresar');return;}
+      if (reason instanceof OnboardingRequestError&&reason.status===401) {setError('Tu sesión todavía no está lista. Tocá Reintentar o volvé a ingresar.');return;}
       setError('No pudimos preparar tu cuenta. Podés reintentar sin volver a registrarte.');
     });
     return ()=>{cancelled=true;};
-  },[isLoaded,isSignedIn,router,setActive,user?.fullName,attempt]);
+  },[isLoaded,isSignedIn,setActive,user?.fullName,attempt]);
 
   async function createStore(event:FormEvent<HTMLFormElement>) {
     event.preventDefault();if (saving) return;setSaving(true);setError('');
@@ -110,6 +111,8 @@ export default function Onboarding() {
     } catch {setError('No pudimos preparar la conexión. Revisá tu conexión y volvé a intentarlo.');}
     finally {setSaving(false);}
   }
+
+  if (step==='checking'&&signedOut&&!isSignedIn) return <main className="onboardingPage"><header className="onboardingNav"><Link className="brand" href="/"><span className="brandMark"><img src="/favicon.svg" alt=""/></span>Rentia</Link><span>Primeros pasos</span></header><section className="onboardingShell onboardingChecking"><h2>Iniciá sesión para seguir</h2><p className="onboardingLead">No encontramos una sesión activa en este navegador.</p><Link className="button" href="/ingresar">Ingresar</Link><Link className="outline" href="/registro">Crear una cuenta</Link></section></main>;
 
   if (step==='checking') return <main className="onboardingPage"><header className="onboardingNav"><Link className="brand" href="/"><span className="brandMark"><img src="/favicon.svg" alt=""/></span>Rentia</Link><span>Preparando tu espacio de trabajo</span></header><section className="onboardingShell onboardingChecking">{!error&&<span className="onboardingSpinner"/>}<h2>{error?'No pudimos preparar tu cuenta':'Preparando tu cuenta…'}</h2>{error&&<><p className="formError" role="alert">{error}</p><button type="button" className="button" onClick={()=>setAttempt(current=>current+1)}>Reintentar</button><Link className="outline" href="/ingresar">Volver al ingreso</Link></>}</section></main>;
 
