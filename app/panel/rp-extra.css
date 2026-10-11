@@ -274,3 +274,5 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-navScroll{min-height:0}
 /* Celular: controles del gráfico a lo ancho */
 @media (max-width:560px){.p-root .p-chanFilter .p-input,.p-root .p-cardHead .p-actions .p-input{width:100%!important}.p-root .p-cardHead .p-actions{width:100%}.p-root .p-cardHead .p-actions .p-tabs{flex:1}.p-root .p-cardHead .p-actions .p-tabs button{flex:1}}
+.p-root .p-clampWrap{display:inline-grid;grid-template-columns:minmax(0,1fr);gap:1px;width:auto}
+.p-root .p-clampMore{justify-self:start}
