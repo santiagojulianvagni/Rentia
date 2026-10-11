@@ -687,12 +687,17 @@ export async function getProductCostRows(userId:string) {
     .bind(userId).all<Record<string,unknown>>();
 }
 
+// One statement per 1,000 variants (array parameters), all in one transaction.
 export async function saveManualProductCosts(userId:string,updates:ProductCostUpdate[]) {
   await ensureSchema();
   const now=new Date().toISOString();
-  const statements=updates.map(update=>database().prepare("UPDATE product_variants SET manual_cost=?,manual_cost_updated_at=? WHERE id=? AND user_id=?")
-    .bind(update.manualCost,update.manualCost===null?null:now,update.variantId,userId));
-  await runInChunks(statements);
+  const statements:Statement[]=[];
+  for (let index=0;index<updates.length;index+=1000) {
+    const chunk=updates.slice(index,index+1000);
+    statements.push(database().prepare("UPDATE product_variants AS pv SET manual_cost=u.cost,manual_cost_updated_at=CASE WHEN u.cost IS NULL THEN NULL ELSE ? END FROM unnest(?::bigint[],?::double precision[]) AS u(id,cost) WHERE pv.id=u.id AND pv.user_id=?")
+      .bind(now,chunk.map(update=>update.variantId),chunk.map(update=>update.manualCost),userId));
+  }
+  await database().batch(statements);
 }
 
 export async function setProductArchived(userId:string,productId:number,archived:boolean) {

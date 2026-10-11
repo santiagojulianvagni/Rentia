@@ -648,10 +648,12 @@ function PanelApp() {
 
   async function saveProductCosts() {
     if(!managementRef.current)return;
-    const updates=costRows.map(row=>{
+    // Only the variants whose cost changed, so large catalogs stay small requests.
+    const updates=costRows.filter(row=>(costDraft[row.variant_id]?.trim()||'')!==(row.manual_cost===null?'':String(row.manual_cost))).map(row=>{
       const value=costDraft[row.variant_id]?.trim()||'';
       return {variantId:row.variant_id,manualCost:value===''?null:parseCost(value)};
     });
+    if (!updates.length) { setCostState('No hay cambios para guardar.'); return; }
     if (updates.some(update=>update.manualCost!==null&&(!Number.isFinite(update.manualCost)||update.manualCost<0))) { setCostState('Revisá los costos ingresados.'); return; }
     setSavingCosts(true);setCostState('Guardando y recalculando ventas anteriores…');
     const response=await fetch('/api/costs/products',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({updates})});
@@ -1342,7 +1344,7 @@ function AdvancedCostRules({rules,paymentMethods,onChanged}:{rules:CostRule[];pa
 
   return <div className="deliveryCustomRules">
     <section className="deliveryBlock" aria-labelledby="custom-payment-title">
-      <div className="deliveryBlockHeading"><div className="deliveryBlockTitle"><span className="deliverySymbol"><CreditCard size={23}/></span><div><span className="deliveryEyebrow">04 · PAGOS PERSONALIZADOS</span><h3 id="custom-payment-title">Una regla para cada medio</h3></div></div><span className="deliveryBadge">Opcional</span></div>
+      <div className="deliveryBlockHeading"><div className="deliveryBlockTitle"><span className="deliverySymbol"><CreditCard size={23}/></span><div><span className="deliveryEyebrow">04 · PAGOS PERSONALIZADOS</span><h3 id="custom-payment-title">Una regla para cada medio</h3></div></div><span className="deliveryBadge">Se guarda al agregar</span></div>
       <p className="deliveryIntro">Para transferencias, pasarelas u otros medios sin cargo exacto ni estimación de Pago Nube. La regla reemplaza la comisión general; no se suma a ella.</p>
       <form className="deliveryRuleForm" onSubmit={addCommission}>
         <fieldset disabled={saving}>

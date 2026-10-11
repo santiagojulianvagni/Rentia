@@ -504,3 +504,6 @@
 @media(max-width:600px){.connectionNotice{align-items:flex-start;flex-wrap:wrap;gap:10px;padding:14px}.connectionNotice>div{flex-basis:calc(100% - 35px)}.connectionNotice button{margin-left:31px}}
 .integrationLogo.brandLogo{padding:8px;background:#fff}.integrationLogo.brandLogo img{width:100%;height:100%;object-fit:contain}
 .metaAccountChoice{display:flex;flex-direction:column;gap:7px;max-width:360px;margin-top:14px}.metaAccountChoice .metaAccountPicker{width:100%}.metaAccountChoice small{color:#7f93a6;font-size:11px;line-height:1.45}
+.costsUnsaved{margin:14px 0 0;padding:11px 14px;border:1px solid #5f4d28;border-radius:11px;background:#211c13;color:#e8d59e;font-size:12px;line-height:1.5}.costsUnsaved b{color:#ffd66d}
+/* The save bar stays in view while editing sections 01-03 of the cost settings. */
+.deliverySave{position:sticky;bottom:14px;z-index:6;padding:14px 18px;border:1px solid #23415a;border-radius:14px;background:rgba(9,20,32,.94);box-shadow:0 12px 34px rgba(0,0,0,.42);backdrop-filter:blur(8px)}

@@ -12,7 +12,7 @@ export const GET=route({},async({user})=>{
   return {products:rows.results};
 });
 
-export const PUT=route({access:'manager',body:z.object({updates:z.array(z.unknown()).max(1000)}),invalidBody:'invalid_updates'},async({user,body})=>{
+export const PUT=route({access:'manager',body:z.object({updates:z.array(z.unknown()).max(20000)}),invalidBody:'invalid_updates'},async({user,body})=>{
   const updates=validate(z.array(CostUpdate),body.updates,'invalid_cost');
   await saveManualProductCosts(user.id,updates);
   return {ok:true,updated:updates.length};
