@@ -16,16 +16,15 @@ export default function SetupChecklist(props:Props) {
   const [expanded,setExpanded]=useState<boolean|null>(null);
   const open=expanded??true;
   if(complete===steps.length)return null;
-  return <section className="setupChecklist" aria-label="Configuración guiada">
-    <button type="button" className="setupChecklistHeading" onClick={()=>setExpanded(!open)} aria-expanded={open} aria-controls="setup-checklist-steps">
-      <span className="setupProgress" style={{background:`conic-gradient(#29cfb7 ${complete/steps.length*360}deg,#213b47 0deg)`}}><span>{complete}<small>/4</small></span></span>
-      <span><small>CONFIGURACIÓN GUIADA</small><strong>Completá la base de tu rentabilidad</strong><em>{`${steps.length-complete} paso${complete===3?'':'s'} pendiente${complete===3?'':'s'} · Meta es opcional`}</em></span>
-      <span className="setupToggle">{open?'Ocultar':'Ver pasos'}<ChevronDown size={17} style={{transform:open?'rotate(180deg)':undefined}}/></span>
-    </button>
-    {open&&<div className="setupChecklistSteps" id="setup-checklist-steps">{steps.map((step,index)=><article className={step.done?'done':''} key={`${step.id}-${index}`}>
-      <div><span className="setupStepIcon">{step.done?<Check size={17}/>:<step.icon size={19}/>}</span><small>{step.optional?'OPCIONAL':`PASO ${index+1}`}</small><span className="setupStepStatus">{step.done?'Listo':'Pendiente'}</span></div>
-      <h3>{step.title}</h3><p>{step.description}</p>
-      <button type="button" onClick={()=>props.onNavigate(step.id)}>{step.action}</button>
-    </article>)}{!props.canManage&&<p className="setupReadOnly">Podés revisar los pasos; para completar cambios, pedile ayuda al propietario o a un administrador.</p>}</div>}
+  return <section className="p-card p-reveal p-setup" aria-label="Configuración guiada">
+    <div className="p-cardHead">
+      <div><span className="p-eyebrowS">CONFIGURACIÓN GUIADA</span><h3>Completá la base de tu rentabilidad</h3>{!props.canManage&&<span className="p-sub">Podés revisar los pasos; para completar cambios, pedile ayuda al propietario o a un administrador.</span>}</div>
+      <div className="p-actions"><b className="p-mono">{complete}<small className="p-sub">/4</small></b><button type="button" className="p-btn p-ghost p-small" onClick={()=>setExpanded(!open)} aria-expanded={open} aria-controls="setup-checklist-steps">{open?'Ocultar':'Ver pasos'}<ChevronDown className="p-i" style={{transform:open?'rotate(180deg)':undefined}} aria-hidden="true"/></button></div>
+    </div>
+    <div className="p-progressLine"><i style={{width:`${complete/steps.length*100}%`}}/></div>
+    {open&&<div className="p-checklist" id="setup-checklist-steps">{steps.map((step,index)=><button type="button" className={`p-task ${step.done?'p-done':''}`} key={`${step.id}-${index}`} onClick={()=>props.onNavigate(step.id)}>
+      <i>{step.done?<Check size={13}/>:<step.icon size={13}/>}</i>
+      <span><b>{step.title}{step.optional&&<small className="p-chip p-n">Opcional</small>}</b><small>{step.description}</small><em className="p-taskCta">{step.done?'Listo':`${step.action} →`}</em></span>
+    </button>)}</div>}
   </section>;
 }

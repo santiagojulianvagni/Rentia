@@ -11,7 +11,7 @@ export function ConnectionNotice({health,onOpen}:{health:ConnectionHealth;onOpen
   if(!health.notice)return null;
   const {kind,title,message}=health.notice;
   const Icon=kind==='import'?CloudDownload:TriangleAlert;
-  return <div className={`connectionNotice ${kind}`} role={kind==='warning'?'alert':'status'}><Icon size={21} aria-hidden="true"/><div><b>{title}</b><p>{message}</p></div><button type="button" onClick={onOpen}>Ver conexiones</button></div>;
+  return <div className={`p-notice p-${kind}`} role={kind==='warning'?'alert':'status'}><Icon className="p-i" aria-hidden="true"/><div><b>{title}</b><p>{message}</p></div><button type="button" className="p-btn p-small" onClick={onOpen}>Ver conexiones</button></div>;
 }
 
 export function ConnectionUpdatedAt({value}:{value:string|null|undefined}) {
