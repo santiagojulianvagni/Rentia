@@ -507,3 +507,4 @@
 .costsUnsaved{margin:14px 0 0;padding:11px 14px;border:1px solid #5f4d28;border-radius:11px;background:#211c13;color:#e8d59e;font-size:12px;line-height:1.5}.costsUnsaved b{color:#ffd66d}
 /* The save bar stays in view while editing sections 01-03 of the cost settings. */
 .deliverySave{position:sticky;bottom:14px;z-index:6;padding:14px 18px;border:1px solid #23415a;border-radius:14px;background:rgba(9,20,32,.94);box-shadow:0 12px 34px rgba(0,0,0,.42);backdrop-filter:blur(8px)}
+.authLegal{margin:14px 4px 0;color:#8ea6b8;font-size:12.5px;line-height:1.55;text-align:center}.authLegal a{color:#21d4c2;text-decoration:underline;text-underline-offset:2px}

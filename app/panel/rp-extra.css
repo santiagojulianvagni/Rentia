@@ -282,3 +282,12 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-menuSeg{display:flex;gap:4px;padding:2px 8px 8px}
 .p-root .p-menu .p-menuSeg button{flex:1;justify-content:center;height:34px;padding:0;border:1px solid var(--line);border-radius:9px;font-weight:700}
 .p-root .p-menu .p-menuSeg button.p-on{border-color:var(--cyan);background:rgba(33,212,194,.1);color:var(--cyan)}
+/* Suscripción: baja y confirmación */
+.p-root .p-btn.p-danger{border-color:transparent;background:var(--coral);color:#fff}
+.p-root .p-btn.p-danger:hover:not(:disabled){background:#ff7d8c}
+.p-root .p-btn.p-dangerGhost{border-color:rgba(255,102,120,.4);background:none;color:#ff8c99}
+.p-root .p-btn.p-dangerGhost:hover{background:rgba(255,102,120,.08)}
+.p-root .p-check{display:flex;align-items:flex-start;gap:10px;margin:14px 0 0;color:#c8d6e2;font-size:13px;line-height:1.5;cursor:pointer}
+.p-root .p-incl li{align-items:flex-start}
+.p-root .p-incl li svg{margin-top:3px}
+.p-root .p-mySub{border-color:var(--line2)}
