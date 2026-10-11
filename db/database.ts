@@ -14,6 +14,7 @@ export type SubscriptionRecord = {
   user_id:string; plan_id:string; requested_plan_id:string|null; status:string; billing_cycle:string;
   trial_ends_at:string; provider:string|null; provider_customer_id:string|null; provider_subscription_id:string|null;
   current_period_start:string|null; current_period_end:string|null; created_at:string; updated_at:string;
+  terms_version?:string|null; terms_accepted_at?:string|null; cancel_at_period_end?:boolean; canceled_at?:string|null; canceled_by?:string|null;
 };
 
 export type SyncedProduct = {
@@ -137,6 +138,10 @@ export async function getOrCreateSubscription(userId:string) {
     await database().prepare("INSERT INTO subscriptions (user_id,plan_id,status,billing_cycle,trial_ends_at,created_at,updated_at) VALUES (?,'free',?,'monthly',?,?,?)")
       .bind(userId,status,trialEndsAt,timestamp,timestamp).run();
     subscription=await database().prepare('SELECT * FROM subscriptions WHERE user_id=?').bind(userId).first<SubscriptionRecord>();
+  } else if (subscription.status==='active'&&subscription.cancel_at_period_end&&subscription.current_period_end&&new Date(subscription.current_period_end).getTime()<=now.getTime()) {
+    await database().prepare("UPDATE subscriptions SET plan_id='free',status='free',requested_plan_id=NULL,provider_subscription_id=NULL,updated_at=? WHERE user_id=?")
+      .bind(now.toISOString(),userId).run();
+    subscription={...subscription,plan_id:'free',status:'free',requested_plan_id:null,provider_subscription_id:null,updated_at:now.toISOString()};
   } else if (subscription.status==='trialing'&&new Date(subscription.trial_ends_at).getTime()<=now.getTime()) {
     await database().prepare("UPDATE subscriptions SET plan_id='free',status='free',updated_at=? WHERE user_id=?")
       .bind(now.toISOString(),userId).run();
@@ -153,12 +158,12 @@ export async function getOrderUsageLast30Days(userId:string) {
   return Number(row?.orders||0);
 }
 
-export async function saveRequestedPlan(userId:string,planId:string,billingCycle:string) {
+export async function saveRequestedPlan(userId:string,planId:string,billingCycle:string,termsVersion:string) {
   const subscription=await getOrCreateSubscription(userId);
   if (!subscription) return null;
   const now=new Date().toISOString();
-  await database().prepare('UPDATE subscriptions SET requested_plan_id=?,billing_cycle=?,updated_at=? WHERE user_id=?')
-    .bind(planId,billingCycle,now,userId).run();
+  await database().prepare('UPDATE subscriptions SET requested_plan_id=?,billing_cycle=?,terms_version=?,terms_accepted_at=?,cancel_at_period_end=FALSE,canceled_at=NULL,canceled_by=NULL,updated_at=? WHERE user_id=?')
+    .bind(planId,billingCycle,termsVersion,now,now,userId).run();
   return database().prepare('SELECT * FROM subscriptions WHERE user_id=?').bind(userId).first<SubscriptionRecord>();
 }
 
@@ -828,4 +833,18 @@ export async function recoverableSkippedOrders(userId:string,provider:string,max
 
 export async function forgetSkippedOrder(userId:string,provider:string,externalOrderId:string) {
   await database().prepare('DELETE FROM skipped_orders WHERE user_id=? AND provider=? AND external_order_id=?').bind(userId,provider,externalOrderId).run();
+}
+
+// Baja pedida por el cliente. Con un plan pago activo, deja de renovarse y sigue hasta el
+// final del período ya pagado. Sin plan pago, se borra la preferencia guardada.
+export async function cancelSubscription(userId:string,actorId:string) {
+  const subscription=await getOrCreateSubscription(userId);
+  if(!subscription)return null;
+  const now=new Date().toISOString();
+  if(subscription.status==='active') {
+    await database().prepare('UPDATE subscriptions SET cancel_at_period_end=TRUE,canceled_at=?,canceled_by=?,updated_at=? WHERE user_id=?').bind(now,actorId,now,userId).run();
+  } else {
+    await database().prepare('UPDATE subscriptions SET requested_plan_id=NULL,canceled_at=?,canceled_by=?,updated_at=? WHERE user_id=?').bind(now,actorId,now,userId).run();
+  }
+  return database().prepare('SELECT * FROM subscriptions WHERE user_id=?').bind(userId).first<SubscriptionRecord>();
 }
