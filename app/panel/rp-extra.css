@@ -222,3 +222,31 @@
 .p-dateFoot button:hover{background:#13253a}
 .p-dateHead b{display:inline-block;text-transform:none}
 .p-dateHead b::first-letter{text-transform:uppercase}
+/* Sin controles genéricos del navegador */
+.p-root input[type=number]{-moz-appearance:textfield;appearance:textfield}
+.p-root input[type=number]::-webkit-inner-spin-button,.p-root input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;appearance:none;margin:0}
+.p-root input::-webkit-calendar-picker-indicator{display:none}
+.p-root input:-webkit-autofill,.p-root input:-webkit-autofill:hover,.p-root input:-webkit-autofill:focus{-webkit-text-fill-color:var(--text);-webkit-box-shadow:0 0 0 1000px var(--bg) inset;caret-color:var(--text);transition:background-color 9999s}
+.p-root input[type=checkbox]{-webkit-appearance:none;appearance:none;display:inline-grid;place-items:center;width:18px;height:18px;flex:0 0 18px;margin:1px 0 0;border:2px solid var(--line2);border-radius:6px;background:var(--bg);cursor:pointer;transition:background .2s,border-color .2s}
+.p-root input[type=checkbox]::after{content:'';width:5px;height:9px;margin-top:-2px;border:solid var(--cyanInk);border-width:0 2px 2px 0;transform:rotate(45deg) scale(0);transition:transform .15s}
+.p-root input[type=checkbox]:checked{border-color:var(--cyan);background:var(--cyan)}
+.p-root input[type=checkbox]:checked::after{transform:rotate(45deg) scale(1)}
+.p-root input[type=checkbox]:focus-visible{outline:0;box-shadow:0 0 0 4px rgba(33,212,194,.2)}
+.p-root .p-input.p-invalid,.p-root .p-range label.p-invalid .p-dateTrigger{border-color:var(--coral)!important;box-shadow:0 0 0 4px rgba(255,102,120,.14)!important}
+.p-root .p-invalidNote{display:block;margin-top:6px;color:#ff8c99;font-size:12px;font-weight:600}
+.p-root .p-invalidNote::before{content:'! ';font-weight:800}
+/* Confirmaciones */
+dialog.p-confirm{width:min(440px,calc(100% - 32px));padding:0;border:1px solid #264560;border-radius:18px;background:#0b1726;color:#f2f7fb;box-shadow:0 24px 60px rgba(0,0,0,.55);font-family:var(--font-geist-sans),system-ui,sans-serif;animation:pSelectIn .22s cubic-bezier(.2,.8,.2,1)}
+dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
+.p-confirmBody{padding:22px 22px 6px}
+.p-confirmBody h3{margin:0 0 8px;font-size:17px;letter-spacing:-.01em}
+.p-confirmBody p{margin:0;color:#9bb0c1;font-size:13.5px;line-height:1.55}
+.p-confirmFoot{display:flex;justify-content:flex-end;gap:8px;padding:18px 22px 20px}
+.p-confirmFoot button{height:40px;padding:0 16px;border-radius:11px;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer;transition:background .2s,border-color .2s}
+.p-confirmCancel{border:1px solid transparent;background:none;color:#9bb0c1}
+.p-confirmCancel:hover{color:#f2f7fb;background:#13233a}
+.p-confirmOk{border:1px solid transparent;background:#21d4c2;color:#041716}
+.p-confirmOk:hover{background:#3fe0ce}
+.p-confirmOk.p-danger{background:#ff6678;color:#fff}
+.p-confirmOk.p-danger:hover{background:#ff7d8c}
+.p-confirmFoot button:focus-visible{outline:2px solid #21d4c2;outline-offset:2px}

@@ -1,6 +1,7 @@
 'use client';
 
 import RpSelect from './panel/rp-select';
+import {confirmDialog} from './panel/rp-confirm';
 import {useEffect,useState} from 'react';
 
 type Entry={revenue_date:string;order_count:number;revenue:number};
@@ -33,9 +34,9 @@ export default function ExternalRevenue({onChanged,canManage,money}:Props) {
       }).catch(()=>{if(!controller.signal.aborted){setRows([]);setLoadFailed(true);setState('No pudimos cargar este mes. Reintentá para ver y editar sus valores.');setLoading(false);}});
     return()=>controller.abort();
   },[month,retry]);
-  function selectMonth(next:string) {
+  async function selectMonth(next:string) {
     if(saving||next===month)return;
-    if(dirty&&!window.confirm('Tenés cambios sin guardar en este mes. ¿Querés cambiar de mes y descartarlos?'))return;
+    if(dirty&&!await confirmDialog({title:'Tenés cambios sin guardar en este mes',message:'¿Querés cambiar de mes y descartarlos?',confirmLabel:'Descartar y cambiar',cancelLabel:'Seguir editando',danger:true}))return;
     setLoading(true);setDirty(false);setMonth(next);
   }
   function update(index:number,field:'order_count'|'revenue',value:string) {
