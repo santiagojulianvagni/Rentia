@@ -76,7 +76,7 @@ export const landingProducts = [
     questions: [
       ['¿Por qué el ROAS de Meta y el total son distintos?', 'Meta atribuye ventas según sus reglas. La referencia total compara la facturación de tu tienda con la inversión. No miden exactamente lo mismo y ninguna relación equivale por sí sola a ganancia.'],
       ['¿Rentia cambia mis campañas?', 'No. Esta sección muestra y compara la información para ayudarte a analizarla; no modifica automáticamente los anuncios ni sus presupuestos.'],
-      ['¿Puedo conectar Google Ads o TikTok hoy?', 'La conexión publicitaria disponible actualmente es Meta Ads. No mostramos otras plataformas como activas antes de que estén listas.'],
+      ['¿Puedo conectar Google Ads o TikTok hoy?', 'Hoy podés conectar Meta Ads y Product Ads de Mercado Libre. No mostramos otras plataformas como activas antes de que estén listas.'],
     ],
   },
 ] as const;
