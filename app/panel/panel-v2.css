@@ -86,7 +86,7 @@ html:has(.appPage){scrollbar-color:#274660 #07111f}
 .appPage .metricCard>strong{margin:10px 0 6px!important;font-family:var(--font-geist-mono),ui-monospace,monospace;font-size:24px!important;font-weight:600!important;letter-spacing:-.03em;font-feature-settings:'tnum';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .appPage .metricCard>i{color:var(--p-dim)!important;font-size:11px!important;font-style:normal;opacity:0;transform:translateY(4px);transition:.25s}
 .appPage .metricCard:hover>i{opacity:1;transform:none;color:var(--cyan)!important}
-.appPage .metricCard .p2Spark{position:absolute;top:46px;right:16px;width:72px;height:28px;opacity:.85;pointer-events:none}.appPage .metricCard>strong{padding-right:84px}
+.appPage .metricCard .p2Spark{position:absolute;top:46px;right:16px;width:72px;height:28px;opacity:.85;pointer-events:none}.appPage .metricCard:has(.p2Spark)>strong{padding-right:84px}
 .appPage .metricCard .p2Spark path{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:p2Draw 1.2s .2s var(--p-ease) forwards}
 .appPage .positiveProfit{color:var(--cyan)!important}
 .appPage .negativeProfit{color:#ff8c99!important}
