@@ -14,12 +14,12 @@ export default function OrderPagination({total,page,onChange,position}:{total:nu
   if(!total)return null;
   const number=(value:number)=>value.toLocaleString('es-AR');
   const visible=[...new Set([1,current-1,current,current+1,pages])].filter(value=>value>=1&&value<=pages).sort((a,b)=>a-b);
-  return <nav className="orderPagination" aria-label={`Páginas de órdenes · ${position==='top'?'arriba':'abajo'}`}>
-    <div className="orderPageCount"><strong>{number(start+1)}–{number(end)} <span>de {number(total)} órdenes</span></strong><small>Hasta 100 órdenes por página</small></div>
-    <div className="orderPageControls">
-      <button type="button" disabled={current===1} onClick={()=>onChange(current-1)}>Anterior</button>
-      <div className="orderPageNumbers">{visible.map((value,index)=><span key={value}>{index>0&&value-visible[index-1]>1&&<span className="orderPageEllipsis" aria-hidden="true">…</span>}<button type="button" className={value===current?'active':''} aria-label={`Página ${value}`} aria-current={value===current?'page':undefined} onClick={()=>onChange(value)}>{value}</button></span>)}</div>
-      <button type="button" disabled={current===pages} onClick={()=>onChange(current+1)}>Siguiente</button>
+  return <nav className={`p-pager ${position==='top'?'p-pagerTop':'p-pagerBottom'}`} aria-label={`Páginas de órdenes · ${position==='top'?'arriba':'abajo'}`}>
+    <span>{number(start+1)}–{number(end)} de {number(total)} órdenes · hasta 100 por página</span>
+    <div className="p-pages">
+      <button type="button" disabled={current===1} onClick={()=>onChange(current-1)} aria-label="Página anterior">‹</button>
+      {visible.map((value,index)=><span key={value} style={{display:'contents'}}>{index>0&&value-visible[index-1]>1&&<span className="p-ellipsis" aria-hidden="true">…</span>}<button type="button" className={value===current?'p-on':''} aria-label={`Página ${value}`} aria-current={value===current?'page':undefined} onClick={()=>onChange(value)}>{value}</button></span>)}
+      <button type="button" disabled={current===pages} onClick={()=>onChange(current+1)} aria-label="Página siguiente">›</button>
     </div>
   </nav>;
 }

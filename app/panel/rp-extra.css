@@ -72,3 +72,19 @@
 .p-root a.p-btn{text-decoration:none}
 .p-root .p-empty svg{color:var(--green)}
 .p-root .p-kv a{font-weight:600}
+.p-root .p-drawer{z-index:61}
+.p-root .p-orderDetail .p-kv small{display:block}
+.p-root .p-orderLine{padding-bottom:6px;border-bottom:1px solid #142638}
+.p-root .p-orderLine .p-kv{border-bottom:0}
+.p-root .p-lineCost{margin:2px 0 6px}
+.p-root .p-lineCostForm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.p-root .p-lineCostForm small{flex-basis:100%;font-size:11.5px}
+.p-root .p-claims{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.p-root .p-field .p-fieldLabel{color:var(--muted);font-size:12.5px;font-weight:600}
+.p-root .p-subcard .p-actions{margin-top:10px}
+.p-root .p-ellipsis{display:grid;place-items:center;min-width:20px;color:var(--dim)}
+.p-root .p-pagerTop{margin:0 0 10px}
+.p-root .p-soonIcon{width:40px;height:40px;margin-bottom:12px;color:var(--cyan)}
+.p-root .p-soon .p-ring{margin:0 auto 18px}
+.p-root tr.p-click:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px}
+.p-root .p-btn.p-spin svg{animation:p-rot 1s linear infinite}
