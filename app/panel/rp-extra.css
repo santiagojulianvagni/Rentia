@@ -291,3 +291,15 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-incl li{align-items:flex-start}
 .p-root .p-incl li svg{margin-top:3px}
 .p-root .p-mySub{border-color:var(--line2)}
+
+/* Órdenes: mientras se busca o se cambia de página, la tabla queda visible y atenuada. */
+.p-root .p-tableWrap{transition:opacity .15s ease}
+.p-root .p-tableWrap.p-updating{opacity:.55;transition-delay:.2s}
+
+/* Plan: referencia del precio en pesos al dólar oficial. */
+.p-root .p-arsRef{margin:6px 0 0;font-size:12.5px;color:var(--muted)}
+.p-root .p-arsRef b{color:var(--text);font-weight:600}
+.p-arsCalc{display:grid;gap:3px;margin:0 0 16px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:rgba(33,212,194,.06)}
+.p-arsCalc span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan)}
+.p-arsCalc b{font-size:15px;color:var(--text)}
+.p-arsCalc small{color:var(--muted);font-size:12px;line-height:1.45}

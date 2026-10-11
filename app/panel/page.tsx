@@ -848,6 +848,8 @@ function SubscriptionSection() {
   const [saving,setSaving]=useState<string|null>(null);
   const [pendingPlan,setPendingPlan]=useState<string|null>(null);
   const [cancelOpen,setCancelOpen]=useState(false);
+  const [officialRate,setOfficialRate]=useState<{sell:number;updatedAt:string|null}|null>(null);
+  useEffect(()=>{fetch('/api/finance/live-rates',{cache:'no-store'}).then(response=>response.ok?response.json() as Promise<LiveRates>:null).then(data=>{const quote=data?.quotes?.official;if(quote?.sell)setOfficialRate({sell:quote.sell,updatedAt:quote.updatedAt});}).catch(()=>undefined);},[]);
 
   async function loadSubscription() {
     try {
@@ -891,10 +893,10 @@ function SubscriptionSection() {
         {data.canManage&&!(paid&&sub.cancelAtPeriodEnd)&&<button type="button" className="p-btn p-dangerGhost" onClick={()=>setCancelOpen(true)}>{paid?'Dar de baja':'Quitar mi elección'}</button>}</div>
       <p className="p-sub" style={{margin:0,fontSize:12.5}}>Darte de baja es inmediato y sin penalidades: lo hacés vos desde acá, sin llamar ni escribir a nadie. Los detalles están en los <a href="/terminos" target="_blank" rel="noopener noreferrer" style={{color:'var(--cyan)'}}>Términos y condiciones</a>.</p>
     </div>;})()}
-    <PlanConfigurator plans={data.plans} initialPlanId={requested||data.recommendation.id} recommendedPlanId={data.recommendation.id} usageOrders={data.usage.orders} annual={annual} onAnnualChange={setAnnual} onChoose={planId=>setPendingPlan(planId)} currentPlanId={trial?undefined:data.subscription.planId} requestedPlanId={requested} requestedBillingCycle={data.subscription.billingCycle} savingPlanId={saving} canManage={data.canManage}/>
+    <PlanConfigurator plans={data.plans} initialPlanId={requested||data.recommendation.id} recommendedPlanId={data.recommendation.id} usageOrders={data.usage.orders} annual={annual} onAnnualChange={setAnnual} onChoose={planId=>setPendingPlan(planId)} currentPlanId={trial?undefined:data.subscription.planId} requestedPlanId={requested} requestedBillingCycle={data.subscription.billingCycle} savingPlanId={saving} canManage={data.canManage} officialRate={officialRate}/>
     <div className="p-grid p-g3" style={{marginBottom:16}}>{([[ShieldCheck,'14 días de prueba','Acceso completo, sin tarjeta.'],[CalendarDays,'Renovación transparente','Vas a ver el monto antes de pagar.'],[Coins,'Sin costos escondidos','El precio depende del volumen.']] as const).map(([Icon,title,detail],index)=><div className="p-card p-reveal p-roleCard" style={{'--i':index} as React.CSSProperties} key={title}><Icon className="p-i" aria-hidden="true"/><div><b>{title}</b><p className="p-sub">{detail}</p></div></div>)}</div>
     <div className="p-card p-reveal" aria-labelledby="billing-roadmap-title"><div className="p-grid p-g2"><div><span className="p-eyebrowS">PRÓXIMO PASO</span><h3 id="billing-roadmap-title" style={{margin:'4px 0 6px'}}>Cobros simples dentro de Rentia</h3><p className="p-sub">La opción recomendada para comenzar en Argentina es integrar pagos recurrentes. Hasta que esté conectada, esta pantalla solo guarda tu preferencia y no solicita una tarjeta.</p><div className="p-note" style={{margin:0}}><CreditCard className="p-i" aria-hidden="true"/> <b>Integración de cobro pendiente</b> · Ningún plan genera cargos hoy</div></div><div>{([['Elegís el plan','Según el volumen real de tu tienda.'],['Confirmás el pago','En un checkout seguro y fuera de Rentia.'],['Rentia se actualiza','Plan, vencimiento y estado quedan sincronizados.']] as const).map(([title,detail],index)=><div className="p-stepRow" key={title}><span>{index+1}</span><div><b>{title}</b><small>{detail}</small></div></div>)}</div></div></div>
-    {pendingPlan&&(()=>{const plan=data.plans.find(item=>item.id===pendingPlan);return plan?<ConfirmPlanDialog plan={plan} annual={annual} saving={saving===plan.id} onConfirm={()=>void choosePlan(plan.id)} onClose={()=>setPendingPlan(null)}/>:null;})()}
+    {pendingPlan&&(()=>{const plan=data.plans.find(item=>item.id===pendingPlan);return plan?<ConfirmPlanDialog plan={plan} annual={annual} saving={saving===plan.id} officialRate={officialRate} onConfirm={()=>void choosePlan(plan.id)} onClose={()=>setPendingPlan(null)}/>:null;})()}
     {cancelOpen&&<CancelSubscriptionDialog planName={(data.plans.find(plan=>plan.id===(data.subscription.status==='active'?data.subscription.planId:requested))||data.currentPlan).name} paid={data.subscription.status==='active'} periodEnd={data.subscription.currentPeriodEnd??null} onClose={()=>setCancelOpen(false)} onDone={result=>{setCancelOpen(false);if(result.subscription)setData(result as SubscriptionData);setMessage(result.message||'Baja confirmada.');}}/>}
   </section>;
 }
@@ -1379,8 +1381,11 @@ function OrdersSection({orders:recentOrders,days,range,refreshKey,period,syncing
   useEffect(()=>{const params=new URLSearchParams(window.location.search),id=params.get('order'),provider=params.get('provider');if(id){setQuery(id);if(provider==='tiendanube'||provider==='mercadolibre')setExpandedOrder(`${provider}:${id}`);}},[setExpandedOrder]);
   const [total,setTotal]=useState(0);
   const [loading,setLoading]=useState(true);
+  const [updating,setUpdating]=useState(false);
   const [loadError,setLoadError]=useState('');
   const [reload,setReload]=useState(0);
+  const loadedRef=useRef(false);
+  const requestKeyRef=useRef('');
   useEffect(()=>{
     if(loading||scrolledToReview.current||!window.location.hash.startsWith('#meli-review-'))return;
     const target=document.getElementById(window.location.hash.slice(1));
@@ -1388,20 +1393,24 @@ function OrdersSection({orders:recentOrders,days,range,refreshKey,period,syncing
     const frame=requestAnimationFrame(()=>{target.scrollIntoView({block:'start'});scrolledToReview.current=true;});
     return()=>cancelAnimationFrame(frame);
   },[loading,orders,expandedOrder]);
+  // La actualización automática del panel (cada 30 s) recarga la lista en silencio: las
+  // órdenes visibles no se borran. Buscar o cambiar de página atenúa la tabla mientras carga.
   useEffect(()=>{
-    setLoading(true);setLoadError('');
+    const requestKey=JSON.stringify([query,page,period,days,range,reload]);
+    const background=loadedRef.current&&requestKeyRef.current===requestKey;
+    requestKeyRef.current=requestKey;
+    if(!background){setLoadError('');if(loadedRef.current)setUpdating(true);else setLoading(true);}
     const controller=new AbortController();
     const timer=window.setTimeout(async()=>{
-      setLoading(true);setLoadError('');
       try {
         const params=new URLSearchParams(analyticsQuery(days,range));params.set('page',String(page));params.set('q',query);
         const response=await fetch(`/api/orders?${params}`,{signal:controller.signal});
         if(!response.ok)throw new Error('orders_unavailable');
         const data=await response.json() as {orders:OrderRow[];pagination:{total:number;page:number}};
-        if(!controller.signal.aborted){setOrders(data.orders);setTotal(data.pagination.total);if(data.pagination.page!==page)setPage(data.pagination.page);}
-      }catch{if(!controller.signal.aborted)setLoadError('No pudimos cargar las órdenes. No se muestran resultados parciales.');}
-      finally{if(!controller.signal.aborted)setLoading(false);}
-    },250);
+        if(!controller.signal.aborted){loadedRef.current=true;setLoadError('');setOrders(data.orders);setTotal(data.pagination.total);if(data.pagination.page!==page)setPage(data.pagination.page);}
+      }catch{if(!controller.signal.aborted&&!background)setLoadError('No pudimos cargar las órdenes. No se muestran resultados parciales.');}
+      finally{if(!controller.signal.aborted){setLoading(false);setUpdating(false);}}
+    },background?0:250);
     return()=>{controller.abort();window.clearTimeout(timer);};
   },[query,page,period,days,range,refreshKey,reload]);
   const refreshOrders=async()=>{setReload(value=>value+1);await onRefresh();};
@@ -1442,7 +1451,7 @@ function OrdersSection({orders:recentOrders,days,range,refreshKey,period,syncing
   const {current}=orderPageWindow(total,page);
   const visibleOrders=orders;
   function changePage(next:number,fromBottom=false) {
-    setLoading(true);setPage(next);setExpandedOrder(null);
+    setPage(next);setExpandedOrder(null);
     if(fromBottom)tableStart.current?.scrollIntoView({block:'start'});
   }
   const exportOrders=()=>{const params=new URLSearchParams(analyticsQuery(days,range));params.set('q',query);window.location.href=`/api/orders/export?${params}`;};
@@ -1462,7 +1471,7 @@ function OrdersSection({orders:recentOrders,days,range,refreshKey,period,syncing
     {(total>0||query||recentOrders.length||loading||loadError)?<>
       <div className="p-toolbar"><label className="p-search"><Search className="p-i" aria-hidden="true"/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Buscar por orden o medio de pago" aria-label="Buscar por orden o medio de pago"/></label><span className="p-sub">{total.toLocaleString('es-AR')} órdenes</span><button type="button" className="p-btn" style={{marginLeft:'auto'}} onClick={exportOrders} disabled={loading||Boolean(loadError)}><Download className="p-i" aria-hidden="true"/>Exportar CSV</button></div>
       <div ref={tableStart}><OrderPagination total={total} page={current} onChange={next=>changePage(next)} position="top"/></div>
-      {loading?<div className="p-empty" role="status">Cargando órdenes…</div>:loadError?<div className="p-empty" role="alert">{loadError} <button type="button" className="p-btn p-small" onClick={()=>setReload(value=>value+1)}>Reintentar</button></div>:<div className="p-tableWrap p-reveal"><table>
+      {loading?<div className="p-empty" role="status">Cargando órdenes…</div>:loadError?<div className="p-empty" role="alert">{loadError} <button type="button" className="p-btn p-small" onClick={()=>setReload(value=>value+1)}>Reintentar</button></div>:<div className={`p-tableWrap p-reveal ${updating?'p-updating':''}`} aria-busy={updating}><table>
         <thead><tr><th>Orden</th><th>Origen / fecha</th><th>Pago</th><th className="p-r">Venta</th><th className="p-r">Costos</th><th className="p-r">Ganancia</th><th>Datos</th></tr></thead>
         <tbody>{visibleOrders.map(order=>{const key=orderKey(order);const review=orderReturnNeedsReview(order);const [stateLabel,stateTone]=orderState(order);return <tr key={key} className={`p-click ${expandedOrder===key?'p-openRow':''}`} onClick={()=>setExpandedOrder(expandedOrder===key?null:key)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();setExpandedOrder(expandedOrder===key?null:key);}}} tabIndex={0} aria-expanded={expandedOrder===key} aria-label={`Ver detalle de la orden ${order.order_number||order.external_order_id}`}>
           <td><b>#{order.order_number||order.external_order_id}</b>{order.items[0]&&<><br/><small className="p-sub">{order.items[0].name}{order.items.length>1?` +${order.items.length-1}`:''}</small></>}</td>

@@ -18,12 +18,17 @@ type Props={
   savingPlanId?:string|null;
   canManage?:boolean;
   publicPricing?:boolean;
+  officialRate?:OfficialRate|null;
 };
+
+export type OfficialRate={sell:number;updatedAt:string|null};
+export const formatArs=(value:number)=>new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(Math.round(value));
+export const rateDate=(value:string|null)=>value?new Intl.DateTimeFormat('es-AR',{day:'numeric',month:'numeric'}).format(new Date(value)):null;
 
 const formatNumber=(value:number)=>new Intl.NumberFormat('es-AR',{minimumFractionDigits:Number.isInteger(value)?0:2,maximumFractionDigits:2}).format(value);
 const capacity=(plan:RentiaPlan)=>plan.orders===null?'Más de 10.000':`Hasta ${formatNumber(plan.orders)}`;
 
-export default function PlanConfigurator({plans,initialPlanId='growth',recommendedPlanId,usageOrders,annual,onAnnualChange,onChoose,currentPlanId,requestedPlanId,requestedBillingCycle,savingPlanId,canManage=true,publicPricing=false}:Props) {
+export default function PlanConfigurator({plans,initialPlanId='growth',recommendedPlanId,usageOrders,annual,onAnnualChange,onChoose,currentPlanId,requestedPlanId,requestedBillingCycle,savingPlanId,canManage=true,publicPricing=false,officialRate=null}:Props) {
   const initialIndex=Math.max(0,plans.findIndex(plan=>plan.id===initialPlanId));
   const [sliderPosition,setSliderPosition]=useState(initialIndex);
   const [dragging,setDragging]=useState(false);
@@ -69,6 +74,7 @@ export default function PlanConfigurator({plans,initialPlanId='growth',recommend
             <h3 style={{fontSize:24,margin:'8px 0 2px'}}>{plan.name}</h3><p className="p-sub" style={{margin:'0 0 10px'}}>{plan.description}</p>
             <div aria-live="polite" aria-atomic="true">{quote.monthlyEquivalent===null?<b className="p-mono" style={{fontSize:32}}>A medida</b>:<><b className="p-mono" style={{fontSize:32}}>USD {formatNumber(quote.monthlyEquivalent)}</b><span className="p-sub"> / mes{annual?' · equivalente anual':''}</span></>}</div>
             <p className="p-sub" style={{margin:'2px 0 0'}}>{quote.monthlyEquivalent===null?'Una propuesta pensada para tu operación.':quote.total===0?'Sin costo. Sin tarjeta.':annual?<>USD {formatNumber(quote.total!)} facturados al año · <b style={{color:'var(--green)'}}>Ahorrás USD {formatNumber(quote.savings)}</b></>:'Facturación mensual. Precio expresado en USD.'}</p>
+            {officialRate&&quote.total?<p className="p-arsRef">Hoy serían <b>ARS {formatArs(quote.total*officialRate.sell)}</b> {annual?'por año':'por mes'} · dólar oficial ${formatArs(officialRate.sell)}{rateDate(officialRate.updatedAt)?` del ${rateDate(officialRate.updatedAt)}`:''}. Se cobra a la cotización del día de cada cobro.</p>:null}
             <div className="p-kv" style={{marginTop:12}}><span>Órdenes por mes</span><b>{plan.orders===null?'+10.000':formatNumber(plan.orders)}</b></div><div className="p-kv"><span>Usuarios</span><b>{plan.users===null?'A medida':plan.users}</b></div><div className="p-kv"><span>Historial inicial</span><b>{plan.history}</b></div>
           </div>
           <small className="p-sub" style={{display:'block',margin:'8px 0'}}>El cupo incluye al propietario. Cada invitación pendiente reserva un lugar hasta que se acepta, vence o se cancela.</small>

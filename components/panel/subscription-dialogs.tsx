@@ -5,19 +5,21 @@ import { useReverification } from '@clerk/nextjs';
 import { isReverificationCancelledError } from '@clerk/nextjs/errors';
 import { CalendarDays, ShieldCheck, X } from 'lucide-react';
 import { SUBSCRIPTION_SUMMARY } from '../../lib/terms';
+import { formatArs, rateDate, type OfficialRate } from '../plan-configurator';
 
 type Plan={id:string;name:string;monthlyPrice:number|null};
 const usd=(value:number)=>new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(value);
 const longDate=(value:string|null|undefined)=>value?new Intl.DateTimeFormat('es-AR',{dateStyle:'long'}).format(new Date(value)):null;
 
 // Paso previo a elegir un plan: resumen de cómo se cobra y aceptación de los términos.
-export function ConfirmPlanDialog({plan,annual,saving,onConfirm,onClose}:{plan:Plan;annual:boolean;saving:boolean;onConfirm:()=>void;onClose:()=>void}) {
+export function ConfirmPlanDialog({plan,annual,saving,officialRate=null,onConfirm,onClose}:{plan:Plan;annual:boolean;saving:boolean;officialRate?:OfficialRate|null;onConfirm:()=>void;onClose:()=>void}) {
   const [accepted,setAccepted]=useState(false);
   const price=plan.monthlyPrice===null?null:annual?plan.monthlyPrice*10:plan.monthlyPrice;
   return <><button type="button" className="p-scrim p-open" onClick={onClose} aria-label="Cerrar"/>
     <div className="p-modal p-open" role="dialog" aria-modal="true" aria-labelledby="confirm-plan-title">
       <div className="p-drawerHead"><div><span className="p-eyebrowS">CONFIRMAR PLAN</span><h3 id="confirm-plan-title">{plan.name} · {annual?'anual':'mensual'}</h3><span className="p-sub">{price===null?'Precio a medida':`USD ${usd(price)} ${annual?'por año':'por mes'}, cobrado en pesos al dólar oficial del día`}</span></div><button type="button" className="p-iconBtn" onClick={onClose} aria-label="Cerrar"><X className="p-i" aria-hidden="true"/></button></div>
       <div className="p-drawerBody">
+        {price!==null&&officialRate&&<div className="p-arsCalc"><span>Referencia de hoy</span><b className="p-mono">USD {usd(price)} × ${formatArs(officialRate.sell)} = ARS {formatArs(price*officialRate.sell)}</b><small>Dólar oficial, venta{rateDate(officialRate.updatedAt)?`, del ${rateDate(officialRate.updatedAt)}`:''}. Cada cobro usa la cotización de ese día, así que el monto en pesos puede variar.</small></div>}
         <b style={{display:'block',marginBottom:8}}>Antes de confirmar</b>
         <ul className="p-incl">{SUBSCRIPTION_SUMMARY.map(item=><li key={item}><ShieldCheck aria-hidden="true"/>{item}</li>)}</ul>
         <label className="p-check"><input type="checkbox" checked={accepted} onChange={event=>setAccepted(event.target.checked)}/> <span>Leí y acepto los <a href="/terminos" target="_blank" rel="noopener noreferrer" style={{color:'var(--cyan)'}}>Términos y condiciones</a> y la <a href="/privacidad" target="_blank" rel="noopener noreferrer" style={{color:'var(--cyan)'}}>Política de privacidad</a>.</span></label>
