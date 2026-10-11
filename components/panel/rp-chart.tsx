@@ -66,6 +66,8 @@ export default function RpChart({data,valueKey,secondKey=null,type='area',color=
         <path className="p-line" d={path(vals)} stroke={color}/>
         {sec&&type==='area'&&<path className="p-areaFill" d={`${path(sec)} L${x(sec.length-1)} ${H-P.b} L${x(0)} ${H-P.b}Z`} fill={`url(#${id}b)`}/>}
         {sec&&<path className="p-line" d={path(sec)} stroke={secondColor}/>}
+        {data.length<=2&&vals.map((value,index)=><circle key={`a${index}`} r={4} cx={x(index)} cy={y(value)} fill={color}/>)}
+        {data.length<=2&&sec&&sec.map((value,index)=><circle key={`b${index}`} r={4} cx={x(index)} cy={y(value)} fill={secondColor}/>)}
       </>}
       {hover!==null&&<><line className="p-hover" x1={x(hover)} x2={x(hover)} y1={P.t} y2={H-P.b} stroke="#36607f" strokeDasharray="3 4"/>{type!=='bar'&&<circle r={5} cx={x(hover)} cy={y(vals[hover])} fill={color} stroke="#07111f" strokeWidth={2}/>}</>}
     </svg>}
