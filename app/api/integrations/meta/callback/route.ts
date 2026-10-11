@@ -49,7 +49,10 @@ export async function GET(request:Request) {
     await upsertMetaAdAccounts(userId,accounts);
     await syncMetaAds(userId);
     return NextResponse.redirect(new URL('/panel?section=integraciones&connected=meta',request.url));
-  } catch {
+  } catch (error) {
+    // Meta's own message (permissions, app mode, expired code) is the only way
+    // to diagnose a failed connection; it never includes the token.
+    console.error(JSON.stringify({level:'error',route:'integrations/meta/callback',message:error instanceof Error?error.message:String(error)}));
     return NextResponse.redirect(new URL('/panel?section=integraciones&error=meta_sync',request.url));
   }
 }

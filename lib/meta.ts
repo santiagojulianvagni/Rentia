@@ -5,9 +5,9 @@ import {
   markSyncCompleted,
   markSyncFailed,
   markSyncStarted,
-  MetaAdAccountInput,
-  MetaCampaignInput,
-  MetaInsightInput,
+  type MetaAdAccountInput,
+  type MetaCampaignInput,
+  type MetaInsightInput,
   replaceMetaCampaignsAndInsights,
   upsertMetaAdAccounts,
 } from '../db/database';
