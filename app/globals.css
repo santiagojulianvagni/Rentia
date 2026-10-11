@@ -503,3 +503,4 @@
 .connectionUpdatedAt svg{flex:0 0 14px}
 @media(max-width:600px){.connectionNotice{align-items:flex-start;flex-wrap:wrap;gap:10px;padding:14px}.connectionNotice>div{flex-basis:calc(100% - 35px)}.connectionNotice button{margin-left:31px}}
 .integrationLogo.brandLogo{padding:8px;background:#fff}.integrationLogo.brandLogo img{width:100%;height:100%;object-fit:contain}
+.metaAccountChoice{display:flex;flex-direction:column;gap:7px;max-width:360px;margin-top:14px}.metaAccountChoice .metaAccountPicker{width:100%}.metaAccountChoice small{color:#7f93a6;font-size:11px;line-height:1.45}
