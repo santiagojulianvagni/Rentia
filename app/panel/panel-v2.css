@@ -177,11 +177,11 @@ html:has(.appPage){scrollbar-color:#274660 #07111f}
 @keyframes p2Swap{from{opacity:.5;transform:translateY(4px)}}
 
 /* ---------- Entrada al cambiar de sección ---------- */
-.appPage .managementFields>*{animation:p2Rise .5s var(--p-ease) both}
+.appPage .managementFields>*{animation:p2Rise .5s var(--p-ease) backwards}
 .appPage .managementFields>*:nth-child(2){animation-delay:.05s}
 .appPage .managementFields>*:nth-child(3){animation-delay:.1s}
 .appPage .managementFields>*:nth-child(n+4){animation-delay:.15s}
-.appPage .appMetrics.expanded>.metricCard{animation:p2Rise .55s var(--p-ease) both}
+.appPage .appMetrics.expanded>.metricCard{animation:p2Rise .55s var(--p-ease) backwards}
 .appPage .appMetrics.expanded>.metricCard:nth-child(2){animation-delay:.05s}
 .appPage .appMetrics.expanded>.metricCard:nth-child(3){animation-delay:.1s}
 .appPage .appMetrics.expanded>.metricCard:nth-child(4){animation-delay:.15s}
@@ -229,11 +229,15 @@ html:has(.appPage){scrollbar-color:#274660 #07111f}
 .appPage .integrationCards article p{margin:0 0 8px!important;color:var(--p-muted)!important;font-size:13px!important}
 .appPage .integrationCards article small{display:flex;align-items:center;gap:6px;margin-top:4px;color:var(--p-dim)!important;font-size:12px!important}
 .appPage .integrationActions{display:flex!important;flex-direction:column;align-items:flex-end;gap:10px!important;margin:0!important}
+.appPage .integrationCards .integrationLogo{grid-column:1!important;grid-row:1!important}
+.appPage .integrationCards article>div:not(.integrationActions){grid-column:2!important;grid-row:1!important;min-width:0}
+.appPage .integrationCards .integrationActions{grid-column:3!important;grid-row:1!important;align-self:start}
+@media (max-width:1100px){.appPage .integrationCards .integrationActions{grid-column:2!important;grid-row:2!important;flex-direction:row;align-items:center;justify-content:flex-start;margin-top:8px!important}}
 .appPage .integrationActions .statusPill{padding:4px 10px!important;border:0!important;background:rgba(50,213,131,.12)!important;color:var(--green)!important}
 .appPage .meliBillingLink{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:0;border:0;background:none;color:var(--cyan)!important;font-size:12.5px;font-weight:700;cursor:pointer}
 .appPage .metaAccountChoice{display:grid;gap:8px;margin-top:14px;padding:12px 14px;border:1px dashed var(--p-line2);border-radius:12px;background:rgba(7,17,31,.35)}
 .appPage .integrationNotice{border-radius:14px!important;border-color:var(--p-line2)!important;background:rgba(15,27,43,.7)!important}
-@media (max-width:760px){.appPage .integrationCards>article,.appPage .integrationCards>.mercadoLibreIntegration{grid-template-columns:44px minmax(0,1fr)}.appPage .integrationCards .integrationLogo{width:44px!important;height:44px!important}.appPage .integrationActions{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:flex-start}}
+@media (max-width:760px){.appPage .integrationCards>article,.appPage .integrationCards>.mercadoLibreIntegration{grid-template-columns:44px minmax(0,1fr)}.appPage .integrationCards .integrationLogo{width:44px!important;height:44px!important}.appPage .integrationCards .integrationActions{grid-column:1/-1!important}}
 
 /* ---------- Plan y facturación ---------- */
 .appPage .subscriptionStatus{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important}
