@@ -1,4 +1,4 @@
-import {claimImportJob,checkpointImportJob,getIntegrations,getSyncStatus,markSyncCompleted,markSyncFailed,markSyncPending,markSyncStarted,releaseImportJob} from '../db/database';
+import {claimImportJob,checkpointImportJob,forgetSkippedOrder,getIntegrations,getSyncStatus,markSyncCompleted,markSyncFailed,markSyncPending,markSyncStarted,recoverableSkippedOrders,releaseImportJob} from '../db/database';
 import {claimMeliEvent,completeMeliImport,finishMeliEvent,getMeliCredentials,getMeliProgress,meliCounts,meliOrdersMissingCosts,queueMeliShipmentOrders,replaceMeliCredentials,requireMeliReauthorization,saveMeliOrder,saveMeliProduct,type MeliCredentials,type MeliEvent} from '../db/mercadolibre';
 import {mercadoLibreConfigured,mercadoLibreMissingConfig,mercadoLibreRuntime} from './mercadolibre';
 import {IMPORT_HISTORY_MONTHS,importHistoryStart} from './import-history';
@@ -197,6 +197,11 @@ export async function reconcileMercadoLibre(userId:string,force=false) {
         await finishMeliEvent(userId,event,ignored?'ignored':'failed',safe.code,Math.max(safe.retrySeconds,Math.min(3600,30*2**Math.min(event.attempts,7))));
         if(!ignored)throw error;
       }
+    }
+    for(const id of await recoverableSkippedOrders(userId,'mercadolibre',5)) {
+      if(Date.now()>=client.deadline-3000)break;
+      try{await importOrder(client,claimed.token,id,cache);}
+      catch(error){const safe=safeError(error);if(['mercadolibre_resource_unavailable','mercadolibre_order_owner','mercadolibre_invalid_resource'].includes(safe.code))await forgetSkippedOrder(userId,'mercadolibre',id);else throw error;}
     }
     if(state.phase==='done'&&(force||Date.now()-Date.parse(state.through)>20*60*1000)) {
       const now=new Date();

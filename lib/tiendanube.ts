@@ -4,7 +4,7 @@ import { decryptToken } from './token-crypto';
 import { merchantShippingCost } from './tiendanube-shipping';
 import { merchantCommissionCost } from './tiendanube-commissions';
 import { tiendanubeFetch, tiendanubeRetryDelay } from './tiendanube-http';
-import {claimImportJob,checkpointImportJob,releaseImportJob,markSyncPending} from '../db/database';
+import {claimImportJob,checkpointImportJob,releaseImportJob,markSyncPending,recoverableSkippedOrders,forgetSkippedOrder} from '../db/database';
 import {IMPORT_PAGE_SIZE,IMPORT_VERSION,advanceImportWindow,importOrdersPath,newImportProgress,parseImportProgress,splitImportWindow} from './ingestion-progress';
 
 type UnknownRecord = Record<string,unknown>;
@@ -380,7 +380,8 @@ export async function reconcileTiendanube(userId:string,requestUrl:string,trigge
     try { await ensureTiendanubeWebhooksForUser(userId,requestUrl); }
     catch (error) { automatic=false;automaticError=error instanceof Error?error.message:'No pudimos activar los webhooks'; }
     const sync=await syncTiendanube(userId,triggerSource!=='manual');
-    const summary={...sync,retry,automatic,automaticError};
+    const recoveredOrders=await recoverSkippedTiendanubeOrders(userId).catch(()=>0);
+    const summary={...sync,retry,automatic,automaticError,recoveredOrders};
     await finishReconciliationRun(runId,sync.pending?'pending':'success',summary);
     return summary;
   } catch (error) {
@@ -454,4 +455,25 @@ export async function syncTiendanube(userId:string,automatic=false) {
   } finally {
     await releaseImportJob(userId,'tiendanube',job.token);
   }
+}
+
+// Recupera órdenes omitidas por el límite del plan cuando la tienda ya tiene lugar (por ejemplo, al pasar a un plan pago).
+export async function recoverSkippedTiendanubeOrders(userId:string) {
+  const ids=await recoverableSkippedOrders(userId,'tiendanube');
+  if(!ids.length)return 0;
+  const config=runtime(),integration=await getIntegrationCredentials(userId,'tiendanube');
+  if(!integration||!config.TOKEN_ENCRYPTION_KEY)return 0;
+  const token=await decryptToken(integration.encrypted_access_token,integration.token_iv,config.TOKEN_ENCRYPTION_KEY);
+  const costs=await getVariantStoreCosts(userId,'tiendanube');
+  let recovered=0;
+  for(const id of ids) {
+    // Solo se olvida si Tiendanube confirma que la orden ya no existe; un error temporal se reintenta en la próxima vuelta.
+    const raw=await apiRequest(integration.external_store_id,token,`orders/${encodeURIComponent(id)}?aggregates=fulfillment_orders`,{},false);
+    if(raw===false){await forgetSkippedOrder(userId,'tiendanube',id);continue;}
+    const order=record(raw);
+    await enrichPaymentDetails(integration.external_store_id,token,[order]);
+    await upsertOrders(userId,'tiendanube',normalizeOrders([order],costs));
+    recovered++;
+  }
+  return recovered;
 }

@@ -85,7 +85,8 @@ type MetaAdsData={accounts:MetaAccount[];selected:MetaAccount|null;sync:SyncStat
 type Dashboard={meliAds?:ProductAdsData;metrics:{refundLoss?:number;meliAdSpend?:number;totalAdSpend?:number;meliAdsComparable?:boolean;revenue:number;externalRevenue:number;totalRevenue:number;profitBeforeAds:number;profit:number;margin:number;orders:number;externalOrders:number;totalOrders:number;aov:number;totalAov:number;netRevenue:number;productCost:number;shipping:number;commissions:number;taxes:number;additional:number;adSpend:number;metaReportedRevenue:number;metaPurchases:number;reportedRoas:number;blendedRoas:number;cpa:number;adSpendComparable:boolean;metaCurrency:string};ads:{connected:boolean;selected:MetaAccount|null;sync:SyncState};integrations?:{tiendanube?:{paymentAccess:boolean}};orders:OrderRow[];paymentMethods?:string[];products:ProductRow[];metaTimeline?:TimelinePoint[];timeline:TimelinePoint[];channelTimelines?:Record<string,TimelinePoint[]>;channels:ChannelRow[];exchangeRate:ExchangeRate|null;sync:SyncState;quality:DataQuality};
 type CostRule={id:number;category:'commission'|'additional';name:string;match_value:string|null;calculation:'hybrid'|'fixed_monthly'|'percentage_revenue';amount:number;percentage:number;starts_at:string|null;ends_at:string|null;enabled:number};
 type SubscriptionPlan=RentiaPlan;
-type SubscriptionData={subscription:{planId:string;requestedPlanId:string|null;status:string;billingCycle:string;trialEndsAt:string;trialDaysRemaining:number};usage:{orders:number;limit:number|null;percent:number};currentPlan:SubscriptionPlan;recommendation:SubscriptionPlan;plans:SubscriptionPlan[];billingEnabled:boolean;canManage:boolean;message?:string};
+type SubscriptionData={subscription:{planId:string;requestedPlanId:string|null;status:string;billingCycle:string;trialEndsAt:string;trialDaysRemaining:number};usage:{orders:number;limit:number|null;percent:number};currentPlan:SubscriptionPlan;recommendation:SubscriptionPlan;plans:SubscriptionPlan[];billingEnabled:boolean;canManage:boolean;message?:string;quota?:OrderQuota};
+type OrderQuota={enforced:boolean;month:string;limit:number|null;used:number;skippedThisMonth:number;skippedTotal:number};
 
 type DisplayCurrency='ARS'|'USD'|'EUR';
 type DisplayLanguage='es'|'pt'|'en';
@@ -352,6 +353,8 @@ function PanelApp() {
   const [paletteOpen,setPaletteOpen]=useState(false);
   const [paletteQuery,setPaletteQuery]=useState('');
   const [paletteIndex,setPaletteIndex]=useState(0);
+  const [quota,setQuota]=useState<OrderQuota|null>(null);
+  useEffect(()=>{let cancelled=false;fetch('/api/subscription',{cache:'no-store'}).then(response=>response.ok?response.json():null).then((data:SubscriptionData|null)=>{if(!cancelled&&data?.quota)setQuota(data.quota);}).catch(()=>{});return()=>{cancelled=true;};},[active]);
   useEffect(()=>{
     const invalid=(event:Event)=>{
       const field=event.target as HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement;
@@ -789,6 +792,7 @@ function PanelApp() {
 
       {accessRole==='member'&&<div className="p-readOnly"><ShieldCheck className="p-i" aria-hidden="true"/><span><b>Acceso de consulta</b> Podés ver datos y exportar informes. Los cambios los realiza el propietario o un administrador.</span></div>}
       <main className="p-content appPage">
+      {quota?.enforced&&quota.limit!==null&&active!=='plan'&&(quota.skippedTotal>0||quota.used>=quota.limit)&&<div className="p-notice p-warning" role="status"><TriangleAlert className="p-i" aria-hidden="true"/><div><b>{quota.skippedTotal>0?`Hay ${quota.skippedTotal.toLocaleString('es-AR')} ${quota.skippedTotal===1?'orden':'órdenes'} sin importar por el límite de tu plan`:'Tu tienda llegó al límite de órdenes de su plan este mes'}</b><p>Tu plan importa hasta {quota.limit.toLocaleString('es-AR')} órdenes por mes. Tus datos no se pierden: al elegir un plan mayor, las recuperamos automáticamente.</p></div><button type="button" className="p-btn p-small p-primary" onClick={()=>selectSection('plan')}>Ver planes</button></div>}
       <fieldset className="managementFields" disabled={!canManage&&['costos','configuracion','moneda','integraciones'].includes(active)}>
       {active==='equipo'?<TeamSection onPlans={()=>selectSection('plan')}/>:active==='resumen'?<>
         {integrationsLoaded&&!hasSalesConnection&&<div className="p-notice p-import"><PlugZap className="p-i" aria-hidden="true"/><div><b>{t('Conectá tu tienda para empezar')}</b><p>Enlazar el canal es independiente de cargar envío, comisiones e impuestos.</p></div><button type="button" className="p-btn p-small p-primary" onClick={()=>selectSection('integraciones')}>Ver conexiones</button></div>}

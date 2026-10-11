@@ -2,6 +2,7 @@ import { database, type Statement } from './client';
 import {ITEM_COST_JOINS,ITEM_UNIT_COST_SQL,ITEM_COST_SOURCE_SQL,ORDER_ANALYTICS_BATCH_SQL,ORDER_COUNT_SQL,ORDER_PAGE_SQL,PAID_TOTAL_SQL,PRODUCT_SALES_BATCH_SQL} from '../lib/commerce-queries';
 import type {AnalyticsOrder} from '../lib/order-calculations';
 import {atomicBatches} from '../lib/atomic-batches';
+import {billingEnforced,monthKey,monthlyOrderLimit} from '../lib/billing';
 
 export type Account = {
   user_id: string; email: string; owner_name: string; store_name: string;
@@ -435,6 +436,8 @@ export async function upsertProducts(userId:string,provider:string,products:Sync
 
 export async function upsertOrders(userId:string,provider:string,orders:SyncedOrder[]) {
   await ensureSchema();
+  const allowed=await allowedOrderIds(userId,provider,orders.map(order=>({externalId:order.externalId,createdAt:order.createdAt})));
+  orders=orders.filter(order=>allowed.has(order.externalId));
   const now=new Date().toISOString();
   const groups:Statement[][]=[];
   for (const order of orders) {
@@ -766,4 +769,63 @@ export async function getSessionUser(tokenHash:string) {
 export async function deleteAppSession(tokenHash:string) {
   await ensureSchema();
   await database().prepare("DELETE FROM app_sessions WHERE token_hash = ?").bind(tokenHash).run();
+}
+
+// Límite mensual de órdenes por plan. Devuelve las órdenes que se pueden guardar y
+// anota las que se omiten para recuperarlas cuando la tienda pase a un plan mayor.
+export async function allowedOrderIds(userId:string,provider:string,orders:Array<{externalId:string;createdAt:string|null}>) {
+  const all=new Set(orders.map(order=>order.externalId));
+  if(!orders.length||!billingEnforced())return all;
+  const limit=monthlyOrderLimit(await getOrCreateSubscription(userId));
+  if(limit===null)return all;
+  const existing=await database().prepare('SELECT external_order_id FROM orders WHERE user_id=? AND provider=? AND external_order_id = ANY(?::text[])')
+    .bind(userId,provider,[...all]).all<{external_order_id:string}>();
+  const allowed=new Set(existing.results.map(row=>row.external_order_id));
+  const fresh=orders.filter(order=>!allowed.has(order.externalId)).sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+  const byMonth=new Map<string,typeof fresh>();
+  for(const order of fresh){const key=monthKey(order.createdAt);byMonth.set(key,[...(byMonth.get(key)||[]),order]);}
+  const now=new Date().toISOString();
+  for(const [month,list] of byMonth) {
+    const row=await database().prepare('SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND left(source_created_at,7)=?').bind(userId,month).first<{total:number}>();
+    let remaining=Math.max(0,limit-Number(row?.total||0));
+    for(const order of list) {
+      if(remaining>0){allowed.add(order.externalId);remaining--;continue;}
+      await database().prepare('INSERT INTO skipped_orders (user_id,provider,external_order_id,source_created_at,skipped_at) VALUES (?,?,?,?,?) ON CONFLICT (user_id,provider,external_order_id) DO NOTHING')
+        .bind(userId,provider,order.externalId,order.createdAt,now).run();
+    }
+  }
+  const recovered=[...allowed].filter(id=>!existing.results.some(row=>row.external_order_id===id));
+  if(recovered.length)await database().prepare('DELETE FROM skipped_orders WHERE user_id=? AND provider=? AND external_order_id = ANY(?::text[])').bind(userId,provider,recovered).run();
+  return allowed;
+}
+
+export async function getOrderQuota(userId:string,now=new Date()) {
+  const subscription=await getOrCreateSubscription(userId);
+  const limit=monthlyOrderLimit(subscription,now.getTime());
+  const month=now.toISOString().slice(0,7);
+  const [used,skipped,pending]=await Promise.all([
+    database().prepare('SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND left(source_created_at,7)=?').bind(userId,month).first<{total:number}>(),
+    database().prepare('SELECT COUNT(*) AS total FROM skipped_orders WHERE user_id=? AND left(source_created_at,7)=?').bind(userId,month).first<{total:number}>(),
+    database().prepare('SELECT COUNT(*) AS total FROM skipped_orders WHERE user_id=?').bind(userId).first<{total:number}>(),
+  ]);
+  return {enforced:billingEnforced(),month,limit,used:Number(used?.total||0),skippedThisMonth:Number(skipped?.total||0),skippedTotal:Number(pending?.total||0)};
+}
+
+export async function getSkippedOrders(userId:string,provider:string,limit=50) {
+  const rows=await database().prepare('SELECT external_order_id FROM skipped_orders WHERE user_id=? AND provider=? ORDER BY source_created_at LIMIT ?').bind(userId,provider,limit).all<{external_order_id:string}>();
+  return rows.results.map(row=>row.external_order_id);
+}
+
+// Omitidas que ya entran en el plan actual (su mes tiene lugar). Vacío si el cobro no está activo.
+export async function recoverableSkippedOrders(userId:string,provider:string,max=30) {
+  if(!billingEnforced())return [] as string[];
+  const limit=monthlyOrderLimit(await getOrCreateSubscription(userId));
+  const rows=limit===null
+    ?await database().prepare('SELECT external_order_id FROM skipped_orders WHERE user_id=? AND provider=? ORDER BY source_created_at LIMIT ?').bind(userId,provider,max).all<{external_order_id:string}>()
+    :await database().prepare('SELECT s.external_order_id FROM skipped_orders s WHERE s.user_id=? AND s.provider=? AND (SELECT COUNT(*) FROM orders o WHERE o.user_id=s.user_id AND left(o.source_created_at,7)=left(s.source_created_at,7))<? ORDER BY s.source_created_at LIMIT ?').bind(userId,provider,limit,max).all<{external_order_id:string}>();
+  return rows.results.map(row=>row.external_order_id);
+}
+
+export async function forgetSkippedOrder(userId:string,provider:string,externalOrderId:string) {
+  await database().prepare('DELETE FROM skipped_orders WHERE user_id=? AND provider=? AND external_order_id=?').bind(userId,provider,externalOrderId).run();
 }

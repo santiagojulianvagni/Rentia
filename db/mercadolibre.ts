@@ -1,7 +1,7 @@
 import {database} from './client';
 import type {MercadoLibreNotice} from '../lib/mercadolibre';
 import type {MeliOrder} from '../lib/mercadolibre-data';
-import type {SyncedProduct} from './database';
+import {allowedOrderIds,type SyncedProduct} from './database';
 import {ITEM_COST_JOINS,ITEM_COST_MISSING_SQL} from '../lib/commerce-queries';
 
 
@@ -51,6 +51,7 @@ export async function requireMeliReauthorization(previous:MeliCredentials) {
 const writeGuard="EXISTS (SELECT 1 FROM sync_jobs j JOIN integrations i ON i.user_id=j.user_id AND i.provider=j.provider WHERE j.user_id=? AND j.provider='mercadolibre' AND j.lease_token=? AND j.lease_expires_at>? AND i.external_store_id=? AND i.status IN ('authorized','connected'))";
 function guardValues(userId:string,lease:string,sellerId:string) { return [userId,lease,Date.now(),sellerId]; }
 export async function saveMeliOrder(userId:string,sellerId:string,lease:string,order:MeliOrder) {
+  if(!(await allowedOrderIds(userId,'mercadolibre',[{externalId:order.externalId,createdAt:order.createdAt}])).has(order.externalId))return false;
   const now=new Date().toISOString(),guard=guardValues(userId,lease,sellerId);
   const accepted="EXISTS (SELECT 1 FROM orders o WHERE o.user_id=? AND o.provider='mercadolibre' AND o.external_order_id=? AND o.source_updated_at IS NOT DISTINCT FROM ? AND o.synced_at=?)";
   const statements=[database().prepare(`INSERT INTO orders (user_id,provider,external_order_id,order_number,currency,status,payment_status,payment_method,payment_type,payment_installments,shipping_status,source_shipping_cost,source_commission_cost,source_commission_checked_at,total,subtotal,discount,source_created_at,source_updated_at,synced_at) SELECT ?,'mercadolibre',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE ${writeGuard} ON CONFLICT(user_id,provider,external_order_id) DO UPDATE SET order_number=excluded.order_number,currency=excluded.currency,status=excluded.status,payment_status=excluded.payment_status,payment_method=excluded.payment_method,payment_type=excluded.payment_type,payment_installments=excluded.payment_installments,shipping_status=excluded.shipping_status,source_shipping_cost=excluded.source_shipping_cost,source_commission_cost=excluded.source_commission_cost,source_commission_checked_at=excluded.source_commission_checked_at,total=excluded.total,subtotal=excluded.subtotal,discount=excluded.discount,source_updated_at=excluded.source_updated_at,synced_at=excluded.synced_at WHERE orders.source_updated_at IS NULL OR excluded.source_updated_at>=orders.source_updated_at`)
