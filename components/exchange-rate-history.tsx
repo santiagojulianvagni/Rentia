@@ -50,20 +50,20 @@ export default function ExchangeRateHistory({rateType,quote,refreshKey}:{rateTyp
     points.forEach((point,index)=>{if(Math.abs(x(point)-position)<Math.abs(x(points[nearest])-position))nearest=index;});setActive(nearest);
   }
 
-  if(rateType==='manual')return <section className="quoteManualHistory"><h3>Cotización manual</h3><p>El valor lo definís vos. No mostramos una evolución automática porque no hay un historial de mercado para esta configuración.</p></section>;
-  return <section className="quoteHistory" aria-label="Historial de cotizaciones">
-    <div className="quoteHistorySummaries">
-      <article><span>Precio actual · {rateLabels[rateType]}</span><strong>{pesos(current)}</strong><small>Venta, sin ajuste personalizado</small></article>
+  if(rateType==='manual')return <section className="p-card p-reveal"><h3>Cotización manual</h3><p className="p-sub">El valor lo definís vos. No mostramos una evolución automática porque no hay un historial de mercado para esta configuración.</p></section>;
+  return <section className="p-quoteHistory" aria-label="Historial de cotizaciones">
+    <div className="p-grid p-g4" style={{marginBottom:16}}>
+      <div className="p-card p-kpi p-hero p-reveal"><small>Precio actual · {rateLabels[rateType]}</small><b className="p-mono" style={{fontSize:21}}>{pesos(current)}</b><span className="p-sub" style={{fontSize:11.5}}>Venta, sin ajuste personalizado</span></div>
       {[{days:7,label:'Hace 7 días'},{days:30,label:'Hace 30 días'},{days:365,label:'Hace un año'}].map(({days,label})=>{
         const target=daysBefore(today,days);const previous=[...history].reverse().find(point=>point.date<=target&&point.date>=daysBefore(target,7));
         const change=previous&&current!==null?(current/previous.sell-1)*100:null;
-        return <article key={days}><span>{label}</span><div><strong>{loading?'—':pesos(previous?.sell)}</strong>{change!==null&&!loading&&<b className={`quoteChange ${change<0?'down':''}`}>{change>0?'+':''}{new Intl.NumberFormat('es-AR',{maximumFractionDigits:1}).format(change)}%</b>}</div><small>{loading?'Consultando historial…':previous?`${dayLabel(previous.date,true)} · variación hasta hoy`:'Sin datos para esa fecha'}</small></article>;
+        return <div className="p-card p-kpi p-reveal" key={days}><small>{label}</small><b className="p-mono" style={{fontSize:21}}>{loading?'—':pesos(previous?.sell)}</b>{change!==null&&!loading&&<span className={`p-delta ${change<0?'p-down':'p-up'}`}>{change>0?'▲ +':'▼ '}{new Intl.NumberFormat('es-AR',{maximumFractionDigits:1}).format(change)}%</span>}<span className="p-sub" style={{fontSize:11.5,display:'block',marginTop:4}}>{loading?'Consultando historial…':previous?`${dayLabel(previous.date,true)} · variación hasta hoy`:'Sin datos para esa fecha'}</span></div>;
       })}
     </div>
-    <div className="quoteChartCard">
-      <div className="quoteChartHeading"><div><h3>Evolución del dólar {rateLabels[rateType]}</h3><p>Precio de venta en ARS, sin tu ajuste</p></div><div className="quotePeriods" role="group" aria-label="Período del gráfico">{[7,30,365].map(days=><button type="button" key={days} aria-pressed={period===days} onClick={()=>{setPeriod(days);setActive(null);}}>{days===365?'1 año':`${days} días`}</button>)}</div></div>
-      <div className="quoteInspection" aria-live="polite"><span>{!loading&&inspect?dayLabel(inspect.date,true):'Cotización histórica'}</span><b>{!loading&&inspect?pesos(inspect.sell):'—'}</b><small>{points.length>1?'Pasá el cursor o usá las flechas para explorar':''}</small></div>
-      <div ref={chart} className="quoteChart" {...(!loading&&points.length?{role:'slider',tabIndex:0,'aria-label':`Explorar cotización histórica del dólar ${rateLabels[rateType]}`,'aria-valuemin':0,'aria-valuemax':points.length-1,'aria-valuenow':active??points.length-1,'aria-valuetext':inspect?`${dayLabel(inspect.date,true)}: ${pesos(inspect.sell)}`:undefined}: {})} onKeyDown={event=>{
+    <div className="p-card p-reveal">
+      <div className="p-cardHead"><div><h3>Evolución del dólar {rateLabels[rateType]}</h3><span className="p-sub">Precio de venta en ARS, sin tu ajuste</span></div><div className="p-tabs" role="group" aria-label="Período del gráfico">{[7,30,365].map(days=><button type="button" key={days} className={period===days?'p-on':''} aria-pressed={period===days} onClick={()=>{setPeriod(days);setActive(null);}}>{days===365?'1 año':`${days} días`}</button>)}</div></div>
+      <div className="p-quoteInspection" aria-live="polite"><span>{!loading&&inspect?dayLabel(inspect.date,true):'Cotización histórica'}</span><b>{!loading&&inspect?pesos(inspect.sell):'—'}</b><small>{points.length>1?'Pasá el cursor o usá las flechas para explorar':''}</small></div>
+      <div ref={chart} className="p-quoteChart quoteChart" {...(!loading&&points.length?{role:'slider',tabIndex:0,'aria-label':`Explorar cotización histórica del dólar ${rateLabels[rateType]}`,'aria-valuemin':0,'aria-valuemax':points.length-1,'aria-valuenow':active??points.length-1,'aria-valuetext':inspect?`${dayLabel(inspect.date,true)}: ${pesos(inspect.sell)}`:undefined}: {})} onKeyDown={event=>{
         if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)&&points.length){event.preventDefault();setActive(index=>event.key==='Home'?0:event.key==='End'?points.length-1:Math.max(0,Math.min(points.length-1,(index??points.length-1)+(event.key==='ArrowLeft'?-1:1))));}
       }}>
         {loading?<div className="quoteChartEmpty" role="status">Consultando cotizaciones históricas…</div>:error?<div className="quoteChartEmpty">No pudimos consultar el historial. Podés reintentar con “Actualizar cotización”.</div>:!points.length?<div className="quoteChartEmpty">No hay cotizaciones disponibles para este período.</div>:<svg viewBox={`0 0 ${width} ${height}`} aria-hidden="true" onPointerMove={inspectPointer} onPointerDown={inspectPointer} onPointerLeave={()=>setActive(null)}>
@@ -74,7 +74,7 @@ export default function ExchangeRateHistory({rateType,quote,refreshKey}:{rateTyp
           {inspect&&active!==null&&<g><line x1={x(inspect)} x2={x(inspect)} y1={top} y2={bottom} className="quoteCrosshair"/><circle cx={x(inspect)} cy={y(inspect.sell)} r={5} className="quoteActiveDot"/></g>}
         </svg>}
       </div>
-      <div className="quoteChartFooter"><span>Fuente: <a href="https://argentinadatos.com/docs/operations/get-cotizaciones-dolares-casa" target="_blank" rel="noreferrer">ArgentinaDatos · DolarApi</a>{data?.cached?' · última consulta disponible':''}</span><span>{!loading&&points.length?`${dayLabel(points[0].date,true)} — ${dayLabel(points.at(-1)!.date,true)}`:'Solo mostramos datos informados por la fuente'}</span></div>
+      <div className="p-quoteFooter"><span>Fuente: <a href="https://argentinadatos.com/docs/operations/get-cotizaciones-dolares-casa" target="_blank" rel="noreferrer">ArgentinaDatos · DolarApi</a>{data?.cached?' · última consulta disponible':''}</span><span>{!loading&&points.length?`${dayLabel(points[0].date,true)} — ${dayLabel(points.at(-1)!.date,true)}`:'Solo mostramos datos informados por la fuente'}</span></div>
     </div>
   </section>;
 }
