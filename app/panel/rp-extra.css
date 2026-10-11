@@ -250,3 +250,7 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-confirmOk.p-danger{background:#ff6678;color:#fff}
 .p-confirmOk.p-danger:hover{background:#ff7d8c}
 .p-confirmFoot button:focus-visible{outline:2px solid #21d4c2;outline-offset:2px}
+.p-root .p-commRow{display:flex!important;flex-wrap:wrap;align-items:flex-end;gap:12px}
+.p-root .p-commRow>.p-field{flex:1 1 170px}
+.p-root .p-commRow>.p-plus{flex:0 0 auto;padding-bottom:12px}
+.p-root .p-commRow>.p-btn{flex:0 0 auto}
