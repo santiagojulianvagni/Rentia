@@ -2,6 +2,7 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { esES } from '@clerk/localizations';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import ErrorReporter from '../components/error-reporter';
 import './globals.css';
 
 const geistSans = Geist({
@@ -44,6 +45,7 @@ export default function RootLayout({
         {/* Rentia's own pages, so every Clerk flow (Google, email links) returns here. */}
         <ClerkProvider localization={esES} signInUrl="/ingresar" signUpUrl="/registro" signInFallbackRedirectUrl="/onboarding" signUpFallbackRedirectUrl="/onboarding" taskUrls={{'choose-organization':'/onboarding'}}>
           {children}
+          <ErrorReporter/>
         </ClerkProvider>
       </body>
     </html>

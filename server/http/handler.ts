@@ -86,7 +86,7 @@ export function createRoute<TUser>(deps:RouteDeps<TUser>) {
         return result instanceof Response?result:json(result??{ok:true},200,options.headers);
       } catch(error) {
         if(error instanceof HttpError) return json({error:error.code,...error.extra},error.status,options.headers);
-        (deps.log||defaultLog)({level:'error',method:request.method,path:url.pathname,message:error instanceof Error?error.message:String(error)});
+        (deps.log||defaultLog)({level:'error',method:request.method,path:url.pathname,message:error instanceof Error?error.message:String(error),stack:error instanceof Error?error.stack:undefined});
         return json({error:'internal_error'},500,options.headers);
       }
     };

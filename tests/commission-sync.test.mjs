@@ -59,8 +59,11 @@ test('concurrent requests for a store are spaced, not fired in a burst',async()=
   const original=globalThis.fetch,calls=[];
   globalThis.fetch=async()=>{calls.push(Date.now());return new Response('{}');};
   try{
+    // Medido desde el inicio: una demora por carga solo puede atrasar un pedido, nunca adelantarlo.
+    const start=Date.now();
     await Promise.all([1,2,3].map(()=>tiendanubeFetch('concurrent-test','https://example.test/orders')));
-    assert.ok(calls[1]-calls[0]>=500);assert.ok(calls[2]-calls[1]>=500);
+    calls.sort((x,y)=>x-y);
+    assert.ok(calls[1]-start>=500,'second request waited');assert.ok(calls[2]-start>=1000,'third request waited');
   }finally{globalThis.fetch=original;}
 });
 

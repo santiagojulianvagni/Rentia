@@ -22,25 +22,32 @@ import {automaticSyncDue,connectionHealth} from '../../lib/connection-health';
 import {salesChannelLabel,orderReturnNeedsReview} from '../../lib/sales-channels';
 import { createContext, FormEvent, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Mail, Receipt, RefreshCw, Printer, Trophy, ArrowRight, LogOut, PanelLeft, Search, ArrowLeftRight, BadgeDollarSign, Boxes, CalendarDays, ChevronDown, ChevronLeft, Coins, CreditCard, Download, FileChartColumn, FilePlus2, GripVertical, Languages, LayoutDashboard, LayoutGrid, Menu, Megaphone, PackageSearch, Pencil, PlugZap, Plus, Settings2, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, TriangleAlert, UsersRound, X, type LucideIcon } from 'lucide-react';
-import PlanConfigurator from '../../components/plan-configurator';
 import RpChart from '../../components/panel/rp-chart';
-import {CancelSubscriptionDialog,ConfirmPlanDialog} from '../../components/panel/subscription-dialogs';
 import SetupChecklist from '../../components/setup-checklist';
-import ProductCosts,{type ProductCostRow} from '../../components/product-costs';
-import ExternalRevenue from '../../components/external-revenue';
-import MeliBilling from '../../components/meli-billing';
+import type {ProductCostRow} from '../../components/product-costs';
 import OrderPagination, {orderPageWindow} from '../../components/order-pagination';
 import ThemedSelect from '../../components/themed-select';
 import type { TeamCapacity } from '../../lib/team-capacity';
 import HelpPopover from '../../components/term-help';
 import MetaAccountPicker from '../../components/meta-account-picker';
-import ShippingCommissionSettings from '../../components/shipping-commission-settings';
-import ExchangeRateSettings from '../../components/exchange-rate-settings';
 import type { RentiaPlan } from '../../lib/plans';
 import type { CostSettings } from '../../lib/cost-engine';
 import { formatDisplayRange, rollingDisplayRange } from '../../lib/display-dates';
 import type { LiveRates } from '../../lib/exchange-rates';
 import { accountAppearance } from '../../lib/account-appearance';
+import dynamic from 'next/dynamic';
+
+// Secciones de configuración: su código se descarga recién al abrirlas, así el panel
+// carga más rápido en el resumen.
+const sectionLoading=()=><div className="p-empty" role="status">Cargando…</div>;
+const PlanConfigurator=dynamic(()=>import('../../components/plan-configurator'),{loading:sectionLoading});
+const ConfirmPlanDialog=dynamic(()=>import('../../components/panel/subscription-dialogs').then(module=>module.ConfirmPlanDialog));
+const CancelSubscriptionDialog=dynamic(()=>import('../../components/panel/subscription-dialogs').then(module=>module.CancelSubscriptionDialog));
+const ProductCosts=dynamic(()=>import('../../components/product-costs'),{loading:sectionLoading});
+const ExternalRevenue=dynamic(()=>import('../../components/external-revenue'),{loading:sectionLoading});
+const MeliBilling=dynamic(()=>import('../../components/meli-billing'),{loading:sectionLoading});
+const ShippingCommissionSettings=dynamic(()=>import('../../components/shipping-commission-settings'),{loading:sectionLoading});
+const ExchangeRateSettings=dynamic(()=>import('../../components/exchange-rate-settings'),{loading:sectionLoading});
 
 type NavItem={id:string;label:string;icon:LucideIcon;badge?:string};
 const overviewSections:NavItem[]=[
@@ -406,6 +413,8 @@ function PanelApp() {
   const syncingRef=useRef(false);
   const syncingMetaRef=useRef(false);
   const latestDashboard=useRef<Dashboard|null>(null);
+  // Versión de los datos del resumen: solo se recalcula cuando cambia (ver /api/dashboard/version).
+  const dashboardVersion=useRef('');
   const latestAds=useRef<MetaAdsData|null>(null);
   const periodDaysRef=useRef(30);
   const activeRangeRef=useRef<CustomDateRange|null>(null);
@@ -417,12 +426,22 @@ function PanelApp() {
   async function loadDashboard(days=30,range=activeRangeRef.current) {
     const currentQuery=analyticsQuery(days,range);
     const previousQuery=range?analyticsQuery(days,previousDateRange(range)):`days=${days}&offset=${days}`;
-    const [response,previousResponse]=await Promise.all([fetch(`/api/dashboard?${currentQuery}`),fetch(`/api/dashboard?${previousQuery}`)]);
+    const [version,response,previousResponse]=await Promise.all([currentDashboardVersion(),fetch(`/api/dashboard?${currentQuery}`),fetch(`/api/dashboard?${previousQuery}`)]);
     if (response.status===401) { window.location.href='/onboarding'; return null; }
     if (!response.ok) return null;
     const data=await response.json() as Dashboard;
     const previous=previousResponse.ok?await previousResponse.json() as Dashboard:null;
-    latestDashboard.current=data;setDashboard(data);setPreviousDashboard(previous);return data;
+    latestDashboard.current=data;setDashboard(data);setPreviousDashboard(previous);if(version)dashboardVersion.current=version;return data;
+  }
+
+  async function currentDashboardVersion() {
+    try { const response=await fetch('/api/dashboard/version',{cache:'no-store'}); return response.ok?(await response.json() as {version:string}).version:null; }
+    catch { return null; }
+  }
+
+  async function refreshDashboardIfChanged() {
+    const version=await currentDashboardVersion();
+    if(version&&version!==dashboardVersion.current)await loadDashboard(periodDaysRef.current);
   }
 
   async function loadDashboardPreferences() {
@@ -635,11 +654,11 @@ function PanelApp() {
       if (tiendanubeConnected&&(automaticSyncDue(current?.sync)||(current?.sync?.details_version||0)<7||current?.sync?.webhook_status!=='active'||current?.sync?.status==='error')) void runSync(true);
       if (metaConnected&&currentAds?.selected&&(automaticSyncDue(currentAds.sync)||(currentAds.sync?.details_version||0)<2)) void runMetaSync(true);
     });
-    const refreshTimer=window.setInterval(()=>{if ((tiendanubeConnected||metaConnected)&&document.visibilityState==='visible') void loadDashboard(periodDaysRef.current);},30_000);
+    const refreshTimer=window.setInterval(()=>{if (document.visibilityState==='visible') void refreshDashboardIfChanged();},30_000);
     const syncTimer=window.setInterval(()=>{if (tiendanubeConnected&&document.visibilityState==='visible') void runSync(true);},15*60_000);
     const syncWhenVisible=()=>{
       if(document.visibilityState!=='visible')return;
-      if(tiendanubeConnected||metaConnected)void loadDashboard(periodDaysRef.current);
+      void refreshDashboardIfChanged();
       if(tiendanubeConnected&&automaticSyncDue(latestDashboard.current?.sync))void runSync(true);
       if(metaConnected&&latestAds.current?.selected&&automaticSyncDue(latestAds.current.sync))void runMetaSync(true);
     };

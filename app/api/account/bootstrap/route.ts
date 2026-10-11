@@ -1,6 +1,6 @@
 import { auth, clerkClient, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { getAccount, getAccountByEmail, getSettings, getStoreIdentityByOrganization, getStoreIdentityByOwner, saveAccount, saveAccountContact, saveStoreIdentityLink } from '../../../../db/database';
+import { getAccount, getAccountByEmail, getSettings, getStoreIdentityByOrganization, getStoreIdentityByOwner, recordError, saveAccount, saveAccountContact, saveStoreIdentityLink } from '../../../../db/database';
 
 async function bootstrap(request:Request) {
   // Pending sessions (no organization yet) are expected here: this creates it.
@@ -76,6 +76,7 @@ export async function POST(request:Request) {
   catch (error) {
     const clerk=(error as {errors?:Array<{code?:string;message?:string}>})?.errors?.[0];
     console.error(JSON.stringify({level:'error',route:'account/bootstrap',message:error instanceof Error?error.message:String(error),clerkCode:clerk?.code,clerkMessage:clerk?.message}));
+    await recordError({source:'server',path:'/api/account/bootstrap',message:error instanceof Error?error.message:String(error),detail:clerk?`Clerk ${clerk.code||''}: ${clerk.message||''}`:null}).catch(()=>undefined);
     return NextResponse.json({error:'bootstrap_failed'},{status:500});
   }
 }

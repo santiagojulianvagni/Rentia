@@ -594,7 +594,8 @@ export async function saveExternalRevenueMonth(userId:string,month:string,entrie
     statements.push(database().prepare("INSERT INTO external_revenue (user_id,revenue_date,order_count,revenue,currency,updated_at) VALUES (?,?,?,?,?,?)")
       .bind(userId,entry.revenueDate,entry.orderCount,entry.revenue,entry.currency,now));
   }
-  await runInChunks(statements);
+  // Un mes completo en una sola transacción: el panel nunca ve el mes vacío a mitad del guardado.
+  await database().batch(statements);
 }
 
 export async function getExchangeRateSettings(userId:string) {
@@ -661,14 +662,15 @@ export async function selectMetaAdAccount(userId:string,externalAccountId:string
 export async function replaceMetaCampaignsAndInsights(userId:string,accountId:string,campaigns:MetaCampaignInput[],insights:MetaInsightInput[],fromDate:string) {
   await ensureSchema();
   const now=new Date().toISOString();
-  const statements:Statement[]=[
-    database().prepare("DELETE FROM meta_insights_daily WHERE user_id=? AND external_account_id=? AND insight_date>=?").bind(userId,accountId,fromDate),
-  ];
+  // Se actualiza en el lugar y recién al final se borran los días que Meta ya no informa:
+  // si el panel lee a mitad de la sincronización, nunca ve la inversión a medio cargar.
+  const statements:Statement[]=[];
   for (const campaign of campaigns) statements.push(database().prepare("INSERT INTO meta_campaigns (user_id,external_account_id,external_campaign_id,name,status,effective_status,daily_budget,lifetime_budget,synced_at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,external_campaign_id) DO UPDATE SET external_account_id=excluded.external_account_id,name=excluded.name,status=excluded.status,effective_status=excluded.effective_status,daily_budget=excluded.daily_budget,lifetime_budget=excluded.lifetime_budget,synced_at=excluded.synced_at")
     .bind(userId,accountId,campaign.externalId,campaign.name,campaign.status,campaign.effectiveStatus,campaign.dailyBudget,campaign.lifetimeBudget,now));
   for (const insight of insights) statements.push(database().prepare("INSERT INTO meta_insights_daily (user_id,external_account_id,external_campaign_id,insight_date,spend,impressions,clicks,purchases,purchase_value,synced_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,external_account_id,external_campaign_id,insight_date) DO UPDATE SET spend=excluded.spend,impressions=excluded.impressions,clicks=excluded.clicks,purchases=excluded.purchases,purchase_value=excluded.purchase_value,synced_at=excluded.synced_at")
     .bind(userId,accountId,insight.campaignId,insight.date,insight.spend,insight.impressions,insight.clicks,insight.purchases,insight.purchaseValue,now));
   await runInChunks(statements);
+  await database().prepare("DELETE FROM meta_insights_daily WHERE user_id=? AND external_account_id=? AND insight_date>=? AND synced_at<>?").bind(userId,accountId,fromDate,now).run();
 }
 
 export async function getMetaAnalyticsData(userId:string,days:number,offsetDays=0,range?:AnalyticsDateRange) {
@@ -847,4 +849,49 @@ export async function cancelSubscription(userId:string,actorId:string) {
     await database().prepare('UPDATE subscriptions SET requested_plan_id=NULL,canceled_at=?,canceled_by=?,updated_at=? WHERE user_id=?').bind(now,actorId,now,userId).run();
   }
   return database().prepare('SELECT * FROM subscriptions WHERE user_id=?').bind(userId).first<SubscriptionRecord>();
+}
+
+// Huella de todo lo que entra en el cálculo del resumen. El panel la consulta cada 30 s
+// y solo vuelve a calcular la ganancia cuando cambia: una consulta liviana en lugar de
+// recorrer todas las órdenes del período. Incluye la hora porque la ventana avanza sola.
+const DASHBOARD_VERSION_SQL=`SELECT concat_ws('|',
+  (SELECT COUNT(*)::text||':'||COALESCE(MAX(synced_at),'')||':'||COALESCE(MAX(source_commission_checked_at),'')||':'||COALESCE(MAX(meli_post_sale_checked_at),'') FROM orders WHERE user_id=?),
+  (SELECT COUNT(*)::text||':'||COALESCE(MAX(synced_at),'')||':'||COALESCE(MAX(manual_cost_updated_at),'') FROM product_variants WHERE user_id=?),
+  (SELECT COUNT(*)::text||':'||COALESCE(MAX(synced_at),'') FROM products WHERE user_id=?),
+  (SELECT COALESCE(MAX(updated_at),'') FROM store_settings WHERE user_id=?),
+  (SELECT COUNT(*)::text||':'||COALESCE(MAX(updated_at),'') FROM cost_rules WHERE user_id=?),
+  (SELECT COUNT(*)::text||':'||COALESCE(MAX(updated_at),'') FROM external_revenue WHERE user_id=?),
+  (SELECT COALESCE(MAX(updated_at),'') FROM exchange_rate_settings WHERE user_id=?),
+  (SELECT COUNT(*)::text||':'||COALESCE(MAX(updated_at),'') FROM order_item_cost_overrides WHERE user_id=?),
+  (SELECT COUNT(*)::text||':'||COALESCE(MAX(synced_at),'') FROM meta_insights_daily WHERE user_id=?),
+  (SELECT COALESCE(string_agg(external_account_id||':'||selected::text||':'||COALESCE(synced_at,''),',' ORDER BY external_account_id),'') FROM meta_ad_accounts WHERE user_id=?),
+  (SELECT COUNT(*)::text||':'||COALESCE(MAX(imported_at),'') FROM meli_billing_entries WHERE user_id=?),
+  (SELECT COALESCE(string_agg(advertiser_id||':'||selected::text||':'||COALESCE(last_completed_at,''),',' ORDER BY advertiser_id),'') FROM meli_ads_accounts WHERE user_id=?),
+  (SELECT COUNT(*)::text FROM meli_ads_daily WHERE user_id=?),
+  (SELECT COALESCE(string_agg(provider||':'||COALESCE(status,'')||':'||COALESCE(last_completed_at,'')||':'||COALESCE(last_error,'')||':'||COALESCE(webhook_status,''),',' ORDER BY provider),'') FROM sync_status WHERE user_id=?),
+  (SELECT COUNT(*)::text||':'||COALESCE(MAX(updated_at),'') FROM integrations WHERE user_id=?)
+) AS version`;
+
+export async function getDashboardVersion(userId:string,now=new Date()) {
+  const row=await database().prepare(DASHBOARD_VERSION_SQL).bind(...Array.from({length:15},()=>userId)).first<{version:string}>();
+  return `${now.toISOString().slice(0,13)}|${row?.version||''}`;
+}
+
+// Errores inesperados agrupados por origen, ruta y mensaje. Nunca debe romper el pedido
+// que lo reporta. Con 5000 tipos distintos guardados solo suma a los ya conocidos.
+export type ErrorReportInput={source:'client'|'server';message:string;detail?:string|null;path?:string|null;userId?:string|null};
+export async function recordError(input:ErrorReportInput) {
+  const message=(input.message||'Error').slice(0,500),path=(input.path||'').slice(0,200),detail=input.detail?input.detail.slice(0,4000):null;
+  const fingerprint=`${input.source}:${path}:${message}`,now=new Date().toISOString();
+  const stored=await database().prepare('SELECT COUNT(*) AS total FROM error_reports').first<{total:number}>();
+  if(Number(stored?.total||0)>=5000) {
+    await database().prepare('UPDATE error_reports SET count=count+1,last_seen_at=? WHERE fingerprint=?').bind(now,fingerprint).run();
+    return;
+  }
+  await database().prepare('INSERT INTO error_reports (fingerprint,source,path,message,detail,user_id,count,first_seen_at,last_seen_at) VALUES (?,?,?,?,?,?,1,?,?) ON CONFLICT(fingerprint) DO UPDATE SET count=error_reports.count+1,last_seen_at=excluded.last_seen_at,detail=COALESCE(excluded.detail,error_reports.detail),user_id=COALESCE(excluded.user_id,error_reports.user_id)')
+    .bind(fingerprint,input.source,path,message,detail,input.userId??null,now,now).run();
+}
+
+export async function getRecentErrors(limit=50) {
+  return database().prepare('SELECT source,path,message,detail,count,first_seen_at,last_seen_at FROM error_reports ORDER BY last_seen_at DESC LIMIT ?').bind(limit).all<Record<string,unknown>>();
 }
