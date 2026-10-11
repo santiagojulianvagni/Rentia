@@ -350,6 +350,13 @@ function PanelApp() {
   const [paletteOpen,setPaletteOpen]=useState(false);
   const [paletteQuery,setPaletteQuery]=useState('');
   const [paletteIndex,setPaletteIndex]=useState(0);
+  const anyMenuOpen=periodOpen||customRangeOpen||currencyOpen||languageOpen||dashboardMenuOpen||profileOpen;
+  useEffect(()=>{
+    if(!anyMenuOpen)return;
+    const outside=(event:PointerEvent)=>{const target=event.target as Element|null;if(target?.closest('.p-ctrl,.p-datePanel,.p-selectMenu'))return;setPeriodOpen(false);setCustomRangeOpen(false);setCurrencyOpen(false);setLanguageOpen(false);setDashboardMenuOpen(false);setProfileOpen(false);};
+    document.addEventListener('pointerdown',outside);
+    return()=>document.removeEventListener('pointerdown',outside);
+  },[anyMenuOpen]);
   useEffect(()=>{const open=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();setPaletteQuery('');setPaletteIndex(0);setPaletteOpen(true);}};window.addEventListener('keydown',open);return()=>window.removeEventListener('keydown',open);},[]);
   const toolbarRef=useRef<HTMLElement>(null);
   const [notice,setNotice]=useState('');
@@ -767,7 +774,6 @@ function PanelApp() {
             <div className={`p-menu ${profileOpen?'p-open':''}`}><div className="p-menuUser"><b>{profileUser?.fullName||'Mi cuenta'}</b><small>{profileUser?.primaryEmailAddress?.emailAddress||'Perfil personal de Rentia'}</small></div><hr/><button type="button" onClick={openAccountSettings} disabled={!profileLoaded}><ShieldCheck className="p-i" aria-hidden="true"/><span>Administrar mi cuenta<small>Perfil, seguridad y dispositivos</small></span></button><div className="p-menuUser"><small className="p-menuCap" style={{padding:0}}>TIENDA ACTUAL</small><b>{store}</b></div><hr/><button type="button" onClick={logout}><LogOut className="p-i" aria-hidden="true"/>{t('Cerrar sesión')}</button></div></div>
         </div>
       </header>
-      {(periodOpen||customRangeOpen||currencyOpen||languageOpen||dashboardMenuOpen||profileOpen)&&<button type="button" className="p-menuScrim" onClick={closeMenus} aria-label="Cerrar menú"/>}
 
       {accessRole==='member'&&<div className="p-readOnly"><ShieldCheck className="p-i" aria-hidden="true"/><span><b>Acceso de consulta</b> Podés ver datos y exportar informes. Los cambios los realiza el propietario o un administrador.</span></div>}
       <main className="p-content appPage">
