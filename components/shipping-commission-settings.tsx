@@ -1,5 +1,6 @@
 'use client';
 
+import RpSelect from './panel/rp-select';
 import type { FormEvent } from 'react';
 import { pagoNubePlan } from '../lib/pago-nube-fees';
 import { ChevronDown, ReceiptText, ShieldCheck, Truck } from 'lucide-react';
@@ -59,8 +60,8 @@ export default function ShippingCommissionSettings(props: Props) {
           <summary><b>Estimación de Pago Nube <span className="p-chip p-n">Respaldo opcional</span></b><ChevronDown className="p-i" aria-hidden="true"/></summary>
           <p className="p-sub" style={{margin:'10px 0 12px'}}>No es necesaria para importar los cargos reales. Usala solo si conocés el plan y el plazo de tu tienda; las tarifas públicas pueden diferir de tu acuerdo.</p>
           <div className="p-grid p-g2">
-            <label className="p-field"><span className="p-fieldLabel">Plan de Tiendanube</span><span className="p-input"><select value={props.pagoNubePlan} disabled={!props.loaded||props.saving} onChange={event=>props.onPlan(event.target.value)}><option value="">{detected.label}</option><option value="inicial">Inicial</option><option value="esencial">Esencial</option><option value="impulso">Impulso</option><option value="escala">Escala</option></select></span>{detected.description&&<small className="p-detected">{detected.description}</small>}</label>
-            <label className="p-field"><span className="p-fieldLabel">Plazo de acreditación</span><span className="p-input"><select value={props.pagoNubePayoutDays} disabled={!props.loaded||props.saving} onChange={event=>props.onPayout(event.target.value)}><option value="">Sin plazo de respaldo</option><option value="1">1 día</option><option value="7">7 días</option><option value="14">14 días</option></select></span></label>
+            <label className="p-field"><span className="p-fieldLabel">Plan de Tiendanube</span><span className="p-input"><RpSelect value={props.pagoNubePlan} disabled={!props.loaded||props.saving} onChange={event=>props.onPlan(event.target.value)}><option value="">{detected.label}</option><option value="inicial">Inicial</option><option value="esencial">Esencial</option><option value="impulso">Impulso</option><option value="escala">Escala</option></RpSelect></span>{detected.description&&<small className="p-detected">{detected.description}</small>}</label>
+            <label className="p-field"><span className="p-fieldLabel">Plazo de acreditación</span><span className="p-input"><RpSelect value={props.pagoNubePayoutDays} disabled={!props.loaded||props.saving} onChange={event=>props.onPayout(event.target.value)}><option value="">Sin plazo de respaldo</option><option value="1">1 día</option><option value="7">7 días</option><option value="14">14 días</option></RpSelect></span></label>
           </div>
           <p className="p-sub" style={{fontSize:12,margin:'10px 0 0'}}>El plan debe estar identificado; para tarjetas también se requiere el plazo. Cuotas y otros cargos pueden no estar incluidos. La comisión real tiene prioridad cuando llega.</p>
         </details>
