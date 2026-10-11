@@ -1,5 +1,6 @@
 'use client';
 
+import RpClamp from './panel/rp-clamp';
 import RpSelect from './panel/rp-select';
 import {useEffect,useRef,useState} from 'react';
 import {ArrowLeft,CheckCircle2,ChevronDown,FileText,RefreshCw,Search,TriangleAlert} from 'lucide-react';
@@ -19,7 +20,7 @@ function Entry({entry}:{entry:BillingEntry}) {
   const tone=entry.direction==='charge'?'p-r':entry.direction==='credit'?'p-g':'p-n';
   return <>
     <tr className={`p-click ${open?'p-openRow':''}`} onClick={()=>setOpen(!open)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();setOpen(!open);}}} tabIndex={0} aria-expanded={open}>
-      <td><b>{entry.name}</b><br/><small className="p-sub">{entry.code} · {category}</small></td>
+      <td><RpClamp text={entry.name}/><br/><small className="p-sub">{entry.code} · {category}</small></td>
       <td><span className={`p-chip ${tone}`}>{entry.direction==='charge'?'Cargo':entry.direction==='credit'?'Bonificación':'Por clasificar'}</span></td>
       <td>{entry.orderIds.length?`Orden #${entry.orderIds[0]}${entry.orderIds.length>1?` + ${entry.orderIds.length-1}`:''}`:'Cargo del período'}<br/><small className="p-sub">{entry.createdAt?new Date(entry.createdAt).toLocaleDateString('es-AR'):'Fecha no informada'}</small></td>
       <td className={`p-r p-mono ${entry.direction==='credit'?'p-pos':''}`}>{entry.direction==='credit'?'− ':''}{amount(entry.amountCents,entry.currency)}</td>
