@@ -1,0 +1,168 @@
+/* Panel · diseño 2026-10. Capa visual sobre los estilos existentes del panel.
+   Todo queda dentro de .appPage para no afectar al sitio público. */
+.appPage{
+  --p-bg:#07111f;--p-surface:#0f1b2b;--p-surface2:#0c1726;--p-raise:#13233a;--p-line:#1a2e43;--p-line2:#264560;
+  --p-text:#f2f7fb;--p-muted:#9bb0c1;--p-dim:#6b8398;--p-ease:cubic-bezier(.2,.8,.2,1);
+  font-family:var(--font-geist-sans),system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;background:var(--p-bg)!important;color:var(--p-text);
+}
+.appPage button,.appPage input,.appPage select,.appPage textarea{font-family:inherit}
+.appPage strong,.appPage b{font-weight:650}
+
+/* ---------- Barras de scroll ---------- */
+.appPage,.appPage *{scrollbar-width:thin;scrollbar-color:#274660 transparent}
+.appPage ::-webkit-scrollbar{width:10px;height:10px}
+.appPage ::-webkit-scrollbar-track{background:transparent}
+.appPage ::-webkit-scrollbar-thumb{border:3px solid transparent;border-radius:99px;background:#1f3851 padding-box}
+.appPage ::-webkit-scrollbar-button{display:none;width:0;height:0}
+html:has(.appPage){scrollbar-color:#274660 #07111f}
+.appPage .sidebarScroll{scrollbar-color:transparent transparent!important;mask-image:linear-gradient(180deg,#000 calc(100% - 26px),transparent);-webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 26px),transparent);padding-bottom:18px!important}
+.appPage .sidebarScroll:hover{scrollbar-color:#2f5878 transparent!important}
+
+/* ---------- Menú lateral ---------- */
+.appPage .appSidebar{padding:16px 12px;border-right:1px solid var(--p-line);background:linear-gradient(180deg,#0a1626,#08121f);scrollbar-width:none}
+.appPage .sidebarBrand{gap:10px;padding:4px 8px;font-size:19px;font-weight:800;letter-spacing:-.03em}
+.appPage .sidebarBrand .brandMark{width:28px;height:28px;background:none;box-shadow:none}
+.appPage .sidebarBrand .brandMark img{width:28px;height:28px}
+.appPage .sidebarCollapse{border:1px solid var(--p-line)!important;border-radius:10px!important;background:var(--p-surface2)!important;color:var(--p-muted)!important;transition:color .2s,border-color .2s}
+.appPage .sidebarCollapse:hover{border-color:var(--p-line2)!important;color:var(--p-text)!important}
+.appPage .sidebarGroup>small,.appPage .sidebarGroupToggle>span{color:var(--p-dim)!important;font-size:10.5px!important;font-weight:800!important;letter-spacing:.14em!important}
+.appPage .sidebarGroup>small{display:block;margin:16px 10px 6px}
+.appPage .sidebarNavItem,.appPage .sidebarGroupToggle{position:relative;gap:11px!important;min-height:38px;padding:9px 10px!important;border:0!important;border-radius:10px!important;background:none!important;color:#b6c7d4!important;font-size:13.5px!important;font-weight:600!important;transition:background .2s,color .2s}
+.appPage .sidebarNavItem:hover,.appPage .sidebarGroupToggle:hover{background:#112033!important;color:var(--p-text)!important}
+.appPage .sidebarNavItem.active{background:linear-gradient(90deg,rgba(33,212,194,.16),rgba(33,212,194,.04))!important;color:var(--p-text)!important;box-shadow:none!important}
+.appPage .sidebarNavItem.active:before{content:'';position:absolute;left:-12px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--cyan)}
+.appPage .sidebarNavItem.active svg{color:var(--cyan)}
+.appPage .sidebarNavItem svg,.appPage .sidebarGroupToggle svg{width:18px!important;height:18px!important}
+.appPage .sidebarNavItem>em{padding:2px 7px!important;border:1px solid rgba(167,139,250,.4)!important;border-radius:99px!important;background:none!important;color:#a78bfa!important;font-size:9.5px!important;font-weight:800!important}
+.appPage .sidebarSubnav{margin-left:0!important;padding-left:0!important;border-left:0!important}
+.appPage .sidebarFooter{gap:8px;padding-top:12px;border-top:1px solid var(--p-line)}
+.appPage .sidebarFooter .connectionStatus,.appPage .sidebarAccount{border:1px solid var(--p-line)!important;border-radius:12px!important;background:var(--p-surface2)!important;transition:border-color .2s}
+.appPage .sidebarFooter .connectionStatus:hover,.appPage .sidebarAccount:hover{border-color:var(--p-line2)!important}
+.appPage .sidebarAccount>b{border-radius:9px!important;background:linear-gradient(135deg,#0f6b66,#123a72)!important;color:#fff!important}
+
+/* ---------- Barra superior ---------- */
+.appPage .panelToolbar{position:sticky;top:0;z-index:30;margin:-35px -40px 28px;padding:12px 40px;border-bottom:1px solid var(--p-line);background:rgba(7,17,31,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.appPage .appHeaderTitle .muted{color:var(--p-dim)!important;font-size:12px!important;letter-spacing:0!important;font-weight:600!important}
+.appPage .appHeaderTitle h1{font-size:17px!important;font-weight:700;letter-spacing:-.02em}
+.appPage .headerControl>button{height:40px;border-color:var(--p-line)!important;border-radius:11px!important;background:var(--p-surface2)!important;color:#cfdce6!important;box-shadow:none!important;font-size:13px;font-weight:600}
+.appPage .headerControl>button:hover{border-color:var(--p-line2)!important;color:var(--p-text)!important}
+.appPage .controlMenu,.appPage .profileMenu,.appPage .dateRangeMenu{border-color:var(--p-line2)!important;border-radius:14px!important;background:#0d1a2a!important;box-shadow:0 24px 60px rgba(0,0,0,.5)!important;animation:p2Menu .22s var(--p-ease)}
+.appPage .controlMenu button{font-size:13px!important}
+.appPage .appAvatar{background:linear-gradient(135deg,#7c4dff,#3b8cff)!important;color:#fff!important;border:0!important}
+@keyframes p2Menu{from{opacity:0;transform:translateY(6px)}}
+
+/* ---------- Títulos de cada sección ---------- */
+.appPage .muted{color:var(--cyan);font-size:11px;font-weight:800;letter-spacing:.14em}
+.appPage .dashboardIntro h2,.appPage .dataSection>div:first-child h2,.appPage [class$="Heading"] h2,.appPage .integrationsPage>div:first-child h2,.appPage .deliveryPageHeading h2,.appPage .sectionEmpty h2{font-size:30px!important;font-weight:600!important;letter-spacing:-.035em!important;line-height:1.15}
+.appPage .dashboardIntro p,.appPage .dataSection>div:first-child p,.appPage [class$="Heading"]>div>p,.appPage .integrationsPage>div:first-child p,.appPage .deliveryPageHeading p{color:var(--p-muted)!important;font-size:14px!important;line-height:1.55!important;max-width:720px}
+
+/* ---------- Tarjetas ---------- */
+.appPage .performanceChart,.appPage .profitStack,.appPage .channelSection,.appPage .latestSales,.appPage .dashboardInsightChart,
+.appPage .setupChecklist,.appPage .decisionCard,.appPage .decisionSummary>article,.appPage .decisionWins,
+.appPage .qualityHero,.appPage .qualityDimensions>article,.appPage .qualityIssues,.appPage .qualityMethod,.appPage .qualityOrders,.appPage .postSaleQuality,
+.appPage .reportHero,.appPage .reportEvolution,.appPage .reportCosts,.appPage .reportTables>article,.appPage .reportDetailPanel,
+.appPage .analyticsSummary>article,.appPage .adsSummary>article,.appPage .adsComparison>article,.appPage .integrationCards>article,.appPage .mercadoLibreIntegration,
+.appPage .teamSummary>article,.appPage .teamPermissionGuide>article,.appPage .teamInvite,.appPage .teamCard,
+.appPage .deliveryBlock,.appPage .costSummary>article,.appPage .subscriptionStatus>div,.appPage .rentiaPlanBuilder,.appPage .rentiaPlanComparison,.appPage .billingRoadmap,
+.appPage .financeSummary>article,.appPage .quoteConfiguration,.appPage .quoteCurrent,.appPage .quoteChartCard,.appPage .meliBillingTotals>article,.appPage .productAdsMetrics>article,.appPage .productAdsAccount{
+  border:1px solid var(--p-line)!important;border-radius:18px!important;background:linear-gradient(170deg,var(--p-surface),var(--p-surface2))!important;box-shadow:none!important;
+  transition:border-color .25s,transform .25s var(--p-ease),box-shadow .25s}
+.appPage .decisionCard:hover,.appPage .integrationCards>article:hover,.appPage .qualityDimensions>article:hover,.appPage .analyticsSummary>article:hover,.appPage .teamSummary>article:hover{border-color:var(--p-line2)!important}
+
+/* Tarjetas de métricas del dashboard */
+.appPage .dashboardMetricSection{margin-bottom:18px;padding:16px!important;border:1px solid var(--p-line);border-top:2px solid rgba(33,212,194,.5);border-radius:20px;background:rgba(10,20,34,.5)}
+.appPage .dashboardMetricSection.channel-tiendanube{border-top-color:rgba(59,140,255,.55)}
+.appPage .dashboardMetricSection.channel-meta{border-top-color:rgba(59,140,255,.35)}
+.appPage .dashboardMetricSection.channel-mercadolibre{border-top-color:rgba(245,196,81,.55)}
+.appPage .dashboardMetricSectionTitle h3{font-size:16px!important;font-weight:650}
+.appPage .dashboardMetricSectionTitle small{color:var(--p-dim)!important;font-size:12px!important}
+.appPage .channelIcon:not(.compact){width:36px!important;height:36px!important;border:1px solid var(--p-line2)!important;border-radius:11px!important;background:var(--p-bg)!important}
+.appPage .appMetrics.expanded{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))!important;gap:14px!important}
+.appPage .metricCard{position:relative;overflow:hidden;min-height:136px;padding:16px 18px!important;border:1px solid var(--p-line)!important;border-radius:16px!important;background:linear-gradient(170deg,var(--p-surface),var(--p-surface2))!important;text-align:left;transition:transform .25s var(--p-ease),border-color .2s,box-shadow .25s!important}
+.appPage .metricCard:hover{transform:translateY(-3px);border-color:var(--p-line2)!important;box-shadow:0 18px 40px rgba(0,0,0,.3)!important}
+.appPage .metricCard:after{display:none!important}
+.appPage .metricCardLabel{color:var(--p-muted)!important;font-size:12px!important;font-weight:600!important;padding-right:78px}
+.appPage .metricCard>strong{margin:10px 0 6px!important;font-family:var(--font-geist-mono),ui-monospace,monospace;font-size:24px!important;font-weight:600!important;letter-spacing:-.03em;font-feature-settings:'tnum';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appPage .metricCard>i{color:var(--p-dim)!important;font-size:11px!important;font-style:normal;opacity:0;transform:translateY(4px);transition:.25s}
+.appPage .metricCard:hover>i{opacity:1;transform:none;color:var(--cyan)!important}
+.appPage .metricCard .p2Spark{position:absolute;top:14px;right:14px;width:76px;height:30px;opacity:.85;pointer-events:none}
+.appPage .metricCard .p2Spark path{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:240;stroke-dashoffset:240;animation:p2Draw 1.2s .2s var(--p-ease) forwards}
+.appPage .positiveProfit{color:var(--cyan)!important}
+.appPage .negativeProfit{color:#ff8c99!important}
+.appPage .metricChange{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:11.5px!important;font-weight:700}
+@keyframes p2Draw{to{stroke-dashoffset:0}}
+
+/* Banner de calidad con anillo */
+.appPage .dashboardQualityBanner{display:flex;align-items:center;gap:16px;width:100%;padding:14px 18px!important;border:1px solid rgba(245,196,81,.35)!important;border-radius:16px!important;background:linear-gradient(90deg,rgba(245,196,81,.09),rgba(245,196,81,.02))!important;transition:border-color .2s,transform .25s var(--p-ease)}
+.appPage .dashboardQualityBanner.ready{border-color:rgba(50,213,131,.35)!important;background:linear-gradient(90deg,rgba(50,213,131,.08),rgba(50,213,131,.02))!important}
+.appPage .dashboardQualityBanner:hover{transform:translateY(-1px)}
+.appPage .dashboardQualityBanner b{font-size:15px!important}
+.appPage .dashboardQualityBanner small{font-size:12.5px!important;color:#d8c99a}
+.appPage .dashboardQualityBanner>.p2Ring{--v:0;position:relative;display:grid;place-items:center;width:52px;height:52px;flex:0 0 52px;border-radius:50%;background:conic-gradient(#f5c451 calc(var(--v)*1%),#1a2e42 0);font-size:12.5px;font-weight:700;animation:p2RingIn 1.2s var(--p-ease) both}
+.appPage .dashboardQualityBanner.ready>.p2Ring{background:conic-gradient(#32d583 calc(var(--v)*1%),#1a2e42 0)}
+.appPage .dashboardQualityBanner>.p2Ring:before{content:'';position:absolute;inset:6px;border-radius:50%;background:#0f1b29}
+.appPage .dashboardQualityBanner>.p2Ring>em{position:relative;font-style:normal}
+.appPage .dashboardQualityBanner>strong{margin-left:auto;padding:9px 13px;border:1px solid var(--p-line2);border-radius:10px;background:var(--p-surface2);font-size:12.5px!important;white-space:nowrap}
+@property --v{syntax:'<number>';inherits:false;initial-value:0}
+@keyframes p2RingIn{from{--v:0}}
+
+/* ---------- Botones ---------- */
+.appPage .button{border-radius:11px!important;padding:11px 17px!important;font-size:13.5px!important;font-weight:700!important;box-shadow:0 10px 30px rgba(33,212,194,.22)!important;transition:transform .2s,background .2s,box-shadow .2s!important}
+.appPage .button:hover:not(:disabled){background:#3fe0ce!important;transform:translateY(-1px)}
+.appPage .button:active:not(:disabled),.appPage .outline:active:not(:disabled){transform:scale(.97)}
+.appPage .outline,.appPage .exportButton{align-items:center;gap:8px;padding:10px 15px!important;border:1px solid var(--p-line2)!important;border-radius:11px!important;background:var(--p-surface2)!important;color:var(--p-text)!important;font-size:13px!important;font-weight:700!important;cursor:pointer;transition:border-color .2s,background .2s,transform .2s!important}
+.appPage .outline:hover:not(:disabled),.appPage .exportButton:hover:not(:disabled){border-color:#36607f!important;background:var(--p-raise)!important}
+.appPage button:disabled{cursor:not-allowed}
+.appPage .filterTabs,.appPage .chartTypeSwitch,.appPage .advertisingTabs,.appPage .reportPeriods,.appPage .quotePeriods,.appPage .rentiaPlanCycle,.appPage .dashboardPresetPicker{gap:4px!important;padding:3px!important;border:1px solid var(--p-line)!important;border-radius:11px!important;background:var(--p-surface2)!important}
+.appPage .filterTabs button,.appPage .chartTypeSwitch button,.appPage .advertisingTabs button,.appPage .reportPeriods button,.appPage .quotePeriods button,.appPage .rentiaPlanCycle button,.appPage .dashboardPresetPicker button{border:0!important;border-radius:8px!important;background:none!important;color:var(--p-muted)!important;font-size:12.5px!important;font-weight:700!important;transition:background .2s,color .2s}
+.appPage .filterTabs button.active,.appPage .chartTypeSwitch button.active,.appPage .advertisingTabs button.active,.appPage .reportPeriods button.active,.appPage .quotePeriods button.active,.appPage .quotePeriods button[aria-pressed=true],.appPage .rentiaPlanCycle button[aria-pressed=true],.appPage .rentiaPlanCycle button.active{background:var(--p-raise)!important;color:var(--p-text)!important;box-shadow:inset 0 0 0 1px var(--p-line2)!important}
+
+/* ---------- Campos ---------- */
+.appPage input:not([type=checkbox]):not([type=radio]):not([type=range]),.appPage select,.appPage textarea,.appPage .themedSelectTrigger{border-color:var(--p-line2)!important;border-radius:11px!important;background-color:var(--p-bg)!important;color:var(--p-text)!important;transition:border-color .2s,box-shadow .2s}
+.appPage input:not([type=checkbox]):not([type=radio]):not([type=range]):focus,.appPage select:focus,.appPage textarea:focus,.appPage .themedSelectTrigger:focus-visible{outline:0!important;border-color:var(--cyan)!important;box-shadow:0 0 0 4px rgba(33,212,194,.12)!important}
+.appPage input[type=date]{color-scheme:dark}
+.appPage .themedSelectMenu{border-color:var(--p-line2)!important;border-radius:12px!important;background:#0d1a2a!important;box-shadow:0 24px 60px rgba(0,0,0,.5)!important;animation:p2Menu .2s var(--p-ease)}
+
+/* ---------- Tablas y filas ---------- */
+.appPage .dataTable,.appPage .analyticsTable,.appPage .inventoryTable,.appPage .adsTable,.appPage .channelTable,.appPage .qualityOrderTable,.appPage .costTable,.appPage .meliBillingTable,.appPage .externalRevenueTable,.appPage .reportDetailTable,.appPage .teamTable{border:1px solid var(--p-line)!important;border-radius:16px!important;background:var(--p-surface2)!important;overflow:hidden}
+.appPage .dataHead,.appPage .analyticsHead,.appPage .inventoryHead,.appPage .adsHead,.appPage .channelHead,.appPage .qualityOrderHead,.appPage .costHead,.appPage .meliBillingHead,.appPage .externalRevenueHead{background:#0b1828!important;color:var(--p-dim)!important;font-size:11px!important;font-weight:700!important;letter-spacing:.06em;text-transform:uppercase}
+.appPage .dataRow,.appPage .analyticsRow,.appPage .inventoryRow,.appPage .adsRow,.appPage .channelRow,.appPage .qualityOrderRow,.appPage .costRow,.appPage .meliBillingRow,.appPage .externalRevenueRow{border-color:#142638!important;font-size:13px;transition:background .15s}
+.appPage .dataRow:not(.dataHead):hover,.appPage .analyticsRow:not(.analyticsHead):hover,.appPage .inventoryRow:not(.inventoryHead):hover,.appPage .adsRow:not(.adsHead):hover,.appPage .channelRow:not(.channelHead):hover,.appPage .costRow:hover,.appPage .meliBillingRow:hover{background:#0f1f31!important}
+.appPage .orderBreakdown{border-top:1px solid var(--p-line);background:linear-gradient(180deg,#0b1828,#0a1523)!important;animation:p2Open .3s var(--p-ease)}
+.appPage .profitTotal b,.appPage .profitStackTotal b{font-family:var(--font-geist-mono),monospace}
+@keyframes p2Open{from{opacity:0;transform:translateY(-4px)}}
+
+/* Pastillas y estados */
+.appPage .statusPill,.appPage .deliveryBadge,.appPage .sourcePill,.appPage .inventoryPill,.appPage .campaignStatus,.appPage .marginBadge,.appPage .teamRole,.appPage .qualityStatus{border-radius:99px!important;font-size:11px!important;font-weight:700!important}
+
+/* Barras de progreso */
+.appPage .qualityProgress,.appPage .usageMeter>div,.appPage .setupProgress{border-radius:99px!important;background:#16283a!important;overflow:hidden}
+.appPage .qualityProgress i,.appPage .usageMeter>div>i,.appPage .setupProgress i{border-radius:inherit!important;background:linear-gradient(90deg,var(--cyan),var(--green))!important;transform-origin:left;animation:p2Grow 1s var(--p-ease) both}
+@keyframes p2Grow{from{transform:scaleX(0)}}
+
+/* Gráficos */
+.appPage .timelineLine{stroke-dasharray:3000;stroke-dashoffset:3000;animation:p2Draw 1.4s var(--p-ease) forwards}
+.appPage .timelineArea{opacity:0;animation:p2Fade .9s .35s forwards}
+@keyframes p2Fade{to{opacity:1}}
+
+/* Plan: transición suave al mover la barra */
+.appPage .rentiaPlanResult,.appPage .rentiaPlanOffer{transition:border-color .35s,background .35s}
+.appPage .rentiaPlanChangingValue{animation:p2Swap .3s var(--p-ease)}
+@keyframes p2Swap{from{opacity:.5;transform:translateY(4px)}}
+
+/* ---------- Entrada al cambiar de sección ---------- */
+.appPage .managementFields>*{animation:p2Rise .5s var(--p-ease) both}
+.appPage .managementFields>*:nth-child(2){animation-delay:.05s}
+.appPage .managementFields>*:nth-child(3){animation-delay:.1s}
+.appPage .managementFields>*:nth-child(n+4){animation-delay:.15s}
+.appPage .appMetrics.expanded>.metricCard{animation:p2Rise .55s var(--p-ease) both}
+.appPage .appMetrics.expanded>.metricCard:nth-child(2){animation-delay:.05s}
+.appPage .appMetrics.expanded>.metricCard:nth-child(3){animation-delay:.1s}
+.appPage .appMetrics.expanded>.metricCard:nth-child(4){animation-delay:.15s}
+.appPage .appMetrics.expanded>.metricCard:nth-child(n+5){animation-delay:.2s}
+@keyframes p2Rise{from{opacity:0;transform:translateY(12px)}}
+
+@media (max-width:900px){.appPage .panelToolbar{margin:-24px -14px 20px;padding:10px 14px}.appPage .dashboardIntro h2,.appPage .dataSection>div:first-child h2,.appPage [class$="Heading"] h2{font-size:24px!important}}
+@media (max-width:560px){.appPage .appMetrics.expanded{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.appPage .metricCard{min-height:118px;padding:13px!important}.appPage .metricCard>strong{font-size:18px!important}.appPage .metricCard .p2Spark{display:none}.appPage .metricCardLabel{padding-right:0}.appPage .dashboardQualityBanner{flex-wrap:wrap}.appPage .dashboardQualityBanner>strong{margin-left:0}}
+@media (prefers-reduced-motion:reduce){.appPage *,.appPage *:before,.appPage *:after{animation:none!important;transition:none!important}}
