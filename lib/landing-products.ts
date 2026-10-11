@@ -9,7 +9,7 @@ export const landingProducts = [
     insight: 'Un número útil también te dice cuánto podés confiar en él. Si falta un costo, la ganancia sigue siendo provisoria.',
     stepsTitle: 'De una venta a un resultado que entendés.',
     steps: [
-      ['Conectá tus datos', 'Sincronizá las órdenes de Tiendanube y la inversión de tu cuenta de Meta Ads.'],
+      ['Conectá tus datos', 'Sincronizá las órdenes de Tiendanube y Mercado Libre, y la inversión de tu cuenta de Meta Ads.'],
       ['Completá los costos', 'Cargá productos, envíos e impuestos. Rentia usa las comisiones informadas o el respaldo que configuraste.'],
       ['Revisá lo que queda', 'Consultá la ganancia conocida y los costos pendientes antes de comparar el resultado de tu tienda.'],
     ],
@@ -29,7 +29,7 @@ export const landingProducts = [
     insight: 'Un producto puede vender mucho y dejar poco margen. Mirá ambas cosas antes de cambiar su precio o promocionarlo.',
     stepsTitle: 'Tu catálogo, con una lectura más completa.',
     steps: [
-      ['Traé tu catálogo', 'La conexión de Tiendanube reúne los productos, variantes y ventas disponibles.'],
+      ['Traé tu catálogo', 'Las conexiones de Tiendanube y Mercado Libre reúnen los productos, variantes y ventas disponibles.'],
       ['Vinculá sus costos', 'Completá el costo de cada producto o variante. El SKU permite identificarlo sin confundirlo con otro.'],
       ['Compará el período', 'Revisá ventas, costos y margen para entender qué aporta cada producto al resultado.'],
     ],

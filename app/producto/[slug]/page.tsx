@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import LandingProductDetail from '../../../components/landing-product-detail';
+import ProductDetail from '../../../components/site/product-detail';
 import { findLandingProduct, landingProducts } from '../../../lib/landing-products';
-import '../../landing.css';
+import '../../landing-v2.css';
 
 type ProductParams = { params: Promise<{ slug: string }> };
 export function generateStaticParams() { return landingProducts.map(product => ({ slug: product.slug })); }
@@ -14,5 +14,5 @@ export async function generateMetadata({ params }: ProductParams): Promise<Metad
 export default async function ProductDetailPage({ params }: ProductParams) {
   const { slug } = await params;
   if (!findLandingProduct(slug)) notFound();
-  return <LandingProductDetail slug={slug}/>;
+  return <ProductDetail slug={slug}/>;
 }
