@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {contributionRate,campaignProfits,campaignTotals} from '../lib/campaign-profit.ts';
 import {buildAlerts,defaultAlertSettings,urgentAlerts} from '../lib/alerts.ts';
 import {achievements} from '../lib/achievements.ts';
+import {recordAchievements} from '../lib/records.ts';
 
 const money=value=>`$${Math.round(value)}`;
 
@@ -50,6 +51,30 @@ test('achievements offer a version without amounts',()=>{
   assert.equal(byId.orders.privateValue,'+100');
   assert.match(byId['best-day'].privateValue,/^Jueves 8$/);
   assert.equal(byId['best-day'].value,'$700');
-  for(const item of list)assert.doesNotMatch(item.privateValue,/\$/,`${item.id} must not leak amounts`);
+  // "De cada $100" es una proporción: no revela cuánto vende la tienda.
+  assert.equal(byId['per-100'].value,'$22');
+  for(const item of list.filter(item=>item.id!=='per-100'))assert.doesNotMatch(item.privateValue,/\$/,`${item.id} must not leak amounts`);
   assert.deepEqual(achievements({revenue:0,profit:0,margin:0,orders:0},null,[],money),[]);
+});
+
+test('records, streaks and milestones are measured up to the chosen week',()=>{
+  const days=[];
+  // Cinco semanas creciendo (lunes 7 de septiembre al domingo 11 de octubre), una venta por día.
+  for(let week=0;week<5;week++)for(let day=0;day<7;day++){
+    const date=new Date(Date.UTC(2026,8,7+week*7+day)).toISOString().slice(0,10);
+    days.push({date,orders:3+week,revenue:100*(week+1)});
+  }
+  const ids=list=>list.map(item=>item.id).sort();
+  const last=recordAchievements(days,{start:'2026-10-05',end:'2026-10-11'},money);
+  assert.deepEqual(ids(last),['growth-streak','record-week','sales-streak']);
+  // Las 100 órdenes se superan en la semana del 28/9 (84 antes, 126 al terminarla): el hito aparece esa semana, no después.
+  const crossing=recordAchievements(days,{start:'2026-09-28',end:'2026-10-04'},money).find(item=>item.id==='milestone-orders');
+  assert.equal(crossing?.title,'Superé las 100 órdenes');
+  assert.equal(last.find(item=>item.id==='growth-streak').value,'4 semanas');
+  assert.equal(last.find(item=>item.id==='sales-streak').value,'35 días');
+  assert.equal(last.find(item=>item.id==='record-week').privateValue,'Récord');
+  // Septiembre terminó en la semana del 28/9 al 4/10, pero no hay meses anteriores para compararlo.
+  assert.ok(!ids(recordAchievements(days,{start:'2026-09-28',end:'2026-10-04'},money)).includes('record-month'));
+  // Una semana sin ventas no tiene récords.
+  assert.deepEqual(recordAchievements(days,{start:'2026-10-12',end:'2026-10-18'},money).filter(item=>item.id==='record-week'),[]);
 });

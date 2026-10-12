@@ -21,7 +21,8 @@ export function achievements(current:AchievementMetrics|null,previous:Achievemen
     const growth=(current.profit-previous.profit)/previous.profit*100;
     if(growth>=10)list.push({id:'profit-growth',title:'Más ganancia',value:percent(growth),privateValue:percent(growth),detail:`Ganaste ${money(current.profit)} frente a ${money(previous.profit)} del período anterior.`});
   }
-  if(current.margin>=20)list.push({id:'margin',title:'Margen real saludable',value:`${decimal(current.margin)}%`,privateValue:`${decimal(current.margin)}%`,detail:'Lo que queda después de productos, envíos, comisiones, impuestos y publicidad.'});
+  // El margen dicho en simple: se entiende al instante y no revela cuánto vende la tienda.
+  if(current.margin>0&&current.revenue>0)list.push({id:'per-100',title:'De cada $100 que vendí, me quedaron',value:`$${Math.round(current.margin)}`,privateValue:`$${Math.round(current.margin)}`,detail:'Ganancia real después de productos, envíos, comisiones, impuestos y publicidad.'});
   if(previous&&previous.revenue>0&&current.margin-previous.margin>=2)list.push({id:'margin-up',title:'Margen en alza',value:`+${decimal(current.margin-previous.margin)} pts`,privateValue:`+${decimal(current.margin-previous.margin)} pts`,detail:`Pasó de ${decimal(previous.margin)}% a ${decimal(current.margin)}%.`});
   const milestone=MILESTONES.find(value=>current.orders>=value);
   if(milestone)list.push({id:'orders',title:'Órdenes en el período',value:current.orders.toLocaleString('es-AR'),privateValue:`+${milestone.toLocaleString('es-AR')}`,detail:`Superaste las ${milestone.toLocaleString('es-AR')} órdenes.`});

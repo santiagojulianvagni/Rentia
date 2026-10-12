@@ -379,3 +379,9 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
      para que los números queden parejos aunque un título sea más largo. */
   .p-root .p-g4>.p-kpi>small{min-height:34px;line-height:17px;align-items:flex-start}
 }
+.p-root .p-shareCanvas.p-story{aspect-ratio:1080/1920}
+.p-root .p-shareFormat{margin-bottom:6px}
+.p-root .p-shareFormat button{flex:1}
+.p-root .p-starProduct{display:grid;grid-template-columns:88px 1fr;gap:14px;align-items:center}
+.p-root .p-starProduct img{width:88px;height:88px;border-radius:14px;object-fit:cover;background:#fff}
+@media (max-width:640px){.p-root .p-shareCanvas.p-story{max-width:200px}}

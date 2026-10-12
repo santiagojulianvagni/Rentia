@@ -34,3 +34,11 @@ test('no third-party trackers, external fonts or session recording on the site',
   assert.match(layout,/next\/font\/google/,'fonts are self-hosted by next/font');
   assert.doesNotMatch(layout,/fonts\.googleapis|googletagmanager|gtag\(|hotjar|clarity\.ms|replay/i);
 });
+
+test('product photos are only fetched from Tiendanube and Mercado Libre over https',async()=>{
+  const {allowedImageUrl}=await import('../lib/product-image.ts');
+  assert.ok(allowedImageUrl('https://acdn-us.mitiendanube.com/stores/1/products/a.jpg'));
+  assert.ok(allowedImageUrl('https://http2.mlstatic.com/D_NQ_NP_1.jpg'));
+  for(const url of ['http://acdn-us.mitiendanube.com/a.jpg','https://mitiendanube.com.evil.example/a.jpg','https://evilmlstatic.com/a.jpg','https://169.254.169.254/latest/meta-data','https://user:pass@http2.mlstatic.com/a.jpg','https://http2.mlstatic.com:8443/a.jpg','no es una url',null])
+    assert.equal(allowedImageUrl(url),null,String(url));
+});

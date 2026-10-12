@@ -1100,7 +1100,7 @@ function DashboardOverview({dashboard,previousDashboard,syncing,days,storeName,p
     const prev=previousDashboard?.metrics;
     const growth=(current:number,previous?:number)=>previous?`${current>=previous?'+':''}${Math.round((current-previous)/Math.abs(previous)*100)}%`:'—';
     const margin=`${metrics.margin.toFixed(1).replace('.',',')}%`;
-    setShare({eyebrow:'Mis números',title:'Así le fue a mi tienda',period:periodLabel,stats:[
+    setShare({eyebrow:'Mis números',title:'Así le fue a mi tienda',period:periodLabel,series:(dashboard?.timeline||[]).map(point=>point.storeRevenue+point.externalRevenue),stats:[
       {label:'Facturación',value:money(metrics.totalRevenue),privateValue:growth(metrics.totalRevenue,prev?.totalRevenue)},
       {label:'Ganancia',value:money(metrics.profit),privateValue:growth(metrics.profit,prev?.profit)},
       {label:'Margen real',value:margin,privateValue:margin},

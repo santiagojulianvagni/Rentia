@@ -925,3 +925,17 @@ export async function saveAlertReads(userId:string,viewerId:string,keys:string[]
   await database().batch(statements);
   return getAlertReads(userId,viewerId);
 }
+
+// Ventas pagadas por día de todo el historial, para récords, rachas e hitos al compartir.
+export async function getSalesHistory(userId:string) {
+  const [days,units]=await Promise.all([
+    database().prepare("SELECT left(source_created_at,10) AS date,COUNT(*) AS orders,COALESCE(SUM(total),0) AS revenue FROM orders WHERE user_id=? AND payment_status='paid' AND status!='cancelled' GROUP BY 1 ORDER BY 1").bind(userId).all<{date:string;orders:number;revenue:number}>(),
+    database().prepare("SELECT COALESCE(SUM(oi.quantity),0) AS units FROM order_items oi JOIN orders o ON o.user_id=oi.user_id AND o.provider=oi.provider AND o.external_order_id=oi.external_order_id WHERE oi.user_id=? AND o.payment_status='paid' AND o.status!='cancelled'").bind(userId).first<{units:number}>(),
+  ]);
+  return {days:days.results.map(row=>({date:row.date,orders:Number(row.orders),revenue:Number(row.revenue)})),units:Number(units?.units||0)};
+}
+
+export async function getProductImageUrl(userId:string,provider:string,externalProductId:string) {
+  const row=await database().prepare('SELECT image_url FROM products WHERE user_id=? AND provider=? AND external_product_id=?').bind(userId,provider,externalProductId).first<{image_url:string|null}>();
+  return row?.image_url||null;
+}

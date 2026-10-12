@@ -7,10 +7,11 @@ import ShareDialog, { type ShareContent } from './share-card';
 import { achievements } from '../../lib/achievements';
 import { buildAlerts, type AlertSettings } from '../../lib/alerts';
 import { campaignMargins, campaignProfits, type MeliCampaignInput, type MetaCampaignInput } from '../../lib/campaign-profit';
+import { recordAchievements, type SalesDay } from '../../lib/records';
 
 type WeekMetrics={revenue:number;totalRevenue:number;profit:number;profitBeforeAds:number;margin:number;orders:number;totalOrders:number;totalAdSpend?:number;adSpend:number;reportedRoas:number;totalAov:number;adSpendComparable:boolean;meliAdsComparable?:boolean};
 type WeekDashboard={metrics:WeekMetrics;timeline:Array<{date:string;storeRevenue:number;externalRevenue:number;profit:number}>;channels:Array<{provider:string;revenue:number;orders:number;completeOrders:number;profit:number|null;profitBeforeAds?:number|null}>;quality:{completeOrders:number;totalOrders:number};ads:{connected:boolean};meliAds?:{connected:boolean;campaigns:MeliCampaignInput[]};sync:{status:string}|null};
-type WeekProduct={product_name:string;units_sold:number;profit:number;stock:number|null;days_stock:number|null;rentia_archived:number};
+type WeekProduct={product_name:string;units_sold:number;profit:number;stock:number|null;days_stock:number|null;rentia_archived:number;image_url:string|null;provider:string;external_product_id:string};
 type Week={start:string;end:string};
 
 const DAY=24*60*60*1000;
@@ -47,6 +48,9 @@ export default function WeeklySummary({money,storeName,settings,onNavigate}:{mon
   const [data,setData]=useState<{current:WeekDashboard|null;previous:WeekDashboard|null;products:WeekProduct[];meta:MetaCampaignInput[]}|null>(null);
   const [error,setError]=useState(false);
   const [share,setShare]=useState<ShareContent|null>(null);
+  // Historial completo para récords y rachas: se pide una sola vez.
+  const [history,setHistory]=useState<SalesDay[]>([]);
+  useEffect(()=>{getJson<{days:SalesDay[]}>('/api/insights/records').then(data=>{if(data?.days)setHistory(data.days);}).catch(()=>undefined);},[]);
 
   useEffect(()=>{
     let cancelled=false;
@@ -71,7 +75,8 @@ export default function WeeklySummary({money,storeName,settings,onNavigate}:{mon
     const metrics={revenue:m.totalRevenue,profit:m.profit,margin:m.margin,orders:m.totalOrders};
     const previousMetrics=p?{revenue:p.totalRevenue,profit:p.profit,margin:p.margin,orders:p.totalOrders}:null;
     const alerts=buildAlerts({metrics,previous:previousMetrics,quality:current.quality,adsConnected:current.ads.connected,syncError:current.sync?.status==='error',products:data.products,missingCosts:0,campaigns,settings,money});
-    const wins=achievements({...metrics,reportedRoas:m.reportedRoas,adSpend:m.adSpend},previousMetrics,current.timeline,money);
+    const wins=[...recordAchievements(history,week,money),...achievements({...metrics,reportedRoas:m.reportedRoas,adSpend:m.adSpend},previousMetrics,current.timeline,money)];
+    const series=current.timeline.map(day=>day.storeRevenue+day.externalRevenue);
     const days=current.timeline.map(day=>({label:shortDay.format(new Date(`${day.date}T00:00:00Z`)),revenue:day.storeRevenue+day.externalRevenue,profit:day.profit}));
     const best=current.timeline.reduce<typeof current.timeline[number]|null>((top,day)=>!top||day.storeRevenue+day.externalRevenue>top.storeRevenue+top.externalRevenue?day:top,null);
     const topProducts=[...data.products].filter(row=>row.units_sold>0).sort((a,b)=>b.profit-a.profit).slice(0,3);
@@ -83,10 +88,10 @@ export default function WeeklySummary({money,storeName,settings,onNavigate}:{mon
       topProducts[0]?`El producto que más ganancia dejó fue ${topProducts[0].product_name} (${money(topProducts[0].profit)}).`:'',
       losing[0]?`Ojo: la campaña ${losing[0].name} perdió ${money(Math.abs(losing[0].profit||0))} estimados.`:winning[0]?`La campaña ${winning[0].name} dejó ${money(winning[0].profit||0)} de ganancia estimada.`:'',
     ].filter(Boolean);
-    return {m,p,campaigns,alerts,wins,days,topProducts,losing,winning,story};
-  },[data,settings,money]);
+    return {m,p,campaigns,alerts,wins,days,topProducts,losing,winning,story,series};
+  },[data,settings,money,history,week]);
 
-  const shareWeek=()=>{if(!view)return;const {m,p}=view;setShare({eyebrow:'Resumen semanal',title:'Mi semana en números',period:`Semana del ${label}`,stats:[
+  const shareWeek=()=>{if(!view)return;const {m,p}=view;setShare({eyebrow:'Resumen semanal',title:'Mi semana en números',period:`Semana del ${label}`,series:view.series,stats:[
     {label:'Facturación',value:money(m.totalRevenue),privateValue:signed(change(m.totalRevenue,p?.totalRevenue))},
     {label:'Ganancia',value:money(m.profit),privateValue:signed(change(m.profit,p?.profit))},
     {label:'Margen real',value:`${m.margin.toFixed(1).replace('.',',')}%`,privateValue:`${m.margin.toFixed(1).replace('.',',')}%`},
@@ -122,8 +127,10 @@ export default function WeeklySummary({money,storeName,settings,onNavigate}:{mon
           {view.alerts.filter(alert=>alert.kind!=='info').length?<ul className="p-weekList">{view.alerts.filter(alert=>alert.kind!=='info').slice(0,4).map(alert=><li key={alert.id}><span>{alert.title}</span><button type="button" className="p-btn p-small" onClick={()=>onNavigate(alert.section)}>{alert.action}</button></li>)}</ul>:<div className="p-empty">Nada urgente esta semana.</div>}
         </div>
       </div>
+      {view.topProducts[0]&&view.topProducts[0].profit>0&&(()=>{const star=view.topProducts[0];return <div className="p-card p-reveal" style={{marginBottom:16}}><div className="p-cardHead"><div><span className="p-eyebrowS">PRODUCTO ESTRELLA</span><h3>El que más ganancia dejó</h3></div><button type="button" className="p-btn p-small" onClick={()=>setShare({eyebrow:'Producto estrella de la semana',title:star.product_name,value:money(star.profit),privateValue:`${star.units_sold.toLocaleString('es-AR')} vendidos`,period:`Semana del ${label}`,image:star.image_url?`/api/products/image?provider=${encodeURIComponent(star.provider)}&product=${encodeURIComponent(star.external_product_id)}`:null})}><Share2 className="p-i" aria-hidden="true"/>Compartir</button></div>
+        <div className="p-starProduct">{star.image_url?<img src={star.image_url} alt=""/>:<span/>}<div><b>{star.product_name}</b><p className="p-sub" style={{margin:'4px 0 0'}}>{star.units_sold.toLocaleString('es-AR')} vendidos · {money(star.profit)} de ganancia</p></div></div></div>;})()}
       <div className="p-card p-reveal"><div className="p-cardHead"><div><span className="p-eyebrowS">LOGROS</span><h3>Para compartir</h3><span className="p-sub">Elegí uno y generá una imagen. Por defecto no muestra montos.</span></div></div>
-        {view.wins.length?<div className="p-grid p-g3">{view.wins.map(win=><div key={win.id} className="p-win p-achievement"><small>{win.title}</small><b className="p-mono">{win.value}</b><span className="p-sub">{win.detail}</span><button type="button" className="p-btn p-small" onClick={()=>setShare({eyebrow:'Logro de la semana',title:win.title,value:win.value,privateValue:win.privateValue,period:`Semana del ${label}`})}><Share2 className="p-i" aria-hidden="true"/>Compartir</button></div>)}</div>:<div className="p-empty">Esta semana no hubo logros destacados. ¡La próxima seguro!</div>}
+        {view.wins.length?<div className="p-grid p-g3">{view.wins.map(win=><div key={win.id} className="p-win p-achievement"><small>{win.title}</small><b className="p-mono">{win.value}</b><span className="p-sub">{win.detail}</span><button type="button" className="p-btn p-small" onClick={()=>setShare({eyebrow:'Logro de la semana',title:win.title,value:win.value,privateValue:win.privateValue,period:`Semana del ${label}`,series:view.series})}><Share2 className="p-i" aria-hidden="true"/>Compartir</button></div>)}</div>:<div className="p-empty">Esta semana no hubo logros destacados. ¡La próxima seguro!</div>}
       </div>
       <div className="p-note" style={{marginTop:16}}>¿Querés recibir este resumen por email cada lunes? Activalo en <button type="button" className="p-linkBtn" onClick={()=>onNavigate('acciones')}>Acciones → Cuándo avisarte</button>.</div>
     </>}
