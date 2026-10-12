@@ -38,6 +38,31 @@ function CashflowChart({daily,pace,breakEven,elapsed,totalDays,money,risk}:{dail
   </svg>;
 }
 
+// Opciones rápidas más un porcentaje a elección ("Otro %"), dentro de un rango razonable.
+function PercentPicker({label,steps,value,onChange,min,max,disabled=false,hint}:{label:string;steps:number[];value:number;onChange:(value:number)=>void;min:number;max:number;disabled?:boolean;hint?:string}) {
+  const preset=steps.includes(value);
+  const [custom,setCustom]=useState(preset?'':String(Math.round(value*100)));
+  const [editing,setEditing]=useState(!preset);
+  const [error,setError]=useState('');
+  const apply=(text:string)=>{
+    const clean=text.replace(/[^0-9,.-]/g,'').replace(/(?!^)-/g,'');
+    setCustom(clean);
+    if(!clean||clean==='-'){setError('');return;}
+    const number=Number(clean.replace(',','.'));
+    if(!Number.isFinite(number)){setError('Escribí solo números.');return;}
+    if(number<min||number>max){setError(`Entre ${min}% y +${max}%.`);return;}
+    setError('');onChange(number/100);
+  };
+  return <div className="p-simRow"><span>{label}</span>
+    <div className="p-simChips" role="group" aria-label={label}>
+      {steps.map(step=><button type="button" key={step} className={!editing&&value===step?'p-on':''} disabled={disabled} onClick={()=>{setEditing(false);setCustom('');setError('');onChange(step);}}>{signedPercent(step)}</button>)}
+      {editing?<label className={`p-simCustom ${error?'p-bad':''}`}><input autoFocus value={custom} onChange={event=>apply(event.target.value)} inputMode="decimal" placeholder="0" disabled={disabled} aria-label={`${label}: porcentaje personalizado`} aria-invalid={Boolean(error)}/><span>%</span></label>
+      :<button type="button" disabled={disabled} onClick={()=>setEditing(true)}>Otro %</button>}
+    </div>
+    {error?<small className="p-sub p-simError" role="alert">{error}</small>:hint?<small className="p-sub">{hint}</small>:editing?<small className="p-sub">Ej.: 30 para subir 30%, o -15 para bajar 15%.</small>:null}
+  </div>;
+}
+
 function readBalance() {
   try { return window.localStorage.getItem(BALANCE_KEY)||''; } catch { return ''; }
 }
@@ -110,15 +135,15 @@ export default function Cashflow({data,error,rules,money,onNavigate}:{data:Cashf
       <div className="p-grid p-g2" style={{marginBottom:16}}>
         <div className="p-card p-reveal"><div className="p-cardHead"><div><span className="p-eyebrowS">SIMULADOR</span><h3>¿Qué pasa si…?</h3><span className="p-sub">Probá cambios y mirá cómo cerraría {monthName}.</span></div></div>
           {simulation?<>
-            <div className="p-simRow"><span>Inversión en publicidad</span><div className="p-simChips" role="group" aria-label="Cambio en la inversión publicitaria">{ADS_STEPS.map(step=><button type="button" key={step} className={adsChange===step?'p-on':''} disabled={!view.simulation?.ads} onClick={()=>setAdsChange(step)}>{signedPercent(step)}</button>)}</div>{!view.simulation?.ads&&<small className="p-sub">Sin inversión publicitaria este mes.</small>}</div>
-            <div className="p-simRow"><span>Precios</span><div className="p-simChips" role="group" aria-label="Cambio de precios">{PRICE_STEPS.map(step=><button type="button" key={step} className={priceChange===step?'p-on':''} onClick={()=>setPriceChange(step)}>{signedPercent(step)}</button>)}</div></div>
+            <PercentPicker label="Inversión en publicidad" steps={ADS_STEPS} value={adsChange} onChange={setAdsChange} min={-100} max={500} disabled={!view.simulation?.ads} hint={!view.simulation?.ads?'Sin inversión publicitaria este mes.':undefined}/>
+            <PercentPicker label="Precios" steps={PRICE_STEPS} value={priceChange} onChange={setPriceChange} min={-90} max={300}/>
             <ul className="p-weekList" style={{marginTop:12}}>
               <li><span>Facturación del mes</span><small className="p-sub">{money(simulation.current.revenue)} →</small><b className="p-mono">{money(simulation.scenario.revenue)}</b></li>
               <li><span>Ganancia del mes</span><small className="p-sub">{money(simulation.current.profit)} →</small><b className={`p-mono ${simulation.scenario.profit<0?'p-neg':'p-pos'}`}>{money(simulation.scenario.profit)}</b></li>
               {simulation.scenario.breakEven!==null&&<li><span>Punto de equilibrio</span><small className="p-sub">{simulation.current.breakEven!==null?`${money(simulation.current.breakEven)} →`:''}</small><b className="p-mono">{money(simulation.scenario.breakEven)}</b></li>}
               <li><span><b>Diferencia de ganancia</b></span><b className={`p-mono ${simulation.deltaProfit<0?'p-neg':'p-pos'}`}>{simulation.deltaProfit>0?'+':''}{money(simulation.deltaProfit)}</b></li>
             </ul>
-            <p className="p-sub" style={{margin:'10px 0 0'}}>Supone que la publicidad extra rinde como hoy (ROAS {view.simulation!.roas.toFixed(2).replace('.',',')}x; en la práctica suele rendir algo menos) y que con otro precio vendés las mismas unidades.</p>
+            <p className="p-sub" style={{margin:'10px 0 0'}}>{view.simulation!.ads?`Supone que la publicidad extra rinde como hoy (ROAS ${view.simulation!.roas.toFixed(2).replace('.',',')}x; en la práctica suele rendir algo menos) y que con otro precio vendés las mismas unidades.`:'Supone que con otro precio vendés las mismas unidades.'}</p>
           </>:<div className="p-empty">Cuando haya ventas este mes vas a poder simular escenarios.</div>}
         </div>
         <div className="p-card p-reveal"><div className="p-cardHead"><div><span className="p-eyebrowS">CÓMO LO CALCULAMOS</span><h3>Tus números del mes</h3></div><button type="button" className="p-btn p-small" onClick={()=>onNavigate('configuracion')}>Editar gastos</button></div>

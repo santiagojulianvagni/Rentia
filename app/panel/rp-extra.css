@@ -409,3 +409,7 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-simChips button.p-on{border-color:var(--cyan);background:rgba(33,212,194,.12);color:var(--cyan)}
 .p-root .p-simChips button:disabled{opacity:.4;cursor:not-allowed}
 @media (max-width:560px){.p-root .p-balanceField input{width:100%}}
+.p-root .p-simCustom{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 10px;border:1px solid var(--cyan);border-radius:9px;background:rgba(33,212,194,.12);color:var(--cyan);font-size:12.5px;font-weight:700}
+.p-root .p-simCustom input{width:52px;border:0;background:none;color:var(--text);font:inherit;font-size:13px;text-align:right;outline:none}
+.p-root .p-simCustom.p-bad{border-color:#ff8c99;background:rgba(255,102,120,.1)}
+.p-root .p-simError{color:#ff8c99}
