@@ -385,3 +385,16 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-starProduct{display:grid;grid-template-columns:88px 1fr;gap:14px;align-items:center}
 .p-root .p-starProduct img{width:88px;height:88px;border-radius:14px;object-fit:cover;background:#fff}
 @media (max-width:640px){.p-root .p-shareCanvas.p-story{max-width:200px}}
+
+/* Cashflow */
+.p-root .p-cashHero{margin-bottom:16px;padding:22px 24px}
+.p-root .p-cashHero h2{margin:6px 0 4px;font-size:22px;letter-spacing:-.02em}
+.p-root .p-cashHero.p-cubierto{border-color:rgba(50,213,131,.45);background:linear-gradient(160deg,#0f2f2a,#0b1d2b)}
+.p-root .p-cashHero.p-en-camino{border-color:rgba(33,212,194,.4);background:linear-gradient(160deg,#103236,#0b1d2b)}
+.p-root .p-cashHero.p-en-riesgo{border-color:rgba(255,102,120,.45);background:linear-gradient(160deg,#2b1622,#0b1d2b)}
+.p-root .p-cashBar{height:12px;margin-top:16px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.p-root .p-cashBar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#21d4c2,#32d583);transition:width .8s var(--ease)}
+.p-root .p-cashHero.p-en-riesgo .p-cashBar i{background:linear-gradient(90deg,#f5c451,#ff8c99)}
+.p-root .p-cashBarLabels{display:flex;justify-content:space-between;margin-top:8px;color:var(--muted);font-size:12px;font-weight:600}
+.p-root .p-cashChart{display:block;width:100%;height:auto}
+@media (max-width:560px){.p-root .p-cashHero h2{font-size:18px}}
