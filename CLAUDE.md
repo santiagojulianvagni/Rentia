@@ -48,7 +48,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 
 ## Pendiente
 
-**Decisión que espera respuesta:** hoy los gastos fijos se reparten entre las órdenes del período. Con pocas ventas, los productos aparecen "perdiendo plata" y el margen da muy negativo. Propuesta: productos y órdenes con su margen antes de gastos fijos; los gastos fijos solo en la ganancia total y en Cashflow.
+**Decidido y aplicado (12/10):** los gastos fijos mensuales ya no se cargan a órdenes ni productos (muestran su margen antes de gastos fijos). Se restan una vez en la ganancia total (renglón "Gastos fijos" del desglose) y se reparten por día en el gráfico. Las alertas de margen usan `marginBeforeFixed`; la cobertura de los fijos la avisa la alerta de Cashflow.
 
 **Próximo trabajo:**
 - Inventario multicanal: unir el mismo producto de Tiendanube y Mercado Libre por SKU.
