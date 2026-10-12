@@ -211,7 +211,7 @@
 .p-dateHead button:disabled{opacity:.3;cursor:default}
 .p-dateHead svg{width:16px;height:16px}
 .p-dateGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.p-dateWeek{display:grid;place-items:center;height:26px;color:#6b8398;font-size:11px;font-weight:700}
+.p-dateWeek{display:grid;place-items:center;height:26px;color:#7890a5;font-size:11px;font-weight:700}
 .p-dateGrid button{display:grid;place-items:center;height:34px;border:0;border-radius:9px;background:none;color:#cfdce6;font:inherit;font-size:13px;cursor:pointer;transition:background .15s,color .15s}
 .p-dateGrid button:hover:not(:disabled),.p-dateGrid button:focus-visible{background:#13253a;color:#f2f7fb;outline:0}
 .p-dateGrid button.p-today{box-shadow:inset 0 0 0 1px #264560}

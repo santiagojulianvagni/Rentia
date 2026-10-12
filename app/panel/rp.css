@@ -1,7 +1,7 @@
 /* Panel Rentia · diseño 2026-10 (portado de propuestas/panel-rentia.html). Todo bajo .p-root. */
 .p-root{
   --bg:#07111f;--bg2:#091626;--surface:#0f1b2b;--surface2:#0c1726;--raise:#13233a;--line:#1a2e43;--line2:#264560;
-  --text:#f2f7fb;--muted:#9bb0c1;--dim:#6b8398;
+  --text:#f2f7fb;--muted:#9bb0c1;--dim:#7890a5;
   --cyan:#21d4c2;--cyanInk:#041716;--green:#32d583;--coral:#ff6678;--blue:#3b8cff;--amber:#f5c451;--violet:#a78bfa;
   --ease:cubic-bezier(.2,.8,.2,1);--shadow:0 24px 60px rgba(0,0,0,.45);--side:258px;
 }
