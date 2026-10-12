@@ -350,6 +350,9 @@ function PanelApp() {
   const managementRef=useRef(false);
   const canManage=accessRole==='owner'||accessRole==='admin';
   const [active,setActive]=useState('resumen');
+  // La sección de la dirección (por ejemplo ?section=semanal) se aplica apenas carga el panel,
+  // sin esperar al resto de la carga inicial.
+  useEffect(()=>{const section=new URLSearchParams(window.location.search).get('section');if(section&&sections.some(item=>item.id===section))void Promise.resolve().then(()=>setActive(section));},[]);
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const [mobileNavOpen,setMobileNavOpen]=useState(false);
   const [settingsOpen,setSettingsOpen]=useState(true);
