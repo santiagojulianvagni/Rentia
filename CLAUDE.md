@@ -1,0 +1,65 @@
+# Rentia: contexto para Claude
+
+## Cómo trabajar con el dueño del proyecto
+
+- **Todo en español rioplatense** (vos), incluidos los avisos cortos de avance. Nunca en inglés.
+- Explicar sin jerga técnica: es el dueño del negocio, no un programador.
+- No escribir contraseñas: los inicios de sesión los hace él.
+- Al probar en producción, no modificar sus datos reales (no guardar planes, no cargar ni borrar costos, no marcar alertas).
+- Las propuestas de diseño (carpeta `propuestas/`, excluida de git) quedan locales hasta que pida subirlas.
+- Después de publicar, verificar en el sitio (`rentia-ruby.vercel.app`) y contar lo que se vio, no lo que se supone.
+
+## Qué es Rentia
+
+SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado Libre (ventas, cargos y Product Ads) y Meta Ads con los costos de cada tienda para mostrar la ganancia real. Compite con Escalafy y Ecomind.
+
+- Next.js 16.4 (App Router), React 19, TypeScript. Clerk (organizaciones: una por tienda; hoy instancia de **desarrollo**). Postgres en Neon.
+- Vercel, plan Hobby, proyecto `nexo-6cb9/rentia`. Las funciones corren en `gru1` (San Pablo), igual que la base. Se publica solo con cada push a `main`.
+- `vercel-build` corre las migraciones de `migrations/` (la próxima es `0008_…`) y después compila.
+
+## Código
+
+- Panel: `app/panel/page.tsx` (componente cliente grande) y `components/panel/*`. Los estilos usan clases `p-` dentro de `.p-root`: `app/panel/rp.css` (base) y `app/panel/rp-extra.css` (agregados). Las secciones de configuración se cargan con `next/dynamic`.
+- Sin controles genéricos del navegador: usar `RpSelect`, `RpDate`, `confirmDialog` y botones propios.
+- Cálculos puros en `lib/` con pruebas en `tests/*.test.mjs` (Node test runner y PGlite): `campaign-profit`, `alerts`, `achievements`, `records`, `cashflow`. La lógica nueva va en `lib/` y lleva su prueba.
+- Las rutas de API usan `route()` de `server/http/route.ts`: sesión, rol, origen, validación con zod y registro de errores en `error_reports`. Los archivos `route.ts` solo pueden exportar los métodos HTTP.
+- `tests/scaling.test.mjs` cuenta las tablas (hoy 34): actualizarlo al agregar una.
+- Ojo al editar con scripts de Node: en `String.replace` los patrones `$'` y `` $` `` son especiales.
+
+## Cómo publicar
+
+1. `npx tsc --noEmit -p .`
+2. `npm run build`
+3. `npm test`
+4. Solo si todo pasa: commit con los archivos puntuales y `git push origin main`. No dejar archivos modificados afuera del commit.
+5. Esperar el deploy (alrededor de 1 minuto) y verificar en el sitio.
+
+## Hecho recientemente (octubre 2026)
+
+- Panel rehecho igual a la propuesta, en computadora y celular, con las tarjetas alineadas.
+- El resumen se recalcula solo cuando cambian los datos (`/api/dashboard/version`).
+- Planes, términos, baja en dos pasos y límite de órdenes. El límite se activa con `RENTIA_BILLING_ENFORCED=1` cuando haya cobro.
+- Ganancia estimada por campaña (Meta y Mercado Libre Ads).
+- Alertas con campana: umbrales por tienda; vistas y ocultas por persona.
+- Resumen semanal.
+- Compartir: formato historia o publicación, QR a `/registro?ref=compartir`, récords y rachas, producto estrella con foto, sin montos por defecto.
+- Cashflow: punto de equilibrio, proyección de cierre, plata por cobrar (Pago Nube y Mercado Libre), calendario semanal con día de pago de los gastos, simulador con porcentaje personalizado y alerta si el mes viene en rojo.
+- Seguridad: encabezados, robots y sitemap, 404 en español, registro de errores, Next.js actualizado.
+
+## Pendiente
+
+**Decisión que espera respuesta:** hoy los gastos fijos se reparten entre las órdenes del período. Con pocas ventas, los productos aparecen "perdiendo plata" y el margen da muy negativo. Propuesta: productos y órdenes con su margen antes de gastos fijos; los gastos fijos solo en la ganancia total y en Cashflow.
+
+**Próximo trabajo:**
+- Inventario multicanal: unir el mismo producto de Tiendanube y Mercado Libre por SKU.
+- Pixel propio y atribución (necesita aprobación de Tiendanube y Meta).
+- Emails (alertas, resumen semanal, código de baja): falta que cree una cuenta en Resend.
+- Sentry: falta el DSN.
+
+**Depende de él:**
+- Constituir la SRL (para cobrar con Mercado Pago y verificar el negocio en Meta).
+- Pasar a Vercel Pro y activar el límite de gasto.
+- Dominio propio y Clerk en producción. Revisar también la protección contra bots y el QR, que hoy apunta a `rentia-ruby`.
+- Trámites de permisos en Meta, Mercado Libre (publicidad) y Tiendanube.
+- Revisión legal (incluye el paso de escribir "DAR DE BAJA").
+- Decidir si suma analítica de visitas.
