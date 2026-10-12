@@ -909,3 +909,19 @@ export async function saveAlertSettings(userId:string,settings:AlertSettings) {
     .bind(userId,settings.marginMin,settings.marginDrop,settings.salesDrop,settings.stockDays,settings.campaignMinSpend,settings.alertEmail,settings.weeklyEmail,new Date().toISOString()).run();
   return getAlertSettings(userId);
 }
+
+// Alertas vistas u ocultadas por persona. Se guardan 60 días: si la situación cambia, la
+// alerta tiene otra clave y vuelve a aparecer como nueva.
+export async function getAlertReads(userId:string,viewerId:string) {
+  const rows=await database().prepare('SELECT alert_key,state FROM alert_reads WHERE user_id=? AND viewer_id=?').bind(userId,viewerId).all<{alert_key:string;state:'seen'|'dismissed'}>();
+  return Object.fromEntries(rows.results.map(row=>[row.alert_key,row.state])) as Record<string,'seen'|'dismissed'>;
+}
+
+export async function saveAlertReads(userId:string,viewerId:string,keys:string[],state:'seen'|'dismissed') {
+  const now=new Date().toISOString(),cutoff=new Date(Date.now()-60*24*60*60*1000).toISOString();
+  // Una alerta ocultada no vuelve a "vista" si después se marcan todas como vistas.
+  const statements=[database().prepare('DELETE FROM alert_reads WHERE user_id=? AND viewer_id=? AND updated_at<?').bind(userId,viewerId,cutoff),
+    ...keys.map(key=>database().prepare(`INSERT INTO alert_reads (user_id,viewer_id,alert_key,state,updated_at) VALUES (?,?,?,?,?) ON CONFLICT(user_id,viewer_id,alert_key) DO UPDATE SET state=CASE WHEN alert_reads.state='dismissed' THEN 'dismissed' ELSE excluded.state END,updated_at=excluded.updated_at`).bind(userId,viewerId,key,state,now))];
+  await database().batch(statements);
+  return getAlertReads(userId,viewerId);
+}

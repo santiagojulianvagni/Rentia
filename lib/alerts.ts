@@ -64,3 +64,9 @@ export function buildAlerts(input:AlertInput):BusinessAlert[] {
 export function urgentAlerts(alerts:BusinessAlert[]) {
   return alerts.filter(alert=>alert.kind==='danger'||alert.kind==='warning');
 }
+
+// Clave de una alerta para marcarla como vista: incluye el título, que trae las cifras, así
+// que si la situación cambia (por ejemplo, de 3 a 4 campañas) vuelve a aparecer como nueva.
+export function alertKey(alert:BusinessAlert) {
+  return `${alert.id}:${alert.title}`.slice(0,300);
+}

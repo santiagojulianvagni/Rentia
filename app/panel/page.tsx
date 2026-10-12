@@ -21,7 +21,7 @@ import {ConnectionNotice,ConnectionStatus,ConnectionUpdatedAt} from '../../compo
 import {automaticSyncDue,connectionHealth} from '../../lib/connection-health';
 import {salesChannelLabel,orderReturnNeedsReview} from '../../lib/sales-channels';
 import { createContext, FormEvent, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { CalendarRange, Mail, Receipt, RefreshCw, Printer, Trophy, ArrowRight, LogOut, PanelLeft, Search, ArrowLeftRight, BadgeDollarSign, Boxes, CalendarDays, ChevronDown, ChevronLeft, Coins, CreditCard, Download, FileChartColumn, FilePlus2, GripVertical, Languages, LayoutDashboard, LayoutGrid, Menu, Megaphone, PackageSearch, Pencil, PlugZap, Plus, Settings2, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, TriangleAlert, UsersRound, X, type LucideIcon } from 'lucide-react';
+import { CalendarRange, Share2, Mail, Receipt, RefreshCw, Printer, Trophy, ArrowRight, LogOut, PanelLeft, Search, ArrowLeftRight, BadgeDollarSign, Boxes, CalendarDays, ChevronDown, ChevronLeft, Coins, CreditCard, Download, FileChartColumn, FilePlus2, GripVertical, Languages, LayoutDashboard, LayoutGrid, Menu, Megaphone, PackageSearch, Pencil, PlugZap, Plus, Settings2, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, TriangleAlert, UsersRound, X, type LucideIcon } from 'lucide-react';
 import RpChart from '../../components/panel/rp-chart';
 import SetupChecklist from '../../components/setup-checklist';
 import type {ProductCostRow} from '../../components/product-costs';
@@ -35,8 +35,9 @@ import type { CostSettings } from '../../lib/cost-engine';
 import { formatDisplayRange, rollingDisplayRange } from '../../lib/display-dates';
 import type { LiveRates } from '../../lib/exchange-rates';
 import { accountAppearance } from '../../lib/account-appearance';
-import AlertsBell from '../../components/panel/alerts-bell';
-import { buildAlerts, defaultAlertSettings, urgentAlerts, type AlertSettings, type BusinessAlert } from '../../lib/alerts';
+import AlertsBell, { type AlertReads } from '../../components/panel/alerts-bell';
+import type { ShareContent } from '../../components/panel/share-card';
+import { alertKey, buildAlerts, defaultAlertSettings, urgentAlerts, type AlertSettings, type BusinessAlert } from '../../lib/alerts';
 import { campaignMargins, campaignProfits, type CampaignProfitRow } from '../../lib/campaign-profit';
 import dynamic from 'next/dynamic';
 
@@ -54,6 +55,7 @@ const ExchangeRateSettings=dynamic(()=>import('../../components/exchange-rate-se
 const WeeklySummary=dynamic(()=>import('../../components/panel/weekly-summary'),{loading:sectionLoading});
 const CampaignProfit=dynamic(()=>import('../../components/panel/campaign-profit'),{loading:sectionLoading});
 const AlertSettingsCard=dynamic(()=>import('../../components/panel/alert-settings'));
+const ShareDialog=dynamic(()=>import('../../components/panel/share-card'));
 
 type NavItem={id:string;label:string;icon:LucideIcon;badge?:string};
 const overviewSections:NavItem[]=[
@@ -367,6 +369,14 @@ function PanelApp() {
   const [profileOpen,setProfileOpen]=useState(false);
   const [alertsOpen,setAlertsOpen]=useState(false);
   const [alertSettings,setAlertSettings]=useState<AlertSettings>(defaultAlertSettings);
+  const [alertReads,setAlertReads]=useState<AlertReads>({});
+  useEffect(()=>{fetch('/api/alerts/reads',{cache:'no-store'}).then(response=>response.ok?response.json() as Promise<{reads?:AlertReads}>:null).then(data=>{if(data?.reads)setAlertReads(data.reads);}).catch(()=>undefined);},[]);
+  // Se marca al instante en pantalla y después se guarda; si falla, queda como estaba.
+  const markAlerts=(keys:string[],state:'seen'|'dismissed')=>{
+    const previous=alertReads;
+    setAlertReads(current=>({...current,...Object.fromEntries(keys.filter(key=>current[key]!=='dismissed').map(key=>[key,state]))}));
+    fetch('/api/alerts/reads',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({keys,state})}).then(response=>response.ok?response.json() as Promise<{reads?:AlertReads}>:Promise.reject()).then(data=>{if(data.reads)setAlertReads(data.reads);}).catch(()=>setAlertReads(previous));
+  };
   useEffect(()=>{fetch('/api/alerts/settings',{cache:'no-store'}).then(response=>response.ok?response.json() as Promise<{settings?:AlertSettings}>:null).then(data=>{if(data?.settings)setAlertSettings(data.settings);}).catch(()=>undefined);},[]);
   const [paletteOpen,setPaletteOpen]=useState(false);
   const [paletteQuery,setPaletteQuery]=useState('');
@@ -777,7 +787,7 @@ function PanelApp() {
   const navBadges={
     costs:costRows.filter(row=>!row.rentia_archived&&row.effective_cost<=0).length,
     inventory:productAnalytics.filter(row=>!row.rentia_archived&&row.stock!==null&&row.units_sold>0&&(row.stock<=0||(row.days_stock??0)<=14)).length,
-    actions:urgentAlerts(businessAlerts).length,
+    actions:urgentAlerts(businessAlerts).filter(alert=>alertReads[alertKey(alert)]!=='dismissed').length,
   };
   const activeLabel=t(sections.find(item=>item.id===active)?.label||'Configuración');
   const settingsActive=configurationSections.some(item=>item.id===active);
@@ -819,7 +829,7 @@ function PanelApp() {
             <div className={`p-menu ${languageOpen?'p-open':''}`}>{([['es','Español'],['pt','Português'],['en','English']] as const).map(([value,label])=><button type="button" key={value} className={language===value?'p-on':''} onClick={()=>{setLanguage(value);setLanguageOpen(false);}}><span>{label}</span>{language===value&&'✓'}</button>)}</div></div>
           {active==='resumen'&&canManage&&<div className="p-ctrl"><button type="button" className="p-ctrlBtn" onClick={()=>toggleMenu('dashboard')} aria-expanded={dashboardMenuOpen} aria-label="Vista del dashboard"><LayoutGrid className="p-i" aria-hidden="true"/><span className="p-hideSm p-ctrlLabel">{dashboardModeLabel}</span><ChevronDown className="p-i" aria-hidden="true"/></button>
             <div className={`p-menu ${dashboardMenuOpen?'p-open':''}`}><small className="p-menuCap">VISTAS RÁPIDAS</small><button type="button" onClick={()=>applyDashboardPreset('profitability')}>Rentabilidad</button><button type="button" onClick={()=>applyDashboardPreset('advertising')}>Publicidad</button><button type="button" onClick={()=>applyDashboardPreset('operation')}>Operación</button><hr/><button type="button" onClick={()=>{setDashboardMenuOpen(false);setDashboardEditorOpen(true);setDashboardPreferenceMessage('');}}><Pencil className="p-i" aria-hidden="true"/>Personalizar dashboard</button></div></div>}
-          <AlertsBell alerts={businessAlerts} open={alertsOpen} onToggle={()=>toggleMenu('alerts')} onNavigate={section=>{closeMenus();selectSection(section);}}/>
+          <AlertsBell alerts={businessAlerts} reads={alertReads} open={alertsOpen} onToggle={()=>toggleMenu('alerts')} onClose={closeMenus} onMark={markAlerts} onNavigate={section=>{closeMenus();selectSection(section);}}/>
           <div className="p-ctrl"><button type="button" className="p-avatar" onClick={()=>toggleMenu('profile')} aria-label="Abrir mi cuenta" aria-expanded={profileOpen}>{profileUser?.imageUrl?<img src={profileUser.imageUrl} alt=""/>:storeInitials}</button>
             <div className={`p-menu ${profileOpen?'p-open':''}`}><div className="p-menuUser"><b>{profileUser?.fullName||'Mi cuenta'}</b><small>{profileUser?.primaryEmailAddress?.emailAddress||'Perfil personal de Rentia'}</small></div><hr/><button type="button" onClick={openAccountSettings} disabled={!profileLoaded}><ShieldCheck className="p-i" aria-hidden="true"/><span>Administrar mi cuenta<small>Perfil, seguridad y dispositivos</small></span></button><div className="p-menuUser"><small className="p-menuCap" style={{padding:0}}>TIENDA ACTUAL</small><b>{store}</b></div><hr/><div className="p-showSm"><small className="p-menuCap">MONEDA</small><div className="p-menuSeg">{(['ARS','USD','EUR'] as DisplayCurrency[]).map(value=><button type="button" key={value} className={currency===value?'p-on':''} disabled={!rates[value]} onClick={()=>setCurrency(value)}>{value}</button>)}</div><small className="p-menuCap">IDIOMA</small><div className="p-menuSeg">{([['es','ES'],['pt','PT'],['en','EN']] as const).map(([value,label])=><button type="button" key={value} className={language===value?'p-on':''} onClick={()=>setLanguage(value)}>{label}</button>)}</div><hr/></div><button type="button" onClick={logout}><LogOut className="p-i" aria-hidden="true"/>{t('Cerrar sesión')}</button></div></div>
         </div>
@@ -833,7 +843,7 @@ function PanelApp() {
         {integrationsLoaded&&!hasSalesConnection&&<div className="p-notice p-import"><PlugZap className="p-i" aria-hidden="true"/><div><b>{t('Conectá tu tienda para empezar')}</b><p>Enlazar el canal es independiente de cargar envío, comisiones e impuestos.</p></div><button type="button" className="p-btn p-small p-primary" onClick={()=>selectSection('integraciones')}>Ver conexiones</button></div>}
         <ConnectionNotice health={connections} onOpen={()=>selectSection('integraciones')}/>
         {settingsLoaded&&costsLoaded&&dashboard&&<SetupChecklist connected={hasSalesConnection} productCount={costRows.filter(row=>!row.rentia_archived).length} missingProductCosts={costRows.filter(row=>!row.rentia_archived&&row.cost_source==='sin_costo').length} costsConfigured={dashboard.quality.configurationSaved} adsConnected={Boolean(meta&&adsData?.selected)} canManage={canManage} onNavigate={selectSection}/>}
-        <DashboardOverview dashboard={dashboard} previousDashboard={previousDashboard} syncing={syncing} days={selectedPeriodDays} layout={dashboardLayout} savingLayout={savingDashboard} onNavigate={selectSection} onEdit={()=>{setDashboardEditorOpen(true);setDashboardPreferenceMessage('');}} onLayoutReorder={next=>{setDashboardLayout(next);void saveDashboardPreferences(next,false);}} onChartChange={chart=>{const next={...dashboardLayout,chart};setDashboardLayout(next);void saveDashboardPreferences(next,false);}}/>
+        <DashboardOverview dashboard={dashboard} previousDashboard={previousDashboard} syncing={syncing} days={selectedPeriodDays} storeName={store} periodLabel={displayPeriod} layout={dashboardLayout} savingLayout={savingDashboard} onNavigate={selectSection} onEdit={()=>{setDashboardEditorOpen(true);setDashboardPreferenceMessage('');}} onLayoutReorder={next=>{setDashboardLayout(next);void saveDashboardPreferences(next,false);}} onChartChange={chart=>{const next={...dashboardLayout,chart};setDashboardLayout(next);void saveDashboardPreferences(next,false);}}/>
       </>:active==='acciones'?<DecisionCenter dashboard={dashboard} products={productAnalytics.filter(row=>!row.rentia_archived)} costs={costRows.filter(row=>!row.rentia_archived)} alerts={businessAlerts} campaigns={campaignRows} alertSettings={alertSettings} canManage={canManage} onAlertSettings={setAlertSettings} onNavigate={selectSection}/>
       :active==='semanal'?<WeeklySummary money={money} storeName={store} settings={alertSettings} onNavigate={selectSection}/>
       :active==='calidad'?<DataQualitySection dashboard={dashboard} onNavigate={selectSection}/>
@@ -1074,7 +1084,7 @@ function RpDelta({current,previous,mode='relative',neutral=false}:{current:numbe
   return <><span className={`p-delta ${neutral?'p-flat':up?'p-up':'p-down'}`}>{up?'▲':'▼'} {value}</span> <span className="p-sub p-deltaNote">{t('vs. período anterior')}</span></>;
 }
 
-function DashboardOverview({dashboard,previousDashboard,syncing,days,layout,savingLayout,onNavigate,onEdit,onLayoutReorder,onChartChange}:{dashboard:Dashboard|null;previousDashboard:Dashboard|null;syncing:boolean;days:number;layout:DashboardLayoutConfig;savingLayout:boolean;onNavigate:(section:string)=>void;onEdit:()=>void;onLayoutReorder:(layout:DashboardLayoutConfig)=>void;onChartChange:(chart:DashboardLayoutConfig['chart'])=>void}) {
+function DashboardOverview({dashboard,previousDashboard,syncing,days,storeName,periodLabel,layout,savingLayout,onNavigate,onEdit,onLayoutReorder,onChartChange}:{dashboard:Dashboard|null;previousDashboard:Dashboard|null;syncing:boolean;days:number;storeName:string;periodLabel:string;layout:DashboardLayoutConfig;savingLayout:boolean;onNavigate:(section:string)=>void;onEdit:()=>void;onLayoutReorder:(layout:DashboardLayoutConfig)=>void;onChartChange:(chart:DashboardLayoutConfig['chart'])=>void}) {
   const canManage=useContext(AccessContext);
   const money=useMoney();
   const t=useT();
@@ -1083,6 +1093,20 @@ function DashboardOverview({dashboard,previousDashboard,syncing,days,layout,savi
   const [dropTarget,setDropTarget]=useState<{sectionId:string;index:number}|null>(null);
   const [chartChannel,setChartChannel]=useState('combined');
   const metrics=dashboard?.metrics;
+  const [share,setShare]=useState<ShareContent|null>(null);
+  // Comparte los números del período elegido; sin montos salvo que la persona los active.
+  const shareStats=()=>{
+    if(!metrics)return;
+    const prev=previousDashboard?.metrics;
+    const growth=(current:number,previous?:number)=>previous?`${current>=previous?'+':''}${Math.round((current-previous)/Math.abs(previous)*100)}%`:'—';
+    const margin=`${metrics.margin.toFixed(1).replace('.',',')}%`;
+    setShare({eyebrow:'Mis números',title:'Así le fue a mi tienda',period:periodLabel,stats:[
+      {label:'Facturación',value:money(metrics.totalRevenue),privateValue:growth(metrics.totalRevenue,prev?.totalRevenue)},
+      {label:'Ganancia',value:money(metrics.profit),privateValue:growth(metrics.profit,prev?.profit)},
+      {label:'Margen real',value:margin,privateValue:margin},
+      {label:'Órdenes',value:metrics.totalOrders.toLocaleString('es-AR'),privateValue:growth(metrics.totalOrders,prev?.totalOrders)},
+    ]});
+  };
   const previous=previousDashboard?.metrics;
   const allPoints=dashboard?.timeline||[];
   const selectedChannel=dashboard?.channels.find(row=>row.provider===chartChannel);
@@ -1185,7 +1209,8 @@ function DashboardOverview({dashboard,previousDashboard,syncing,days,layout,savi
   let used=0;
   let cardOrder=0;
   return <>
-    <div className="p-head"><div><div className="p-eyebrow">{t('MÉTRICAS PRINCIPALES')}</div><h1>Tu operación, <em>en un solo lugar</em></h1><p>{t('La ganancia es provisoria cuando faltan costos. La facturación externa se muestra separada porque no conocemos su rentabilidad.')}</p></div>{canManage&&<div className="p-actions"><button type="button" className={`p-btn ${arranging?'p-primary':''}`} onClick={()=>setArranging(value=>!value)}><SlidersHorizontal className="p-i" aria-hidden="true"/>{arranging?'Finalizar':'Personalizar'}</button><button type="button" className="p-btn" onClick={()=>onNavigate('facturacion')}><Plus className="p-i" aria-hidden="true"/>{t('Cargar facturación externa')}</button></div>}</div>
+    <div className="p-head"><div><div className="p-eyebrow">{t('MÉTRICAS PRINCIPALES')}</div><h1>Tu operación, <em>en un solo lugar</em></h1><p>{t('La ganancia es provisoria cuando faltan costos. La facturación externa se muestra separada porque no conocemos su rentabilidad.')}</p></div><div className="p-actions"><button type="button" className="p-btn" onClick={shareStats} disabled={!metrics}><Share2 className="p-i" aria-hidden="true"/>Compartir</button>{canManage&&<><button type="button" className={`p-btn ${arranging?'p-primary':''}`} onClick={()=>setArranging(value=>!value)}><SlidersHorizontal className="p-i" aria-hidden="true"/>{arranging?'Finalizar':'Personalizar'}</button><button type="button" className="p-btn" onClick={()=>onNavigate('facturacion')}><Plus className="p-i" aria-hidden="true"/>{t('Cargar facturación externa')}</button></>}</div></div>
+     {share&&<ShareDialog content={share} storeName={storeName} onClose={()=>setShare(null)}/>}
     {arranging&&<div className="p-arrangeBar p-reveal"><span><GripVertical className="p-i" aria-hidden="true"/><b>Ordená las tarjetas</b><small>Arrastrá una caja a la posición o sección que quieras.</small></span><span><em>{savingLayout?'Guardando…':'Los cambios se guardan automáticamente'}</em><button type="button" className="p-btn p-small" onClick={onEdit}>Editar secciones y métricas</button></span></div>}
     {dashboard?.quality&&dashboard.quality.status!=='empty'&&<button type="button" className={`p-banner p-reveal ${dashboard.quality.completeOrders===dashboard.quality.totalOrders?'p-ready':''}`} onClick={()=>onNavigate('calidad')}><RpRing value={dashboard.quality.score} size={54} color={dashboard.quality.completeOrders===dashboard.quality.totalOrders?'#32d583':'#f5c451'}/><div><b>{dashboard.quality.score}% de calidad de datos</b><p>{dashboard.quality.completeOrders.toLocaleString('es-AR')} de {dashboard.quality.totalOrders.toLocaleString('es-AR')} órdenes tienen todos sus costos identificados.</p></div><span className="p-btn p-small">{dashboard.quality.completeOrders===dashboard.quality.totalOrders?'Costos identificados':'Revisar pendientes'} <ArrowRight className="p-i" aria-hidden="true"/></span></button>}
     {layout.sections.map(section=>{const channel=section.channel||'custom';const logo=logoFor(channel);return <section className={`p-mSection ch-${channel} ${dropTarget?.sectionId===section.id&&dropTarget.index===section.metrics.length?'p-dropSection':''}`} key={section.id}
