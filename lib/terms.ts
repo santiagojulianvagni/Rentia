@@ -1,6 +1,6 @@
 // Versión vigente de los Términos y condiciones. Cambiarla cuando cambie el texto:
 // queda registrada junto con la aceptación de cada suscripción.
-export const TERMS_VERSION='2026-10-11';
+export const TERMS_VERSION='2026-10-12';
 
 // Resumen que se muestra antes de suscribirse y en la página de baja.
 export const SUBSCRIPTION_SUMMARY=[

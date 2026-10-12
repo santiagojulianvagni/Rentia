@@ -7,4 +7,4 @@ export const LEGAL={
   email:process.env.NEXT_PUBLIC_RENTIA_CONTACT_EMAIL||'',
 };
 
-export const LEGAL_UPDATED='11 de octubre de 2026';
+export const LEGAL_UPDATED='12 de octubre de 2026';
