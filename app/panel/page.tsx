@@ -1140,7 +1140,7 @@ function DashboardOverview({dashboard,previousDashboard,syncing,days,layout,savi
       onDragEnd={()=>{setDraggedCard(null);setDropTarget(null);}}
       onClick={()=>{if(!arranging)onNavigate(target);}}>
       {arranging&&<span className="p-grip"><GripVertical className="p-i" aria-hidden="true"/></span>}
-      <small>{channel!=='custom'&&logoFor(channel)&&<img className="p-mini" src={logoFor(channel)} alt=""/>}{label}{dashboardMetricHelp[key]&&<TermHelp term={dashboardMetricHelp[key]}/>}</small>
+      <small>{channel!=='custom'&&logoFor(channel)&&<img className="p-mini" src={logoFor(channel)} alt=""/>}<span className="p-kpiLabel" title={label}>{label}</span>{dashboardMetricHelp[key]&&<TermHelp term={dashboardMetricHelp[key]}/>}</small>
       <b className={`p-mono ${valueClass}`}>{value}</b>
       {partial&&knownChannel?<span className="p-sub p-partial">{knownChannel.completeOrders} de {knownChannel.orders} órdenes · {knownChannel.pendingOrders} por revisar · {key==='mlProfit'?'Product Ads según cobertura':'antes de Meta Ads'}</span>:metrics&&!pending?<RpDelta current={current} previous={previousValue} mode={mode} neutral={neutral}/>:<span className="p-sub p-partial">{pending||t('Cargando')}</span>}
       {!pending&&key!=='roas'&&<Sparkline values={sparkSeries(key)} color={sparkColor}/>}
