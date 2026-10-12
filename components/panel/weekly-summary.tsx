@@ -9,7 +9,7 @@ import { buildAlerts, type AlertSettings } from '../../lib/alerts';
 import { campaignMargins, campaignProfits, type MeliCampaignInput, type MetaCampaignInput } from '../../lib/campaign-profit';
 import { recordAchievements, type SalesDay } from '../../lib/records';
 
-type WeekMetrics={revenue:number;totalRevenue:number;profit:number;profitBeforeAds:number;margin:number;orders:number;totalOrders:number;totalAdSpend?:number;adSpend:number;reportedRoas:number;totalAov:number;adSpendComparable:boolean;meliAdsComparable?:boolean};
+type WeekMetrics={revenue:number;totalRevenue:number;profit:number;profitBeforeAds:number;margin:number;marginBeforeFixed?:number;orders:number;totalOrders:number;totalAdSpend?:number;adSpend:number;reportedRoas:number;totalAov:number;adSpendComparable:boolean;meliAdsComparable?:boolean};
 type WeekDashboard={metrics:WeekMetrics;timeline:Array<{date:string;storeRevenue:number;externalRevenue:number;profit:number}>;channels:Array<{provider:string;revenue:number;orders:number;completeOrders:number;profit:number|null;profitBeforeAds?:number|null}>;quality:{completeOrders:number;totalOrders:number};ads:{connected:boolean};meliAds?:{connected:boolean;campaigns:MeliCampaignInput[]};sync:{status:string}|null};
 type WeekProduct={product_name:string;units_sold:number;profit:number;stock:number|null;days_stock:number|null;rentia_archived:number;image_url:string|null;provider:string;external_product_id:string};
 type Week={start:string;end:string};
@@ -74,7 +74,7 @@ export default function WeeklySummary({money,storeName,settings,onNavigate}:{mon
     const campaigns=campaignProfits({meta:m.adSpendComparable?data.meta:[],mercadolibre:m.meliAdsComparable?current.meliAds?.campaigns||[]:[],metaMargin:margins.meta,meliMargin:margins.mercadolibre});
     const metrics={revenue:m.totalRevenue,profit:m.profit,margin:m.margin,orders:m.totalOrders};
     const previousMetrics=p?{revenue:p.totalRevenue,profit:p.profit,margin:p.margin,orders:p.totalOrders}:null;
-    const alerts=buildAlerts({metrics,previous:previousMetrics,quality:current.quality,adsConnected:current.ads.connected,syncError:current.sync?.status==='error',products:data.products,missingCosts:0,campaigns,settings,money});
+    const alerts=buildAlerts({metrics:{...metrics,margin:m.marginBeforeFixed??m.margin},previous:previousMetrics&&p?{...previousMetrics,margin:p.marginBeforeFixed??p.margin}:null,quality:current.quality,adsConnected:current.ads.connected,syncError:current.sync?.status==='error',products:data.products,missingCosts:0,campaigns,settings,money});
     const wins=[...recordAchievements(history,week,money),...achievements({...metrics,reportedRoas:m.reportedRoas,adSpend:m.adSpend},previousMetrics,current.timeline,money)];
     // Los siete días de la semana, con cero en los días sin ventas, para dibujar la curva completa.
     const byDate=new Map(current.timeline.map(day=>[day.date,day.storeRevenue+day.externalRevenue]));

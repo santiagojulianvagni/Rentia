@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { analyticsWindow, getProductAnalyticsData } from '../../../../db/database';
-import { calculateAdditionalCosts, calculateOrderCosts, type CostRule } from '../../../../lib/cost-engine';
+import { calculateVariableAdditionalCosts, calculateOrderCosts, type CostRule } from '../../../../lib/cost-engine';
 import { analyticsRangeFromUrl } from '../../../../lib/analytics-range';
 import { route } from '../../../../server/http/route';
 
@@ -14,7 +14,7 @@ export const GET=route({},async({user,request})=>{
   const settings={shipping_cost_ars:Number(data.settings?.shipping_cost_ars||0),shipping_mode:data.settings?.shipping_mode||'average',commission_percent:Number(data.settings?.commission_percent||0),tax_percent:Number(data.settings?.tax_percent||0),tiendanube_plan_name:data.settings?.tiendanube_plan_name||null,pago_nube_plan_override:data.settings?.pago_nube_plan_override||null,pago_nube_payout_days:data.settings?.pago_nube_payout_days||null};
   const rules=data.costRules as unknown as CostRule[];
   const totalRevenue=data.totalRevenue;
-  const additionalTotal=calculateAdditionalCosts(totalRevenue,days,rules,new Date(analyticsWindow(days,0,range).until));
+  const additionalTotal=calculateVariableAdditionalCosts(totalRevenue,days,rules,new Date(analyticsWindow(days,0,range).until));
   const lastOrderByVariant=new Map<number,number>();
   let costOrder=-1;
   let orderCosts:ReturnType<typeof calculateOrderCosts>&{additional:number}={shipping:0,commissions:0,taxes:0,shippingSource:'',commissionSource:'',additional:0};

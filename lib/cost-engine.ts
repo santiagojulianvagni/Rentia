@@ -32,11 +32,24 @@ export function calculateOrderCosts(order:CostOrder,settings:CostSettings,rules:
   return {shipping,commissions,taxes,shippingSource:useActual?'real':marketplace?'pendiente':'promedio',commissionSource};
 }
 
+// Gastos adicionales del período. Los porcentuales acompañan a cada venta (variables); los
+// fijos mensuales (alquiler, sueldos, suscripciones) son del negocio y no se cargan a ninguna
+// orden ni producto: se restan una sola vez en la ganancia total.
 export function calculateAdditionalCosts(revenue:number,days:number,rules:CostRule[],periodEnd=new Date()) {
+  return additionalCosts(revenue,days,rules,periodEnd,'all');
+}
+export function calculateVariableAdditionalCosts(revenue:number,days:number,rules:CostRule[],periodEnd=new Date()) {
+  return additionalCosts(revenue,days,rules,periodEnd,'variable');
+}
+export function calculateFixedAdditionalCosts(revenue:number,days:number,rules:CostRule[],periodEnd=new Date()) {
+  return additionalCosts(revenue,days,rules,periodEnd,'fixed');
+}
+
+function additionalCosts(revenue:number,days:number,rules:CostRule[],periodEnd:Date,kind:'all'|'variable'|'fixed') {
   const dayMs=24*60*60*1000;
   const end=periodEnd.getTime();
   const start=end-days*dayMs;
-  return rules.filter(rule=>rule.category==='additional'&&Number(rule.enabled)).reduce((sum,rule)=>{
+  return rules.filter(rule=>rule.category==='additional'&&Number(rule.enabled)&&(kind==='all'||(rule.calculation==='fixed_monthly')===(kind==='fixed'))).reduce((sum,rule)=>{
     const activeStart=Math.max(start,dateValue(rule.starts_at,'start'));
     const activeEnd=Math.min(end,dateValue(rule.ends_at,'end'));
     if (activeEnd<=activeStart) return sum;

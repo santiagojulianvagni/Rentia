@@ -48,7 +48,7 @@ export function buildAlerts(input:AlertInput):BusinessAlert[] {
   const losingProducts=input.products.filter(row=>row.units_sold>0&&row.profit<0).sort((a,b)=>a.profit-b.profit);
   if(losingProducts.length)alerts.push({id:'products',kind:'danger',icon:'↓',title:`${losingProducts.length} producto${losingProducts.length===1?' pierde':'s pierden'} dinero`,detail:`El más urgente es ${losingProducts[0].product_name}: ${money(losingProducts[0].profit)} en el período.`,action:'Analizar productos',section:'productos'});
 
-  if(metrics&&complete&&metrics.revenue>0&&metrics.margin<settings.marginMin)alerts.push({id:'margin-low',kind:'warning',icon:'%',title:`Margen de ${pct(metrics.margin)}`,detail:`Está por debajo del mínimo que configuraste (${pct(settings.marginMin)}).`,action:'Ver desglose',section:'resumen'});
+  if(metrics&&complete&&metrics.revenue>0&&metrics.margin<settings.marginMin)alerts.push({id:'margin-low',kind:'warning',icon:'%',title:`Margen de ${pct(metrics.margin)}`,detail:`Margen después de productos, envíos, comisiones y publicidad, antes de gastos fijos. Está por debajo del mínimo que configuraste (${pct(settings.marginMin)}).`,action:'Ver desglose',section:'resumen'});
   if(metrics&&previous&&complete&&previous.revenue>0&&metrics.revenue>0&&previous.margin-metrics.margin>=settings.marginDrop)alerts.push({id:'margin-drop',kind:'warning',icon:'%',title:`El margen bajó ${(previous.margin-metrics.margin).toFixed(1).replace('.',',')} puntos`,detail:`Pasó de ${pct(previous.margin)} a ${pct(metrics.margin)} respecto del período anterior.`,action:'Ver desglose',section:'resumen'});
   if(metrics&&previous&&previous.revenue>0) {
     const change=(metrics.revenue-previous.revenue)/previous.revenue*100;

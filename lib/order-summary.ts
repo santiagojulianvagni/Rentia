@@ -1,11 +1,13 @@
-import {calculateAdditionalCosts,type CostRule,type CostSettings} from './cost-engine';
+import {calculateFixedAdditionalCosts,calculateVariableAdditionalCosts,type CostRule,type CostSettings} from './cost-engine';
 import {allocateOrderCosts,orderCosts,type AnalyticsOrder} from './order-calculations';
 import {emptySalesChannel,type SalesChannelTotals} from './sales-channels';
 import {orderReturnNeedsReview} from './sales-channels';
 
 export async function summarizeOrders(source:AsyncIterable<AnalyticsOrder>,settings:CostSettings,rules:CostRule[],days:number,paidTotals:{orders:number;revenue:number},configurationSaved:boolean,periodEnd:Date) {
-  const additionalTotal=calculateAdditionalCosts(paidTotals.revenue,days,rules,periodEnd);
-  const totals={orders:0,revenue:0,productCost:0,shipping:0,commissions:0,taxes:0,additional:0,refundLoss:0};
+  // A cada orden solo se le cargan los gastos variables; los fijos van una vez al total.
+  const additionalTotal=calculateVariableAdditionalCosts(paidTotals.revenue,days,rules,periodEnd);
+  const fixedTotal=calculateFixedAdditionalCosts(paidTotals.revenue,days,rules,periodEnd);
+  const totals={orders:0,revenue:0,productCost:0,shipping:0,commissions:0,taxes:0,additional:0,refundLoss:0,fixed:fixedTotal};
   const channels=new Map<string,SalesChannelTotals>();
   const timeline=new Map<string,{date:string;orders:number;storeRevenue:number;externalRevenue:number;profit:number;adSpend:number;operatingCosts:number}>();
   const channelTimelines=new Map<string,typeof timeline>();
@@ -54,6 +56,16 @@ export async function summarizeOrders(source:AsyncIterable<AnalyticsOrder>,setti
     const series=channelTimelines.get(order.provider)||new Map();
     const channelPoint=series.get(date)||{date,orders:0,storeRevenue:0,externalRevenue:0,profit:0,adSpend:0,operatingCosts:0};
     channelPoint.orders++;channelPoint.storeRevenue+=Number(order.total||0);channelPoint.profit+=missing.length?0:order.profit;channelPoint.operatingCosts+=order.product_cost+order.shipping_cost+order.commission_cost+order.tax_cost+order.additional_cost;series.set(date,channelPoint);channelTimelines.set(order.provider,series);
+  }
+  // Los gastos fijos se reparten parejo entre los días del período en la evolución diaria,
+  // para que la suma del gráfico coincida con la ganancia total.
+  if(fixedTotal>0&&days>0) {
+    const dayMs=24*60*60*1000,start=periodEnd.getTime()-days*dayMs,perDay=fixedTotal/days;
+    for(let index=0;index<days;index++){
+      const date=new Date(start+index*dayMs).toISOString().slice(0,10);
+      const point=timeline.get(date)||{date,orders:0,storeRevenue:0,externalRevenue:0,profit:0,adSpend:0,operatingCosts:0};
+      point.profit-=perDay;point.operatingCosts+=perDay;timeline.set(date,point);
+    }
   }
   const dimension=(key:keyof typeof dimensions)=>({complete:dimensions[key].complete,total:totals.orders,missing:totals.orders-dimensions[key].complete,percent:totals.orders?Math.round(dimensions[key].complete/totals.orders*100):0});
   const qualityDimensions={products:dimension('products'),shipping:dimension('shipping'),commissions:dimension('commissions'),taxes:dimension('taxes')};

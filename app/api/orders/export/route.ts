@@ -2,7 +2,7 @@ import { route } from '../../../../server/http/route';
 import {analyticsRangeFromUrl} from '../../../../lib/analytics-range';
 import {analyticsWindow,getSettings,getCostRules,getPaidOrderTotals,iterateAnalyticsOrders} from '../../../../db/database';
 import {allocateOrderCosts,costSettings,orderCosts} from '../../../../lib/order-calculations';
-import {calculateAdditionalCosts,type CostRule} from '../../../../lib/cost-engine';
+import {calculateVariableAdditionalCosts,type CostRule} from '../../../../lib/cost-engine';
 
 function csvCell(value:unknown) {
   let text=String(value??'');
@@ -14,7 +14,7 @@ export const GET=route({},async({user,request})=>{
   const url=new URL(request.url),{days,range}=analyticsRangeFromUrl(url),query=(url.searchParams.get('q')||'').trim().slice(0,256);
   const [settings,rulesData,totals]=await Promise.all([getSettings(user.id),getCostRules(user.id),getPaidOrderTotals(user.id,days,range)]);
   const config=costSettings(settings as Record<string,unknown>|null),rules=rulesData.results as unknown as CostRule[];
-  const additional=calculateAdditionalCosts(totals.revenue,days,rules,new Date(analyticsWindow(days,0,range).until));
+  const additional=calculateVariableAdditionalCosts(totals.revenue,days,rules,new Date(analyticsWindow(days,0,range).until));
   const iterator=iterateAnalyticsOrders(user.id,days,0,range,query)[Symbol.asyncIterator](),encoder=new TextEncoder();
   let header=true;
   const stream=new ReadableStream<Uint8Array>({

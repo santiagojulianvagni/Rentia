@@ -18,7 +18,7 @@ const {setDatabase,toPositional}=await import('../db/client.ts');
 const commerce=await import('../db/database.ts');
 const {summarizeOrders}=await import('../lib/order-summary.ts');
 const {allocateOrderCosts,orderCosts}=await import('../lib/order-calculations.ts');
-const {calculateAdditionalCosts}=await import('../lib/cost-engine.ts');
+const {calculateVariableAdditionalCosts}=await import('../lib/cost-engine.ts');
 const {newImportProgress,parseImportProgress,advanceImportWindow,splitImportWindow,importOrdersPath,IMPORT_PAGE_SIZE,IMPORT_VERSION}=await import('../lib/ingestion-progress.ts');
 const {atomicBatches}=await import('../lib/atomic-batches.ts');
 const {analyticsRangeFromUrl}=await import('../lib/analytics-range.ts');
@@ -66,7 +66,9 @@ test('12,050 paid orders, >1,000/day: totals, all 121 pages, exports and 24,100 
   assert.equal(summary.totals.orders,12050);assert.equal(summary.totals.revenue,paid.revenue);
   assert.equal(summary.totals.productCost,12050*40000);assert.equal(summary.totals.shipping,12050*5000);
   assert.equal(summary.totals.commissions,12050*7000);assert.equal(summary.totals.taxes,12050*5000);
-  assert.ok(Math.abs(summary.totals.additional-90000)<0.001);
+  // El alquiler (gasto fijo) no se carga a las órdenes: se resta una sola vez en el total.
+  assert.equal(summary.totals.additional,0);assert.ok(Math.abs(summary.totals.fixed-90000)<0.001);
+  assert.ok(Math.abs([...summary.timeline.values()].reduce((sum,row)=>sum+row.profit,0)-(12050*43000-90000))<0.01,'the daily chart adds up to the total profit');
   assert.equal(summary.latest.length,6);assert.equal(summary.quality.completeOrders,12050);
   assert.equal([...summary.timeline.values()].reduce((sum,row)=>sum+row.orders,0),12050);
   assert.ok([...summary.timeline.values()].some(row=>row.orders>1000));
@@ -80,13 +82,13 @@ test('12,050 paid orders, >1,000/day: totals, all 121 pages, exports and 24,100 
   const searched=await commerce.getOrdersPage('store-a',30,range,1,'historic-transfer');
   assert.equal(searched.pagination.total,1);assert.equal(searched.orders[0].external_order_id,'0');
   assert.equal((await commerce.getOrdersPage('store-a',30,range,999999)).pagination.page,121);
-  const additional=calculateAdditionalCosts(paid.revenue,30,rules,new Date('2026-10-01T00:00:00.000Z'));
+  const additional=calculateVariableAdditionalCosts(paid.revenue,30,rules,new Date('2026-10-01T00:00:00.000Z'));
   let exported=0,exportedProfit=0;
   for await(const raw of commerce.iterateAnalyticsOrders('store-a',30,0,range)){
     const order=allocateOrderCosts(orderCosts(raw,settings,rules),paid.revenue,paid.orders,additional);
     exported++;exportedProfit+=order.profit;
   }
-  assert.equal(exported,12052);assert.ok(Math.abs(exportedProfit-(12050*43000-90000))<0.01);
+  assert.equal(exported,12052);assert.ok(Math.abs(exportedProfit-12050*43000)<0.01);
   const products=await commerce.getProductAnalyticsData('store-a',30,range);
   let lines=0,units=0;const distinct=new Map(),lastOrder=new Map();
   for await(const sale of products.sales){lines++;units+=sale.quantity;assert.equal(sale.order_gross,100000);if(lastOrder.get(sale.variant_id)!==sale.order_cursor){distinct.set(sale.variant_id,(distinct.get(sale.variant_id)||0)+1);lastOrder.set(sale.variant_id,sale.order_cursor);}}
@@ -105,7 +107,7 @@ test('12,050 paid orders, >1,000/day: totals, all 121 pages, exports and 24,100 
   assert.equal(httpPage.status,200);const payload=await httpPage.json();assert.equal(payload.pagination.total,12052);assert.equal(payload.orders.length,52);
   assert.ok(payload.orders.every(row=>row.external_order_id!=='foreign'));
   const paidRow=payload.orders.find(row=>row.payment_status==='paid'&&row.status!=='cancelled');
-  assert.ok(Math.abs(paidRow.profit-(43000-90000/12050))<0.00001);
+  assert.ok(Math.abs(paidRow.profit-43000)<0.00001,'each order shows its margin before fixed costs');
   assert.equal((await ordersEndpoint.GET(new Request(`${base}&page=-1`))).status,400);
   const hostile=await ordersEndpoint.GET(new Request(`${base}&q=${encodeURIComponent("' OR 1=1 --")}`));assert.equal((await hostile.json()).pagination.total,0);
   await adapter.pg.query('UPDATE orders SET order_number=$1 WHERE user_id=$2 AND external_order_id=$3',['=HYPERLINK("unsafe")','store-a','0']);
@@ -113,7 +115,7 @@ test('12,050 paid orders, >1,000/day: totals, all 121 pages, exports and 24,100 
   assert.equal(download.headers.get('cache-control'),'private, no-store');assert.equal(csv.trimEnd().split('\r\n').length,12053);assert.ok(csv.includes("\"'=HYPERLINK(\"\"unsafe\"\")\""));assert.ok(!csv.includes('foreign'));
   const productResponse=await productsEndpoint.GET(new Request(base));assert.equal(productResponse.status,200);
   const analytics=await productResponse.json();assert.equal(analytics.products.reduce((sum,row)=>sum+row.units_sold,0),36150);assert.equal(analytics.products.reduce((sum,row)=>sum+row.revenue,0),paid.revenue);
-  assert.ok(Math.abs(analytics.products.reduce((sum,row)=>sum+row.profit,0)-(12050*43000-90000))<0.01);
+  assert.ok(Math.abs(analytics.products.reduce((sum,row)=>sum+row.profit,0)-12050*43000)<0.01,'products show their margin before fixed costs');
   globalThis.__scalingUser=null;
   assert.equal((await ordersEndpoint.GET(new Request(base))).status,401);assert.equal((await exportEndpoint.GET(new Request(base))).status,401);
   await adapter.close();
