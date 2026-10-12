@@ -374,3 +374,8 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
   .p-root .p-shareCanvas{max-width:260px;justify-self:center}
   .p-root .p-campaignName{max-width:160px}
 }
+@media (max-width:560px){
+  /* En celular las grillas de 4 pasan a 2 columnas: todos los títulos reservan dos líneas
+     para que los números queden parejos aunque un título sea más largo. */
+  .p-root .p-g4>.p-kpi>small{min-height:34px;line-height:17px;align-items:flex-start}
+}
