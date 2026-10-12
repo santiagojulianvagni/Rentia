@@ -580,3 +580,23 @@ html{scroll-behavior:smooth}
 .rl .legalText a{color:var(--cyan)}
 @media (max-width:900px){.rl .legalBody{grid-template-columns:1fr;gap:20px}.rl .legalToc{position:static;grid-template-columns:repeat(2,1fr)}}
 @media (max-width:560px){.rl .legalHero{padding-top:100px}.rl .legalToc{grid-template-columns:1fr}}
+
+/* Diagrama de conexiones en celular: la misma composición que en la computadora (canales a
+   la izquierda, Rentia a la derecha y las líneas animadas), en tamaño compacto. Las líneas
+   salen del 42% del ancho y llegan al 64%, igual que en escritorio. */
+@media (max-width:640px){
+  .rl .diagram{height:360px;display:block}
+  .rl .diagram svg.lines{display:block}
+  .rl .node{position:absolute;left:0;width:48%;height:64px;padding:10px 11px;gap:9px;border-radius:13px;transform:none}
+  .rl .node:hover{transform:none}
+  .rl .node.n1{top:15px}.rl .node.n2{top:140px}.rl .node.n3{top:264px}
+  .rl .node img{width:22px;height:22px;flex:0 0 22px}
+  .rl .node span{min-width:0}
+  .rl .node b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rl .node small{font-size:10.5px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .rl .hub{position:absolute;right:0;top:50%;width:36%;transform:translateY(-50%);padding:18px 8px;border-radius:18px}
+  .rl .hub img{width:30px;height:30px;margin-bottom:8px}
+  .rl .hub b{font-size:17px}
+  .rl .hub span{margin:8px 0;font-size:11px;line-height:1.45}
+  .rl .hub small{padding-top:8px;font-size:10px;line-height:1.35}
+}
