@@ -47,13 +47,13 @@ async function draw(canvas:HTMLCanvasElement,content:ShareContent,showAmounts:bo
     context.fillStyle=gradient;context.fillText(value,80,y+150);y+=230;
   }
   if(content.stats?.length){
-    y+=20;const columns=2,cellW=(W-160-30)/columns,cellH=170;
+    y+=40;const columns=2,cellW=(W-160-30)/columns,cellH=230;
     content.stats.slice(0,4).forEach((stat,index)=>{
       const x=80+(index%columns)*(cellW+30),top=y+Math.floor(index/columns)*(cellH+24);
       context.fillStyle='rgba(255,255,255,.05)';context.strokeStyle='rgba(255,255,255,.12)';context.lineWidth=2;
       context.beginPath();context.roundRect(x,top,cellW,cellH,24);context.fill();context.stroke();
-      context.fillStyle='#9bb0c1';context.font=`600 28px ${font}`;context.fillText(stat.label,x+30,top+58);
-      context.fillStyle='#f2f7fb';context.font=`700 ${(showAmounts?stat.value:stat.privateValue).length>11?46:56}px ${font}`;context.fillText(showAmounts?stat.value:stat.privateValue,x+30,top+132);
+      context.fillStyle='#9bb0c1';context.font=`600 32px ${font}`;context.fillText(stat.label,x+34,top+70);
+      context.fillStyle='#f2f7fb';context.font=`700 ${(showAmounts?stat.value:stat.privateValue).length>11?54:76}px ${font}`;context.fillText(showAmounts?stat.value:stat.privateValue,x+34,top+170);
     });
   }
   context.fillStyle='#9bb0c1';context.font=`500 30px ${font}`;

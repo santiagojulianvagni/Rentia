@@ -797,7 +797,7 @@ function PanelApp() {
   const displayPeriod=formatDisplayRange(displayRange,locales[language]);
   const dashboardModeLabel=dashboardLayout.sections.length===1&&['profitability','advertising','operation'].includes(dashboardLayout.sections[0].id)?dashboardLayout.sections[0].title:'Personalizado';
 
-  const closeMenus=()=>{setPeriodOpen(false);setCustomRangeOpen(false);setCurrencyOpen(false);setLanguageOpen(false);setDashboardMenuOpen(false);setProfileOpen(false);};
+  const closeMenus=()=>{setPeriodOpen(false);setCustomRangeOpen(false);setCurrencyOpen(false);setLanguageOpen(false);setDashboardMenuOpen(false);setProfileOpen(false);setAlertsOpen(false);};
   const toggleMenu=(menu:'period'|'currency'|'language'|'dashboard'|'profile'|'alerts')=>{const open={period:periodOpen||customRangeOpen,currency:currencyOpen,language:languageOpen,dashboard:dashboardMenuOpen,profile:profileOpen,alerts:alertsOpen}[menu];closeMenus();if(open)return;({period:setPeriodOpen,currency:setCurrencyOpen,language:setLanguageOpen,dashboard:setDashboardMenuOpen,profile:setProfileOpen,alerts:setAlertsOpen})[menu](true);};
   const navGroups:Array<[string,NavItem[],boolean]>=[[t('RESUMEN'),overviewSections,false],[t('OPERACIÓN'),operationSections,false],[t('CONFIGURACIÓN'),configurationSections,true]];
   const navCount:Record<string,number>={acciones:navBadges.actions,inventario:navBadges.inventory,costos:navBadges.costs};
