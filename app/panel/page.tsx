@@ -1087,6 +1087,15 @@ function RpDelta({current,previous,mode='relative',neutral=false}:{current:numbe
   return <><span className={`p-delta ${neutral?'p-flat':up?'p-up':'p-down'}`}>{up?'▲':'▼'} {value}</span> <span className="p-sub p-deltaNote">{t('vs. período anterior')}</span></>;
 }
 
+// Facturación por día sin huecos: los días sin ventas cuentan como cero, así la curva es fiel.
+function dailySeries(points:Array<{date:string;storeRevenue:number;externalRevenue:number}>) {
+  if(!points.length)return [];
+  const byDate=new Map<string,number>();for(const point of points)byDate.set(point.date.slice(0,10),(byDate.get(point.date.slice(0,10))||0)+point.storeRevenue+point.externalRevenue);
+  const dates=[...byDate.keys()].sort(),start=Date.parse(`${dates[0]}T00:00:00Z`),end=Date.parse(`${dates[dates.length-1]}T00:00:00Z`);
+  const series:number[]=[];for(let day=start;day<=end&&series.length<400;day+=24*60*60*1000)series.push(byDate.get(new Date(day).toISOString().slice(0,10))||0);
+  return series;
+}
+
 function DashboardOverview({dashboard,previousDashboard,syncing,days,storeName,periodLabel,layout,savingLayout,onNavigate,onEdit,onLayoutReorder,onChartChange}:{dashboard:Dashboard|null;previousDashboard:Dashboard|null;syncing:boolean;days:number;storeName:string;periodLabel:string;layout:DashboardLayoutConfig;savingLayout:boolean;onNavigate:(section:string)=>void;onEdit:()=>void;onLayoutReorder:(layout:DashboardLayoutConfig)=>void;onChartChange:(chart:DashboardLayoutConfig['chart'])=>void}) {
   const canManage=useContext(AccessContext);
   const money=useMoney();
@@ -1103,11 +1112,11 @@ function DashboardOverview({dashboard,previousDashboard,syncing,days,storeName,p
     const prev=previousDashboard?.metrics;
     const growth=(current:number,previous?:number)=>previous?`${current>=previous?'+':''}${Math.round((current-previous)/Math.abs(previous)*100)}%`:'—';
     const margin=`${metrics.margin.toFixed(1).replace('.',',')}%`;
-    setShare({eyebrow:'Mis números',title:'Así le fue a mi tienda',period:periodLabel,series:(dashboard?.timeline||[]).map(point=>point.storeRevenue+point.externalRevenue),stats:[
+    setShare({eyebrow:'Mis números',title:'Así le fue a mi tienda',period:periodLabel,series:dailySeries(dashboard?.timeline||[]),stats:[
       {label:'Facturación',value:money(metrics.totalRevenue),privateValue:growth(metrics.totalRevenue,prev?.totalRevenue)},
       {label:'Ganancia',value:money(metrics.profit),privateValue:growth(metrics.profit,prev?.profit)},
       {label:'Margen real',value:margin,privateValue:margin},
-      {label:'Órdenes',value:metrics.totalOrders.toLocaleString('es-AR'),privateValue:growth(metrics.totalOrders,prev?.totalOrders)},
+      {label:'Órdenes',value:metrics.totalOrders.toLocaleString('es-AR'),privateValue:prev?.totalOrders?growth(metrics.totalOrders,prev.totalOrders):metrics.totalOrders.toLocaleString('es-AR')},
     ]});
   };
   const previous=previousDashboard?.metrics;

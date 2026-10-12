@@ -63,7 +63,8 @@ async function draw(canvas:HTMLCanvasElement,content:ShareContent,options:Option
   const top=220,bottom=H-(qr?330:220),inner=W-160,gap=options.format==='story'?56:36;
   context.font=`700 76px ${font}`;
   const titleLines=wrap(context,content.title,inner).slice(0,3);
-  const stats=(content.stats||[]).slice(0,4),statRows=Math.ceil(stats.length/2),cellH=options.format==='story'?250:220;
+  // Sin montos, un dato sin comparación posible ("—") no se muestra.
+  const stats=(content.stats||[]).filter(stat=>{const shown=options.showAmounts?stat.value:stat.privateValue;return Boolean(shown)&&shown!=='—';}).slice(0,4),statRows=Math.ceil(stats.length/2),cellH=options.format==='story'?250:220;
   const curveH=content.series&&content.series.length>1?(options.format==='story'?300:200):0;
   // Cada bloque va separado del anterior por "gap"; la foto ocupa el espacio que sobra.
   const fixed=50+titleLines.length*88+(value?190:0)+(statRows?statRows*(cellH+24)-24:0)+curveH;

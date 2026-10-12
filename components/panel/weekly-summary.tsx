@@ -76,7 +76,9 @@ export default function WeeklySummary({money,storeName,settings,onNavigate}:{mon
     const previousMetrics=p?{revenue:p.totalRevenue,profit:p.profit,margin:p.margin,orders:p.totalOrders}:null;
     const alerts=buildAlerts({metrics,previous:previousMetrics,quality:current.quality,adsConnected:current.ads.connected,syncError:current.sync?.status==='error',products:data.products,missingCosts:0,campaigns,settings,money});
     const wins=[...recordAchievements(history,week,money),...achievements({...metrics,reportedRoas:m.reportedRoas,adSpend:m.adSpend},previousMetrics,current.timeline,money)];
-    const series=current.timeline.map(day=>day.storeRevenue+day.externalRevenue);
+    // Los siete días de la semana, con cero en los días sin ventas, para dibujar la curva completa.
+    const byDate=new Map(current.timeline.map(day=>[day.date,day.storeRevenue+day.externalRevenue]));
+    const series=Array.from({length:7},(_,index)=>byDate.get(new Date(Date.parse(`${week.start}T00:00:00Z`)+index*DAY).toISOString().slice(0,10))||0);
     const days=current.timeline.map(day=>({label:shortDay.format(new Date(`${day.date}T00:00:00Z`)),revenue:day.storeRevenue+day.externalRevenue,profit:day.profit}));
     const best=current.timeline.reduce<typeof current.timeline[number]|null>((top,day)=>!top||day.storeRevenue+day.externalRevenue>top.storeRevenue+top.externalRevenue?day:top,null);
     const topProducts=[...data.products].filter(row=>row.units_sold>0).sort((a,b)=>b.profit-a.profit).slice(0,3);
@@ -95,7 +97,7 @@ export default function WeeklySummary({money,storeName,settings,onNavigate}:{mon
     {label:'Facturación',value:money(m.totalRevenue),privateValue:signed(change(m.totalRevenue,p?.totalRevenue))},
     {label:'Ganancia',value:money(m.profit),privateValue:signed(change(m.profit,p?.profit))},
     {label:'Margen real',value:`${m.margin.toFixed(1).replace('.',',')}%`,privateValue:`${m.margin.toFixed(1).replace('.',',')}%`},
-    {label:'Órdenes',value:m.totalOrders.toLocaleString('es-AR'),privateValue:signed(change(m.totalOrders,p?.totalOrders))},
+    {label:'Órdenes',value:m.totalOrders.toLocaleString('es-AR'),privateValue:p?.totalOrders?signed(change(m.totalOrders,p.totalOrders)):m.totalOrders.toLocaleString('es-AR')},
   ]});};
 
   return <>
