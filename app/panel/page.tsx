@@ -37,6 +37,7 @@ import type { LiveRates } from '../../lib/exchange-rates';
 import { accountAppearance } from '../../lib/account-appearance';
 import AlertsBell, { type AlertReads } from '../../components/panel/alerts-bell';
 import type { ShareContent } from '../../components/panel/share-card';
+import { cashflowView, useCashflowData } from '../../components/panel/use-cashflow';
 import { alertKey, buildAlerts, defaultAlertSettings, urgentAlerts, type AlertSettings, type BusinessAlert } from '../../lib/alerts';
 import { campaignMargins, campaignProfits, type CampaignProfitRow } from '../../lib/campaign-profit';
 import dynamic from 'next/dynamic';
@@ -102,7 +103,7 @@ type MetaAccount={external_account_id:string;name:string;currency:string;timezon
 type MetaCampaign={external_campaign_id:string;name:string;status:string|null;effective_status:string|null;daily_budget:number;lifetime_budget:number;spend:number;impressions:number;clicks:number;purchases:number;purchase_value:number;reported_roas:number;cpa:number};
 type MetaAdsData={accounts:MetaAccount[];selected:MetaAccount|null;sync:SyncState;summary:{spend:number;impressions:number;clicks:number;purchases:number;purchaseValue:number;reportedRoas:number;cpa:number;ctr:number;cpc:number};campaigns:MetaCampaign[];daily:Array<{date:string;spend:number;impressions:number;clicks:number;purchases:number;purchase_value:number}>};
 type Dashboard={meliAds?:ProductAdsData;metrics:{refundLoss?:number;meliAdSpend?:number;totalAdSpend?:number;meliAdsComparable?:boolean;revenue:number;externalRevenue:number;totalRevenue:number;profitBeforeAds:number;profit:number;margin:number;orders:number;externalOrders:number;totalOrders:number;aov:number;totalAov:number;netRevenue:number;productCost:number;shipping:number;commissions:number;taxes:number;additional:number;adSpend:number;metaReportedRevenue:number;metaPurchases:number;reportedRoas:number;blendedRoas:number;cpa:number;adSpendComparable:boolean;metaCurrency:string};ads:{connected:boolean;selected:MetaAccount|null;sync:SyncState};integrations?:{tiendanube?:{paymentAccess:boolean}};orders:OrderRow[];paymentMethods?:string[];products:ProductRow[];metaTimeline?:TimelinePoint[];timeline:TimelinePoint[];channelTimelines?:Record<string,TimelinePoint[]>;channels:ChannelRow[];exchangeRate:ExchangeRate|null;sync:SyncState;quality:DataQuality};
-type CostRule={id:number;category:'commission'|'additional';name:string;match_value:string|null;calculation:'hybrid'|'fixed_monthly'|'percentage_revenue';amount:number;percentage:number;starts_at:string|null;ends_at:string|null;enabled:number};
+type CostRule={due_day?:number|null;id:number;category:'commission'|'additional';name:string;match_value:string|null;calculation:'hybrid'|'fixed_monthly'|'percentage_revenue';amount:number;percentage:number;starts_at:string|null;ends_at:string|null;enabled:number};
 type SubscriptionPlan=RentiaPlan;
 type SubscriptionData={subscription:{planId:string;requestedPlanId:string|null;status:string;billingCycle:string;trialEndsAt:string;trialDaysRemaining:number;currentPeriodEnd?:string|null;cancelAtPeriodEnd?:boolean;canceledAt?:string|null;termsAcceptedAt?:string|null};usage:{orders:number;limit:number|null;percent:number};currentPlan:SubscriptionPlan;recommendation:SubscriptionPlan;plans:SubscriptionPlan[];billingEnabled:boolean;canManage:boolean;message?:string;quota?:OrderQuota};
 type OrderQuota={enforced:boolean;month:string;limit:number|null;used:number;skippedThisMonth:number;skippedTotal:number};
@@ -411,6 +412,8 @@ function PanelApp() {
   const [integrations,setIntegrations]=useState<Integration[]>([]);
   const [integrationsLoaded,setIntegrationsLoaded]=useState(false);
   const [dashboard,setDashboard]=useState<Dashboard|null>(null);
+  // Cashflow del mes: se recarga cuando cambian los datos del resumen.
+  const cashflowState=useCashflowData(dashboard);
   const [previousDashboard,setPreviousDashboard]=useState<Dashboard|null>(null);
   const [productAnalytics,setProductAnalytics]=useState<ProductAnalyticsRow[]>([]);
   const [syncing,setSyncing]=useState(false);
@@ -787,8 +790,10 @@ function PanelApp() {
   const connections=connectionHealth({loaded:integrationsLoaded,integrations,tiendanube:dashboard?.sync||null,meta:dashboard?.ads?.sync||adsData?.sync||null,metaSelected:Boolean(dashboard?.ads?.selected||adsData?.selected),mercadolibre:mercadoLibreState.view,tiendanubeRunning:syncing,metaRunning:syncingMeta,meliRunning:mercadoLibreState.running,meliError:mercadoLibreState.error});
   const campaignMarginsNow=campaignMargins(dashboard);
   const campaignRows=campaignProfits({meta:dashboard?.metrics.adSpendComparable?adsData?.campaigns||[]:[],mercadolibre:dashboard?.metrics.meliAdsComparable?productAdsState.data?.campaigns||[]:[],metaMargin:campaignMarginsNow.meta,meliMargin:campaignMarginsNow.mercadolibre});
+  const cashflowNow=cashflowState.data?cashflowView(cashflowState.data,costRules).result:null;
+  const cashflowAlert=cashflowNow?{status:cashflowNow.status,shortfall:cashflowNow.shortfall,perDay:cashflowNow.perDay,monthName:new Intl.DateTimeFormat('es-AR',{month:'long',timeZone:'UTC'}).format(new Date(`${cashflowNow.month}-01T00:00:00Z`)),elapsed:cashflowNow.elapsed}:null;
   const alertMetrics=(value:Dashboard|null)=>value?{revenue:value.metrics.totalRevenue,profit:value.metrics.profit,margin:value.metrics.margin,orders:value.metrics.totalOrders}:null;
-  const businessAlerts=buildAlerts({metrics:alertMetrics(dashboard),previous:alertMetrics(previousDashboard),quality:dashboard?.quality?{completeOrders:dashboard.quality.completeOrders,totalOrders:dashboard.quality.totalOrders}:null,adsConnected:Boolean(dashboard?.ads.connected),syncError:dashboard?.sync?.status==='error',products:productAnalytics.filter(row=>!row.rentia_archived),missingCosts:costRows.filter(row=>!row.rentia_archived&&row.effective_cost<=0).length,campaigns:campaignRows,settings:alertSettings,money});
+  const businessAlerts=buildAlerts({metrics:alertMetrics(dashboard),previous:alertMetrics(previousDashboard),quality:dashboard?.quality?{completeOrders:dashboard.quality.completeOrders,totalOrders:dashboard.quality.totalOrders}:null,adsConnected:Boolean(dashboard?.ads.connected),syncError:dashboard?.sync?.status==='error',products:productAnalytics.filter(row=>!row.rentia_archived),missingCosts:costRows.filter(row=>!row.rentia_archived&&row.effective_cost<=0).length,campaigns:campaignRows,settings:alertSettings,money,cashflow:cashflowAlert});
   const navBadges={
     costs:costRows.filter(row=>!row.rentia_archived&&row.effective_cost<=0).length,
     inventory:productAnalytics.filter(row=>!row.rentia_archived&&row.stock!==null&&row.units_sold>0&&(row.stock<=0||(row.days_stock??0)<=14)).length,
@@ -850,7 +855,7 @@ function PanelApp() {
         {settingsLoaded&&costsLoaded&&dashboard&&<SetupChecklist connected={hasSalesConnection} productCount={costRows.filter(row=>!row.rentia_archived).length} missingProductCosts={costRows.filter(row=>!row.rentia_archived&&row.cost_source==='sin_costo').length} costsConfigured={dashboard.quality.configurationSaved} adsConnected={Boolean(meta&&adsData?.selected)} canManage={canManage} onNavigate={selectSection}/>}
         <DashboardOverview dashboard={dashboard} previousDashboard={previousDashboard} syncing={syncing} days={selectedPeriodDays} storeName={store} periodLabel={displayPeriod} layout={dashboardLayout} savingLayout={savingDashboard} onNavigate={selectSection} onEdit={()=>{setDashboardEditorOpen(true);setDashboardPreferenceMessage('');}} onLayoutReorder={next=>{setDashboardLayout(next);void saveDashboardPreferences(next,false);}} onChartChange={chart=>{const next={...dashboardLayout,chart};setDashboardLayout(next);void saveDashboardPreferences(next,false);}}/>
       </>:active==='acciones'?<DecisionCenter dashboard={dashboard} products={productAnalytics.filter(row=>!row.rentia_archived)} costs={costRows.filter(row=>!row.rentia_archived)} alerts={businessAlerts} campaigns={campaignRows} alertSettings={alertSettings} canManage={canManage} onAlertSettings={setAlertSettings} onNavigate={selectSection}/>
-      :active==='cashflow'?<Cashflow rules={costRules} money={money} onNavigate={selectSection}/>
+      :active==='cashflow'?<Cashflow data={cashflowState.data} error={cashflowState.error} rules={costRules} money={money} onNavigate={selectSection}/>
       :active==='semanal'?<WeeklySummary money={money} storeName={store} settings={alertSettings} onNavigate={selectSection}/>
       :active==='calidad'?<DataQualitySection dashboard={dashboard} onNavigate={selectSection}/>
       :active==='informes'?<ReportsSection dashboard={dashboard} products={productAnalytics} ads={adsData} period={displayPeriod} days={selectedPeriodDays} onPeriodChange={changePeriod}/>
@@ -1579,6 +1584,7 @@ function AdvancedCostRules({rules,paymentMethods,onChanged}:{rules:CostRule[];pa
   const [expenseValue,setExpenseValue]=useState('');
   const [expenseStart,setExpenseStart]=useState('');
   const [expenseEnd,setExpenseEnd]=useState('');
+  const [expenseDueDay,setExpenseDueDay]=useState('');
   const [ruleState,setRuleState]=useState('');
   const [saving,setSaving]=useState(false);
 
@@ -1605,8 +1611,8 @@ function AdvancedCostRules({rules,paymentMethods,onChanged}:{rules:CostRule[];pa
   async function addExpense(event:FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value=parseCost(expenseValue||'0');
-    const ok=await requestRule({category:'additional',name:expenseName,calculation:expenseType,amount:expenseType==='fixed_monthly'?value:0,percentage:expenseType==='percentage_revenue'?value:0,startsAt:expenseStart||null,endsAt:expenseEnd||null});
-    if (ok) {setExpenseName('');setExpenseValue('');setExpenseStart('');setExpenseEnd('');}
+    const ok=await requestRule({category:'additional',name:expenseName,calculation:expenseType,amount:expenseType==='fixed_monthly'?value:0,percentage:expenseType==='percentage_revenue'?value:0,startsAt:expenseStart||null,endsAt:expenseEnd||null,dueDay:expenseType==='fixed_monthly'&&expenseDueDay?Number(expenseDueDay):null});
+    if (ok) {setExpenseName('');setExpenseValue('');setExpenseStart('');setExpenseEnd('');setExpenseDueDay('');}
   }
 
   async function removeRule(id:number) {
@@ -1623,7 +1629,7 @@ function AdvancedCostRules({rules,paymentMethods,onChanged}:{rules:CostRule[];pa
 
   const commissionRules=rules.filter(rule=>rule.category==='commission');
   const expenseRules=rules.filter(rule=>rule.category==='additional');
-  const ruleList=(items:CostRule[],empty:string)=><div>{items.map(rule=><div className="p-ruleRow" key={rule.id}><span><b>{rule.name}</b><small>{rule.category==='commission'?`${rule.percentage||0}%${rule.amount?` + ${money(rule.amount)} por orden`:''}`:rule.calculation==='fixed_monthly'?`${money(rule.amount)} por mes`:`${rule.percentage}% de facturación`}{rule.starts_at||rule.ends_at?` · ${rule.starts_at||'Inicio'} → ${rule.ends_at||'Sin fin'}`:''}</small></span><button type="button" className="p-btn p-small p-ghost" disabled={saving} onClick={()=>void removeRule(rule.id)}>Eliminar</button></div>)}{!items.length&&empty&&<p className="p-sub">{empty}</p>}</div>;
+  const ruleList=(items:CostRule[],empty:string)=><div>{items.map(rule=><div className="p-ruleRow" key={rule.id}><span><b>{rule.name}</b><small>{rule.category==='commission'?`${rule.percentage||0}%${rule.amount?` + ${money(rule.amount)} por orden`:''}`:rule.calculation==='fixed_monthly'?`${money(rule.amount)} por mes${rule.due_day?` · se paga el día ${rule.due_day}`:''}`:`${rule.percentage}% de facturación`}{rule.starts_at||rule.ends_at?` · ${rule.starts_at||'Inicio'} → ${rule.ends_at||'Sin fin'}`:''}</small></span><button type="button" className="p-btn p-small p-ghost" disabled={saving} onClick={()=>void removeRule(rule.id)}>Eliminar</button></div>)}{!items.length&&empty&&<p className="p-sub">{empty}</p>}</div>;
 
   return <div className="p-customRules">
     <section className="p-block p-reveal" style={{'--i':3,marginTop:14} as React.CSSProperties} aria-labelledby="custom-payment-title">
@@ -1646,6 +1652,7 @@ function AdvancedCostRules({rules,paymentMethods,onChanged}:{rules:CostRule[];pa
           <label className="p-field" style={{gridColumn:'1/-1'}}><span className="p-fieldLabel">Nombre del gasto</span><span className="p-input"><input value={expenseName} onChange={event=>setExpenseName(event.target.value)} maxLength={80} placeholder="Ej.: agencia de marketing" required/></span></label>
           <label className="p-field"><span className="p-fieldLabel">Forma de cálculo</span><span className="p-input"><RpSelect value={expenseType} onChange={event=>setExpenseType(event.target.value as 'fixed_monthly'|'percentage_revenue')}><option value="fixed_monthly">Importe mensual</option><option value="percentage_revenue">% de facturación</option></RpSelect></span></label>
           <label className="p-field"><span className="p-fieldLabel">Valor</span><span className="p-input">{expenseType==='fixed_monthly'&&<span>ARS</span>}<input type="number" min="0.01" max={expenseType==='percentage_revenue'?100:undefined} step="0.01" value={expenseValue} onChange={event=>setExpenseValue(event.target.value)} inputMode="decimal" placeholder="0" required/>{expenseType==='percentage_revenue'&&<span>%</span>}</span></label>
+          {expenseType==='fixed_monthly'&&<label className="p-field"><span className="p-fieldLabel">Día de pago · opcional</span><span className="p-input"><RpSelect value={expenseDueDay} onChange={event=>setExpenseDueDay(event.target.value)}><option value="">Sin día fijo</option>{Array.from({length:31},(_,index)=><option key={index+1} value={String(index+1)}>{`Día ${index+1}`}</option>)}</RpSelect></span></label>}
           <label className="p-field"><span className="p-fieldLabel">Desde · opcional</span><span className="p-input"><RpDate value={expenseStart} max={expenseEnd||undefined} onChange={event=>setExpenseStart(event.target.value)}/></span></label>
           <label className="p-field"><span className="p-fieldLabel">Hasta · opcional</span><span className="p-input"><RpDate value={expenseEnd} min={expenseStart||undefined} onChange={event=>setExpenseEnd(event.target.value)}/></span></label>
         </div><button className="p-btn" type="submit" disabled={saving} style={{marginTop:12}}><Plus className="p-i" aria-hidden="true"/>Agregar gasto</button></fieldset></form>

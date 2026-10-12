@@ -740,19 +740,19 @@ async function* iterateProductSales(userId:string,since:string,until:string) {
   }
 }
 
-export type CostRuleInput={category:'commission'|'additional';name:string;matchValue:string|null;calculation:'hybrid'|'fixed_monthly'|'percentage_revenue';amount:number;percentage:number;startsAt:string|null;endsAt:string|null};
+export type CostRuleInput={category:'commission'|'additional';name:string;matchValue:string|null;calculation:'hybrid'|'fixed_monthly'|'percentage_revenue';amount:number;percentage:number;startsAt:string|null;endsAt:string|null;dueDay?:number|null};
 
 export async function getCostRules(userId:string) {
   await ensureSchema();
-  return database().prepare("SELECT id,category,name,match_value,calculation,amount,percentage,starts_at,ends_at,enabled,created_at,updated_at FROM cost_rules WHERE user_id=? ORDER BY category,name,id")
+  return database().prepare("SELECT id,category,name,match_value,calculation,amount,percentage,starts_at,ends_at,enabled,due_day,created_at,updated_at FROM cost_rules WHERE user_id=? ORDER BY category,name,id")
     .bind(userId).all<Record<string,unknown>>();
 }
 
 export async function createCostRule(userId:string,input:CostRuleInput) {
   await ensureSchema();
   const now=new Date().toISOString();
-  await database().prepare("INSERT INTO cost_rules (user_id,category,name,match_value,calculation,amount,percentage,starts_at,ends_at,enabled,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,1,?,?)")
-    .bind(userId,input.category,input.name,input.matchValue,input.calculation,input.amount,input.percentage,input.startsAt,input.endsAt,now,now).run();
+  await database().prepare("INSERT INTO cost_rules (user_id,category,name,match_value,calculation,amount,percentage,starts_at,ends_at,enabled,due_day,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,1,?,?,?)")
+    .bind(userId,input.category,input.name,input.matchValue,input.calculation,input.amount,input.percentage,input.startsAt,input.endsAt,input.dueDay??null,now,now).run();
 }
 
 export async function deleteCostRule(userId:string,id:number) {

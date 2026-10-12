@@ -64,3 +64,65 @@ export function cashflow(input:CashflowInput) {
   const status:CashflowStatus=breakEven===null?'sin-datos':metrics.revenue>=breakEven?'cubierto':projectedRevenue>=breakEven?'en-camino':'en-riesgo';
   return {month,totalDays,elapsed,daysLeft,fixed,fixedItems,margin,breakEven,pace,projectedRevenue,profitSoFar,projectedProfit,remaining,perDay,averageOrder,ordersNeeded,breakEvenDay,status,shortfall:breakEven!==null&&projectedRevenue<breakEven?breakEven-projectedRevenue:0};
 }
+
+// Calendario de las próximas semanas (bloques de 7 días desde hoy).
+// Entradas: cobros pendientes de ventas ya hechas y el margen de las ventas nuevas al ritmo
+// actual (suponiendo que se repone la mercadería que se vende). Salidas: gastos fijos en su
+// día de pago (los que no tienen día se reparten parejo) y la publicidad al ritmo actual.
+export type ScheduleRule=CashflowRule&{due_day?:number|null};
+export type ScheduleInput={today:string;weeks?:number;receivables:{pagoNube:Array<{date:string;amount:number}>;mercadolibre:{amount:number}};rules:ScheduleRule[];dailySales:number;marginBeforeAds:number|null;dailyAds:number;openingBalance?:number|null};
+export type ScheduleWeek={start:string;end:string;collections:number;newSales:number;fixed:number;fixedItems:Array<{name:string;date:string;amount:number}>;ads:number;net:number;balance:number|null};
+
+export function weeklySchedule(input:ScheduleInput):ScheduleWeek[] {
+  const start=time(input.today),weeks=input.weeks??5;
+  const active=(rule:ScheduleRule,day:number)=>Number(rule.enabled)&&rule.category==='additional'&&rule.calculation==='fixed_monthly'&&(!rule.starts_at||Date.parse(rule.starts_at)<=day)&&(!rule.ends_at||Date.parse(rule.ends_at)+(rule.ends_at.length<=10?DAY:0)>day);
+  let balance=input.openingBalance??null;
+  const result:ScheduleWeek[]=[];
+  for(let index=0;index<weeks;index++){
+    const from=start+index*7*DAY,to=from+6*DAY;
+    const inRange=(date:string)=>time(date)>=from&&time(date)<=to;
+    const collections=input.receivables.pagoNube.filter(item=>inRange(item.date)).reduce((sum,item)=>sum+item.amount,0)+(index===0?input.receivables.mercadolibre.amount:0);
+    const fixedItems:ScheduleWeek['fixedItems']=[];let spread=0;
+    for(let day=from;day<=to;day+=DAY){
+      const date=new Date(day),dayOfMonth=date.getUTCDate(),monthDays=new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,0)).getUTCDate();
+      for(const rule of input.rules){
+        if(!active(rule,day))continue;
+        // Un día de pago mayor que los días del mes (por ejemplo, 31 en junio) cae el último día.
+        if(rule.due_day){if(Math.min(rule.due_day,monthDays)===dayOfMonth)fixedItems.push({name:rule.name,date:iso(day),amount:Number(rule.amount||0)});}
+        else spread+=Number(rule.amount||0)/monthDays;
+      }
+    }
+    const fixed=fixedItems.reduce((sum,item)=>sum+item.amount,0)+spread;
+    const newSales=input.marginBeforeAds&&input.marginBeforeAds>0?input.dailySales*input.marginBeforeAds*7:0;
+    const ads=input.dailyAds*7;
+    const net=collections+newSales-fixed-ads;
+    if(balance!==null)balance+=net;
+    result.push({start:iso(from),end:iso(to),collections,newSales,fixed,fixedItems,ads,net,balance});
+  }
+  return result;
+}
+
+const iso=(value:number)=>new Date(value).toISOString().slice(0,10);
+
+// Simulador de cierre de mes. Parte de la proyección actual y cambia dos palancas:
+// - Publicidad: la inversión extra trae ventas con el ROAS atribuido de hoy (en la práctica
+//   la publicidad extra suele rendir algo menos) y esas ventas tienen sus costos variables.
+// - Precios: mismas unidades a otro precio; productos y envíos no cambian, comisiones,
+//   impuestos y gastos porcentuales acompañan a la facturación.
+export type SimulationBase={revenue:number;productCost:number;shipping:number;commissions:number;taxes:number;refundLoss:number;ads:number;fixed:number;percentageRate:number;roas:number};
+export function simulate(base:SimulationBase,adsChange:number,priceChange:number) {
+  const outcome=(adsDelta:number,price:number)=>{
+    const extraRevenue=base.ads*adsDelta*base.roas;
+    const volume=base.revenue>0?1+extraRevenue/base.revenue:1;
+    const revenue=(base.revenue+extraRevenue)*(1+price);
+    const goods=(base.productCost+base.shipping)*volume;
+    const fees=base.revenue>0?(base.commissions+base.taxes+base.refundLoss)/base.revenue*revenue:0;
+    const ads=base.ads*(1+adsDelta);
+    const variable=goods+fees+base.percentageRate*revenue+ads;
+    const profit=revenue-variable-base.fixed;
+    const margin=revenue>0?1-variable/revenue:null;
+    return {revenue,profit,breakEven:margin&&margin>0&&base.fixed>0?base.fixed/margin:null};
+  };
+  const current=outcome(0,0),scenario=outcome(adsChange,priceChange);
+  return {current,scenario,deltaProfit:scenario.profit-current.profit,deltaRevenue:scenario.revenue-current.revenue};
+}

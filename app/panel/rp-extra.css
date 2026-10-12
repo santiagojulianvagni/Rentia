@@ -398,3 +398,14 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-cashBarLabels{display:flex;justify-content:space-between;margin-top:8px;color:var(--muted);font-size:12px;font-weight:600}
 .p-root .p-cashChart{display:block;width:100%;height:auto}
 @media (max-width:560px){.p-root .p-cashHero h2{font-size:18px}}
+.p-root .p-balanceField{display:grid;gap:6px;font-size:12px;font-weight:600;color:var(--muted)}
+.p-root .p-balanceField .p-input{display:flex;align-items:center;gap:6px;height:38px;padding:0 12px;border:1px solid var(--line2);border-radius:10px;background:var(--bg)}
+.p-root .p-balanceField input{width:130px;border:0;background:none;color:var(--text);font:inherit;font-size:14px;outline:none}
+.p-root .p-cashTable td{vertical-align:top}
+.p-root .p-simRow{display:grid;gap:8px;margin-top:12px}
+.p-root .p-simRow>span{font-size:13px;font-weight:600;color:#cfdce6}
+.p-root .p-simChips{display:flex;flex-wrap:wrap;gap:6px}
+.p-root .p-simChips button{height:32px;padding:0 12px;border:1px solid var(--line2);border-radius:9px;background:var(--surface2);color:#cfdce6;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.p-root .p-simChips button.p-on{border-color:var(--cyan);background:rgba(33,212,194,.12);color:var(--cyan)}
+.p-root .p-simChips button:disabled{opacity:.4;cursor:not-allowed}
+@media (max-width:560px){.p-root .p-balanceField input{width:100%}}

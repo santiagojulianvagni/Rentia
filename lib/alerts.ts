@@ -23,6 +23,8 @@ export type AlertInput={
   campaigns:CampaignProfitRow[];
   settings:AlertSettings;
   money:(value:number)=>string;
+  // Proyección del mes: avisa si a este ritmo no se cubren los gastos fijos.
+  cashflow?:{status:string;shortfall:number;perDay:number|null;monthName:string;elapsed:number}|null;
 };
 
 const pct=(value:number)=>`${value.toFixed(1).replace('.',',')}%`;
@@ -55,6 +57,9 @@ export function buildAlerts(input:AlertInput):BusinessAlert[] {
 
   const lowStock=input.products.filter(row=>row.stock!==null&&row.units_sold>0&&(row.days_stock===null||row.days_stock<=settings.stockDays)).sort((a,b)=>(a.days_stock??0)-(b.days_stock??0));
   if(lowStock.length)alerts.push({id:'stock',kind:'warning',icon:'◈',title:`${lowStock.length} SKU requieren reposición`,detail:`${lowStock[0].product_name} tiene ${lowStock[0].stock||0} unidades y ${Math.max(0,lowStock[0].days_stock||0).toFixed(0)} días estimados de stock.`,action:'Revisar inventario',section:'inventario'});
+
+  // Recién desde la segunda semana del mes, para no alarmar con pocos días de datos.
+  if(input.cashflow&&input.cashflow.status==='en-riesgo'&&input.cashflow.elapsed>=7)alerts.push({id:'cashflow',kind:'warning',icon:'$',title:`A este ritmo no cubrís los gastos fijos de ${input.cashflow.monthName}`,detail:`Te faltarían ${money(input.cashflow.shortfall)}.${input.cashflow.perDay?` Necesitás vender ${money(input.cashflow.perDay)} por día.`:''}`,action:'Ver cashflow',section:'cashflow'});
 
   if(!input.adsConnected)alerts.push({id:'ads',kind:'info',icon:'∞',title:'Meta Ads todavía no está conectado',detail:'Conectalo para ver qué campañas dejan ganancia y cuáles la pierden.',action:'Conectar Meta',section:'integraciones'});
 

@@ -15,6 +15,8 @@ const RuleBody=z.object({
   percentage:field(value=>Number(value||0)).pipe(z.number().min(0).max(100)),
   startsAt:optionalDate,
   endsAt:optionalDate,
+  // Día del mes en que se paga un gasto fijo (opcional).
+  dueDay:field(value=>value===undefined||value===null||value===''?null:Number(value)).pipe(z.number().int().min(1).max(31).nullable()),
 });
 
 export const GET=route({},async({user})=>{
@@ -23,14 +25,14 @@ export const GET=route({},async({user})=>{
 });
 
 export const POST=route({access:'manager',body:RuleBody,invalidBody:'invalid_rule'},async({user,body})=>{
-  const {name,matchValue,calculation,amount,percentage,startsAt,endsAt}=body;
+  const {name,matchValue,calculation,amount,percentage,startsAt,endsAt,dueDay}=body;
   if (startsAt&&endsAt&&startsAt>endsAt) throw new HttpError(400,'invalid_dates');
   if (body.category==='commission') {
     if (!matchValue||(amount===0&&percentage===0)) throw new HttpError(400,'invalid_commission');
     await createCostRule(user.id,{category:'commission',name,matchValue,calculation:'hybrid',amount,percentage,startsAt:null,endsAt:null});
   } else if (body.category==='additional') {
     if ((calculation==='fixed_monthly'&&amount===0)||(calculation==='percentage_revenue'&&percentage===0)) throw new HttpError(400,'invalid_additional');
-    await createCostRule(user.id,{category:'additional',name,matchValue:null,calculation,amount:calculation==='fixed_monthly'?amount:0,percentage:calculation==='percentage_revenue'?percentage:0,startsAt,endsAt});
+    await createCostRule(user.id,{category:'additional',name,matchValue:null,calculation,amount:calculation==='fixed_monthly'?amount:0,percentage:calculation==='percentage_revenue'?percentage:0,startsAt,endsAt,dueDay:calculation==='fixed_monthly'?dueDay:null});
   } else throw new HttpError(400,'invalid_category');
   return {ok:true};
 });

@@ -78,3 +78,13 @@ test('records, streaks and milestones are measured up to the chosen week',()=>{
   // Una semana sin ventas no tiene récords.
   assert.deepEqual(recordAchievements(days,{start:'2026-10-12',end:'2026-10-18'},money).filter(item=>item.id==='record-week'),[]);
 });
+
+test('the cashflow alert waits for the second week of the month',()=>{
+  const base={metrics:null,previous:null,adsConnected:true,products:[],missingCosts:0,campaigns:[],settings:defaultAlertSettings,money};
+  const risk={status:'en-riesgo',shortfall:50000,perDay:4000,monthName:'octubre',elapsed:12};
+  const alert=buildAlerts({...base,cashflow:risk}).find(item=>item.id==='cashflow');
+  assert.equal(alert?.title,'A este ritmo no cubrís los gastos fijos de octubre');
+  assert.equal(alert?.section,'cashflow');
+  assert.ok(!buildAlerts({...base,cashflow:{...risk,elapsed:3}}).some(item=>item.id==='cashflow'));
+  assert.ok(!buildAlerts({...base,cashflow:{...risk,status:'en-camino'}}).some(item=>item.id==='cashflow'));
+});

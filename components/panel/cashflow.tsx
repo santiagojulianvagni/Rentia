@@ -1,22 +1,19 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { cashflow, type CashflowRule } from '../../lib/cashflow';
+import { useMemo, useState } from 'react';
+import { simulate, weeklySchedule, type ScheduleRule } from '../../lib/cashflow';
+import { cashflowView, type CashflowData } from './use-cashflow';
 
-type MonthDashboard={metrics:{revenue:number;productCost:number;shipping:number;commissions:number;taxes:number;refundLoss?:number;totalAdSpend?:number;adSpend:number;orders:number};timeline:Array<{date:string;storeRevenue:number}>;quality:{completeOrders:number;totalOrders:number}};
-
-const DAY=24*60*60*1000;
-const iso=(value:number)=>new Date(value).toISOString().slice(0,10);
-// Fecha de hoy en Argentina.
-const todayAr=()=>{const local=new Date(Date.now()-3*60*60*1000);return iso(Date.UTC(local.getUTCFullYear(),local.getUTCMonth(),local.getUTCDate()));};
 const monthLabel=new Intl.DateTimeFormat('es-AR',{month:'long',year:'numeric',timeZone:'UTC'});
 const dayLabel=new Intl.DateTimeFormat('es-AR',{day:'numeric',month:'long',timeZone:'UTC'});
+const shortDate=new Intl.DateTimeFormat('es-AR',{day:'numeric',month:'numeric',timeZone:'UTC'});
+const weekdayDate=new Intl.DateTimeFormat('es-AR',{weekday:'short',day:'numeric',month:'numeric',timeZone:'UTC'});
 const percent=(value:number)=>`${(value*100).toFixed(1).replace('.',',')}%`;
-
-async function getJson<T>(url:string):Promise<T|null> {
-  const response=await fetch(url,{cache:'no-store'});
-  return response.ok?await response.json() as T:null;
-}
+const asDate=(date:string)=>new Date(`${date}T00:00:00Z`);
+const BALANCE_KEY='rentia-cash-balance';
+const ADS_STEPS=[-0.5,-0.25,0,0.25,0.5,1];
+const PRICE_STEPS=[-0.1,-0.05,0,0.05,0.1,0.15];
+const signedPercent=(value:number)=>value===0?'Igual':`${value>0?'+':''}${Math.round(value*100)}%`;
 
 // Facturación acumulada del mes, proyección y línea del punto de equilibrio.
 function CashflowChart({daily,pace,breakEven,elapsed,totalDays,money,risk}:{daily:number[];pace:number;breakEven:number|null;elapsed:number;totalDays:number;money:(value:number)=>string;risk:boolean}) {
@@ -41,43 +38,34 @@ function CashflowChart({daily,pace,breakEven,elapsed,totalDays,money,risk}:{dail
   </svg>;
 }
 
-export default function Cashflow({rules,money,onNavigate}:{rules:CashflowRule[];money:(value:number)=>string;onNavigate:(section:string)=>void}) {
-  const today=todayAr(),month=today.slice(0,7);
-  const [data,setData]=useState<{month:MonthDashboard;recent:MonthDashboard|null}|null>(null);
-  const [error,setError]=useState(false);
-  useEffect(()=>{
-    let cancelled=false;
-    const recentStart=iso(Date.parse(`${today}T00:00:00Z`)-14*DAY),yesterday=iso(Date.parse(`${today}T00:00:00Z`)-DAY);
-    Promise.all([getJson<MonthDashboard>(`/api/dashboard?start=${month}-01&end=${today}`),getJson<MonthDashboard>(`/api/dashboard?start=${recentStart}&end=${yesterday}`)])
-      .then(([current,recent])=>{if(cancelled)return;if(!current){setError(true);return;}setData({month:current,recent});})
-      .catch(()=>{if(!cancelled)setError(true);});
-    return ()=>{cancelled=true;};
-  },[today,month]);
+function readBalance() {
+  try { return window.localStorage.getItem(BALANCE_KEY)||''; } catch { return ''; }
+}
 
-  const view=useMemo(()=>{
-    if(!data)return null;
-    // Últimos 14 días completos, con cero en los días sin ventas.
-    const recentByDate=new Map((data.recent?.timeline||[]).map(point=>[point.date.slice(0,10),point.storeRevenue]));
-    const recentDaily=Array.from({length:14},(_,index)=>recentByDate.get(iso(Date.parse(`${today}T00:00:00Z`)-(14-index)*DAY))||0);
-    const result=cashflow({month,today,metrics:data.month.metrics,rules,recentDaily});
-    const byDate=new Map(data.month.timeline.map(point=>[point.date.slice(0,10),point.storeRevenue]));
-    const daily=Array.from({length:result.totalDays},(_,index)=>byDate.get(`${month}-${String(index+1).padStart(2,'0')}`)||0);
-    const incomplete=data.month.quality.totalOrders>data.month.quality.completeOrders;
-    return {result,daily,incomplete,revenue:data.month.metrics.revenue};
-  },[data,rules,month,today]);
+export default function Cashflow({data,error,rules,money,onNavigate}:{data:CashflowData|null;error:boolean;rules:ScheduleRule[];money:(value:number)=>string;onNavigate:(section:string)=>void}) {
+  const [balanceText,setBalanceText]=useState(readBalance);
+  const [adsChange,setAdsChange]=useState(0);
+  const [priceChange,setPriceChange]=useState(0);
+  const view=useMemo(()=>data?cashflowView(data,rules):null,[data,rules]);
+  const balance=balanceText.trim()?Number(balanceText.replace(/\./g,'').replace(',','.')):null;
+  const schedule=useMemo(()=>data&&view?weeklySchedule({today:data.today,receivables:data.receivables||{pagoNube:[],mercadolibre:{amount:0}},rules,dailySales:view.result.pace,marginBeforeAds:view.marginBeforeAds,dailyAds:view.recentAds,openingBalance:balance!==null&&Number.isFinite(balance)?balance:null}):[],[data,view,rules,balance]);
+  const simulation=view?.simulation?simulate(view.simulation,adsChange,priceChange):null;
+  const saveBalance=(value:string)=>{const clean=value.replace(/[^0-9.,-]/g,'');setBalanceText(clean);try{window.localStorage.setItem(BALANCE_KEY,clean);}catch{/* Solo es una comodidad de este navegador. */}};
 
-  const name=monthLabel.format(new Date(`${month}-01T00:00:00Z`));
-  const monthName=name.split(' ')[0];
+  const month=data?.month||new Date().toISOString().slice(0,7);
+  const name=monthLabel.format(asDate(`${month}-01`)),monthName=name.split(' ')[0];
+  const receivables=data?.receivables;
+  const pendingPagoNube=(receivables?.pagoNube||[]).reduce((sum,item)=>sum+item.amount,0);
   return <>
-    <div className="p-head"><div><div className="p-eyebrow">CASHFLOW · {name.toUpperCase()}</div><h1>¿Cómo vas a <em>terminar el mes?</em></h1><p>Cuánto tenés que vender para cubrir tus gastos fijos y cómo cerrarías {monthName} si seguís al ritmo de los últimos 14 días.</p></div></div>
+    <div className="p-head"><div><div className="p-eyebrow">CASHFLOW · {name.toUpperCase()}</div><h1>¿Cómo vas a <em>terminar el mes?</em></h1><p>Cuánto tenés que vender para cubrir tus gastos fijos, qué plata está por entrar y cómo cerrarías {monthName} si seguís al ritmo de los últimos 14 días.</p></div></div>
     {error?<div className="p-empty" role="alert">No pudimos cargar el mes. Probá de nuevo en unos minutos.</div>
-    :!view?<div className="p-empty" role="status">Calculando tu mes…</div>
+    :!view||!data?<div className="p-empty" role="status">Calculando tu mes…</div>
     :(()=>{const r=view.result;const progress=r.breakEven?Math.min(100,view.revenue/r.breakEven*100):0;return <>
-      {r.fixed<=0&&<div className="p-notice p-warning" role="status"><div><b>Cargá tus gastos fijos</b><p>Alquiler, sueldos, herramientas, contador: con ellos calculamos cuánto necesitás vender para no perder plata.</p></div><button type="button" className="p-btn p-small p-primary" onClick={()=>onNavigate('configuracion')}>Cargar gastos fijos</button></div>}
+      {r.fixed<=0&&<div className="p-notice p-warning" role="status"><div><b>Cargá tus gastos fijos</b><p>Alquiler, sueldos, herramientas, contador: con ellos calculamos cuánto necesitás vender para no perder plata. Si les ponés el día de pago, aparecen en el calendario.</p></div><button type="button" className="p-btn p-small p-primary" onClick={()=>onNavigate('configuracion')}>Cargar gastos fijos</button></div>}
       {view.incomplete&&<div className="p-note">Cálculo provisorio: hay órdenes de este mes con costos sin cargar. <button type="button" className="p-linkBtn" onClick={()=>onNavigate('calidad')}>Ver qué falta</button></div>}
       {r.breakEven!==null&&<div className={`p-card p-reveal p-cashHero p-${r.status}`}>
         <span className="p-eyebrowS">PUNTO DE EQUILIBRIO</span>
-        <h2>{r.status==='cubierto'?`¡Ya cubriste los gastos fijos de ${monthName}!`:r.status==='en-camino'?`Vas bien: los cubrís alrededor del ${r.breakEvenDay?dayLabel.format(new Date(`${r.breakEvenDay}T00:00:00Z`)):'fin de mes'}`:`A este ritmo te faltarían ${money(r.shortfall)}`}</h2>
+        <h2>{r.status==='cubierto'?`¡Ya cubriste los gastos fijos de ${monthName}!`:r.status==='en-camino'?`Vas bien: los cubrís alrededor del ${r.breakEvenDay?dayLabel.format(asDate(r.breakEvenDay)):'fin de mes'}`:`A este ritmo te faltarían ${money(r.shortfall)}`}</h2>
         <p className="p-sub">{r.status==='cubierto'?'Desde acá, cada venta suma ganancia.':`Llevás ${money(view.revenue)} de ${money(r.breakEven)}. ${r.perDay!==null?`Necesitás ${money(r.perDay)} por día${r.ordersNeeded?` (unas ${r.ordersNeeded} órdenes más)`:''}.`:''}`}</p>
         <div className="p-cashBar" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100}><i style={{width:`${progress}%`}}/></div>
         <div className="p-cashBarLabels"><span>{Math.round(progress)}% cubierto</span><span>Día {r.elapsed} de {r.totalDays}</span></div>
@@ -91,6 +79,48 @@ export default function Cashflow({rules,money,onNavigate}:{rules:CashflowRule[];
       <div className="p-grid p-g2" style={{marginBottom:16}}>
         <div className="p-card p-reveal"><div className="p-cardHead"><div><span className="p-eyebrowS">EL MES DÍA POR DÍA</span><h3>Vendido y proyectado</h3><span className="p-sub">Línea llena: lo vendido. Punteada: la proyección.</span></div></div>
           <CashflowChart daily={view.daily} pace={r.pace} breakEven={r.breakEven} elapsed={r.elapsed} totalDays={r.totalDays} money={money} risk={r.status==='en-riesgo'}/></div>
+        <div className="p-card p-reveal"><div className="p-cardHead"><div><span className="p-eyebrowS">PLATA POR COBRAR</span><h3>Lo que está por entrar</h3><span className="p-sub">De ventas que ya hiciste, sin comisiones.</span></div></div>
+          <ul className="p-weekList">
+            {(receivables?.pagoNube||[]).slice(0,5).map(item=><li key={item.date}><span>Pago Nube · {weekdayDate.format(asDate(item.date))}</span><small className="p-sub">{item.orders} {item.orders===1?'venta':'ventas'}</small><b className="p-mono">{money(item.amount)}</b></li>)}
+            {(receivables?.pagoNube.length||0)>5&&<li><span className="p-sub">Y {receivables!.pagoNube.length-5} días más</span><b className="p-mono">{money(receivables!.pagoNube.slice(5).reduce((sum,item)=>sum+item.amount,0))}</b></li>}
+            {receivables&&receivables.mercadolibre.orders>0&&<li><span>Mercado Libre · al entregar</span><small className="p-sub">{receivables.mercadolibre.orders} en camino</small><b className="p-mono">{money(receivables.mercadolibre.amount)}</b></li>}
+            {receivables&&(pendingPagoNube>0||receivables.mercadolibre.amount>0)?<li><span><b>Total por cobrar</b></span><b className="p-mono">{money(pendingPagoNube+receivables.mercadolibre.amount)}</b></li>:<li><span className="p-sub" style={{whiteSpace:'normal'}}>No hay cobros pendientes de Pago Nube ni ventas de Mercado Libre en camino.</span></li>}
+          </ul>
+          {receivables&&!receivables.payoutDays&&<p className="p-sub" style={{margin:'10px 0 0'}}>Para estimar los cobros de Pago Nube, configurá el plazo de acreditación en <button type="button" className="p-linkBtn" onClick={()=>onNavigate('configuracion')}>Envíos y comisiones</button>.</p>}
+          {receivables&&receivables.otherOrders>0&&<p className="p-sub" style={{margin:'10px 0 0'}}>{receivables.otherOrders} {receivables.otherOrders===1?'venta reciente se cobró':'ventas recientes se cobraron'} con otros medios (transferencia, efectivo u otros procesadores): no conocemos su fecha.</p>}
+        </div>
+      </div>
+      <div className="p-card p-reveal" style={{marginBottom:16}}>
+        <div className="p-cardHead"><div><span className="p-eyebrowS">PRÓXIMAS SEMANAS</span><h3>Calendario de plata</h3><span className="p-sub">Entradas y salidas estimadas, semana por semana.</span></div>
+          <label className="p-balanceField"><span>Saldo de hoy · opcional</span><span className="p-input"><span>$</span><input value={balanceText} onChange={event=>saveBalance(event.target.value)} inputMode="decimal" placeholder="0" aria-label="Saldo disponible hoy"/></span></label></div>
+        <div className="p-tableWrap"><table className="p-cashTable">
+          <thead><tr><th>Semana</th><th className="p-r">Cobros</th><th className="p-r">Ventas nuevas</th><th className="p-r">Gastos fijos</th><th className="p-r">Publicidad</th><th className="p-r">Neto</th>{balance!==null&&<th className="p-r">Saldo</th>}</tr></thead>
+          <tbody>{schedule.map(week=><tr key={week.start}>
+            <td><b>{shortDate.format(asDate(week.start))} al {shortDate.format(asDate(week.end))}</b>{week.fixedItems.length>0&&<><br/><small className="p-sub">{week.fixedItems.map(item=>`${item.name} el ${shortDate.format(asDate(item.date))}`).join(' · ')}</small></>}</td>
+            <td className="p-r p-mono">{money(week.collections)}</td>
+            <td className="p-r p-mono">{money(week.newSales)}</td>
+            <td className="p-r p-mono p-neg">−{money(week.fixed)}</td>
+            <td className="p-r p-mono p-neg">−{money(week.ads)}</td>
+            <td className={`p-r p-mono ${week.net<0?'p-neg':'p-pos'}`}>{money(week.net)}</td>
+            {balance!==null&&<td className={`p-r p-mono ${(week.balance||0)<0?'p-neg':''}`}><b>{money(week.balance||0)}</b></td>}
+          </tr>)}</tbody>
+        </table></div>
+        <p className="p-sub" style={{margin:'10px 0 0'}}>Ventas nuevas: el margen de lo que vendas al ritmo actual, suponiendo que reponés la mercadería que vendés. Los gastos sin día de pago se reparten parejo en el mes. El saldo de hoy queda guardado solo en este navegador.</p>
+      </div>
+      <div className="p-grid p-g2" style={{marginBottom:16}}>
+        <div className="p-card p-reveal"><div className="p-cardHead"><div><span className="p-eyebrowS">SIMULADOR</span><h3>¿Qué pasa si…?</h3><span className="p-sub">Probá cambios y mirá cómo cerraría {monthName}.</span></div></div>
+          {simulation?<>
+            <div className="p-simRow"><span>Inversión en publicidad</span><div className="p-simChips" role="group" aria-label="Cambio en la inversión publicitaria">{ADS_STEPS.map(step=><button type="button" key={step} className={adsChange===step?'p-on':''} disabled={!view.simulation?.ads} onClick={()=>setAdsChange(step)}>{signedPercent(step)}</button>)}</div>{!view.simulation?.ads&&<small className="p-sub">Sin inversión publicitaria este mes.</small>}</div>
+            <div className="p-simRow"><span>Precios</span><div className="p-simChips" role="group" aria-label="Cambio de precios">{PRICE_STEPS.map(step=><button type="button" key={step} className={priceChange===step?'p-on':''} onClick={()=>setPriceChange(step)}>{signedPercent(step)}</button>)}</div></div>
+            <ul className="p-weekList" style={{marginTop:12}}>
+              <li><span>Facturación del mes</span><small className="p-sub">{money(simulation.current.revenue)} →</small><b className="p-mono">{money(simulation.scenario.revenue)}</b></li>
+              <li><span>Ganancia del mes</span><small className="p-sub">{money(simulation.current.profit)} →</small><b className={`p-mono ${simulation.scenario.profit<0?'p-neg':'p-pos'}`}>{money(simulation.scenario.profit)}</b></li>
+              {simulation.scenario.breakEven!==null&&<li><span>Punto de equilibrio</span><small className="p-sub">{simulation.current.breakEven!==null?`${money(simulation.current.breakEven)} →`:''}</small><b className="p-mono">{money(simulation.scenario.breakEven)}</b></li>}
+              <li><span><b>Diferencia de ganancia</b></span><b className={`p-mono ${simulation.deltaProfit<0?'p-neg':'p-pos'}`}>{simulation.deltaProfit>0?'+':''}{money(simulation.deltaProfit)}</b></li>
+            </ul>
+            <p className="p-sub" style={{margin:'10px 0 0'}}>Supone que la publicidad extra rinde como hoy (ROAS {view.simulation!.roas.toFixed(2).replace('.',',')}x; en la práctica suele rendir algo menos) y que con otro precio vendés las mismas unidades.</p>
+          </>:<div className="p-empty">Cuando haya ventas este mes vas a poder simular escenarios.</div>}
+        </div>
         <div className="p-card p-reveal"><div className="p-cardHead"><div><span className="p-eyebrowS">CÓMO LO CALCULAMOS</span><h3>Tus números del mes</h3></div><button type="button" className="p-btn p-small" onClick={()=>onNavigate('configuracion')}>Editar gastos</button></div>
           <ul className="p-weekList">
             <li><span>Margen de contribución</span><b className="p-mono">{r.margin!==null?percent(r.margin):'—'}</b></li>
@@ -101,7 +131,7 @@ export default function Cashflow({rules,money,onNavigate}:{rules:CashflowRule[];
           </ul>
         </div>
       </div>
-      <div className="p-note p-reveal">La proyección supone que seguís vendiendo como en los últimos 14 días. No incluye la facturación externa, porque no conocemos sus costos. Próximamente: plata por cobrar de Mercado Libre y Pago Nube, y gastos con fecha para ver el saldo semana a semana.</div>
+      <div className="p-note p-reveal">Las proyecciones suponen que seguís vendiendo como en los últimos 14 días. No incluyen la facturación externa, porque no conocemos sus costos. Los cobros son estimados con el plazo de Pago Nube y el estado de envío de Mercado Libre.</div>
     </>;})()}
   </>;
 }
