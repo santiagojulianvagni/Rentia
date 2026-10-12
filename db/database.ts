@@ -1,3 +1,4 @@
+import { defaultAlertSettings, type AlertSettings } from '../lib/alerts';
 import { database, type Statement } from './client';
 import {ITEM_COST_JOINS,ITEM_UNIT_COST_SQL,ITEM_COST_SOURCE_SQL,ORDER_ANALYTICS_BATCH_SQL,ORDER_COUNT_SQL,ORDER_PAGE_SQL,PAID_TOTAL_SQL,PRODUCT_SALES_BATCH_SQL} from '../lib/commerce-queries';
 import type {AnalyticsOrder} from '../lib/order-calculations';
@@ -894,4 +895,17 @@ export async function recordError(input:ErrorReportInput) {
 
 export async function getRecentErrors(limit=50) {
   return database().prepare('SELECT source,path,message,detail,count,first_seen_at,last_seen_at FROM error_reports ORDER BY last_seen_at DESC LIMIT ?').bind(limit).all<Record<string,unknown>>();
+}
+
+// Umbrales de alertas de cada tienda; sin fila guardada se usan los valores por defecto.
+export async function getAlertSettings(userId:string):Promise<AlertSettings> {
+  const row=await database().prepare('SELECT margin_min,margin_drop,sales_drop,stock_days,campaign_min_spend,alert_email,weekly_email FROM alert_settings WHERE user_id=?').bind(userId).first<Record<string,unknown>>();
+  if(!row)return {...defaultAlertSettings};
+  return {marginMin:Number(row.margin_min),marginDrop:Number(row.margin_drop),salesDrop:Number(row.sales_drop),stockDays:Number(row.stock_days),campaignMinSpend:Number(row.campaign_min_spend),alertEmail:Boolean(row.alert_email),weeklyEmail:Boolean(row.weekly_email)};
+}
+
+export async function saveAlertSettings(userId:string,settings:AlertSettings) {
+  await database().prepare('INSERT INTO alert_settings (user_id,margin_min,margin_drop,sales_drop,stock_days,campaign_min_spend,alert_email,weekly_email,updated_at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET margin_min=excluded.margin_min,margin_drop=excluded.margin_drop,sales_drop=excluded.sales_drop,stock_days=excluded.stock_days,campaign_min_spend=excluded.campaign_min_spend,alert_email=excluded.alert_email,weekly_email=excluded.weekly_email,updated_at=excluded.updated_at')
+    .bind(userId,settings.marginMin,settings.marginDrop,settings.salesDrop,settings.stockDays,settings.campaignMinSpend,settings.alertEmail,settings.weeklyEmail,new Date().toISOString()).run();
+  return getAlertSettings(userId);
 }

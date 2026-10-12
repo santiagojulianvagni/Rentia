@@ -21,7 +21,7 @@ import {ConnectionNotice,ConnectionStatus,ConnectionUpdatedAt} from '../../compo
 import {automaticSyncDue,connectionHealth} from '../../lib/connection-health';
 import {salesChannelLabel,orderReturnNeedsReview} from '../../lib/sales-channels';
 import { createContext, FormEvent, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Mail, Receipt, RefreshCw, Printer, Trophy, ArrowRight, LogOut, PanelLeft, Search, ArrowLeftRight, BadgeDollarSign, Boxes, CalendarDays, ChevronDown, ChevronLeft, Coins, CreditCard, Download, FileChartColumn, FilePlus2, GripVertical, Languages, LayoutDashboard, LayoutGrid, Menu, Megaphone, PackageSearch, Pencil, PlugZap, Plus, Settings2, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, TriangleAlert, UsersRound, X, type LucideIcon } from 'lucide-react';
+import { CalendarRange, Mail, Receipt, RefreshCw, Printer, Trophy, ArrowRight, LogOut, PanelLeft, Search, ArrowLeftRight, BadgeDollarSign, Boxes, CalendarDays, ChevronDown, ChevronLeft, Coins, CreditCard, Download, FileChartColumn, FilePlus2, GripVertical, Languages, LayoutDashboard, LayoutGrid, Menu, Megaphone, PackageSearch, Pencil, PlugZap, Plus, Settings2, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, TriangleAlert, UsersRound, X, type LucideIcon } from 'lucide-react';
 import RpChart from '../../components/panel/rp-chart';
 import SetupChecklist from '../../components/setup-checklist';
 import type {ProductCostRow} from '../../components/product-costs';
@@ -35,6 +35,9 @@ import type { CostSettings } from '../../lib/cost-engine';
 import { formatDisplayRange, rollingDisplayRange } from '../../lib/display-dates';
 import type { LiveRates } from '../../lib/exchange-rates';
 import { accountAppearance } from '../../lib/account-appearance';
+import AlertsBell from '../../components/panel/alerts-bell';
+import { buildAlerts, defaultAlertSettings, urgentAlerts, type AlertSettings, type BusinessAlert } from '../../lib/alerts';
+import { campaignMargins, campaignProfits, type CampaignProfitRow } from '../../lib/campaign-profit';
 import dynamic from 'next/dynamic';
 
 // Secciones de configuración: su código se descarga recién al abrirlas, así el panel
@@ -48,10 +51,14 @@ const ExternalRevenue=dynamic(()=>import('../../components/external-revenue'),{l
 const MeliBilling=dynamic(()=>import('../../components/meli-billing'),{loading:sectionLoading});
 const ShippingCommissionSettings=dynamic(()=>import('../../components/shipping-commission-settings'),{loading:sectionLoading});
 const ExchangeRateSettings=dynamic(()=>import('../../components/exchange-rate-settings'),{loading:sectionLoading});
+const WeeklySummary=dynamic(()=>import('../../components/panel/weekly-summary'),{loading:sectionLoading});
+const CampaignProfit=dynamic(()=>import('../../components/panel/campaign-profit'),{loading:sectionLoading});
+const AlertSettingsCard=dynamic(()=>import('../../components/panel/alert-settings'));
 
 type NavItem={id:string;label:string;icon:LucideIcon;badge?:string};
 const overviewSections:NavItem[]=[
   {id:'resumen',label:'Dashboard',icon:LayoutDashboard},
+  {id:'semanal',label:'Resumen semanal',icon:CalendarRange},
   {id:'acciones',label:'Acciones',icon:Sparkles},
   {id:'calidad',label:'Calidad de datos',icon:ShieldCheck},
   {id:'informes',label:'Informes',icon:FileChartColumn},
@@ -358,6 +365,9 @@ function PanelApp() {
   const [savingDashboard,setSavingDashboard]=useState(false);
   const [dashboardPreferenceMessage,setDashboardPreferenceMessage]=useState('');
   const [profileOpen,setProfileOpen]=useState(false);
+  const [alertsOpen,setAlertsOpen]=useState(false);
+  const [alertSettings,setAlertSettings]=useState<AlertSettings>(defaultAlertSettings);
+  useEffect(()=>{fetch('/api/alerts/settings',{cache:'no-store'}).then(response=>response.ok?response.json() as Promise<{settings?:AlertSettings}>:null).then(data=>{if(data?.settings)setAlertSettings(data.settings);}).catch(()=>undefined);},[]);
   const [paletteOpen,setPaletteOpen]=useState(false);
   const [paletteQuery,setPaletteQuery]=useState('');
   const [paletteIndex,setPaletteIndex]=useState(0);
@@ -419,7 +429,7 @@ function PanelApp() {
   const periodDaysRef=useRef(30);
   const activeRangeRef=useRef<CustomDateRange|null>(null);
   const mercadoLibreState=useMercadoLibreSync(canManage,()=>Promise.all([loadDashboard(periodDaysRef.current),loadProductCosts(),loadProductAnalytics(periodDaysRef.current)]));
-  const [advertisingTab,setAdvertisingTab]=useState('meta');
+  const [advertisingTab,setAdvertisingTab]=useState('ganancia');
   const productAdsState=useProductAds(canManage,analyticsQuery(periodOptions.find(option=>option.label===period)?.days||30,customRange),()=>loadDashboard(periodDaysRef.current));
   useEffect(()=>{if(new URLSearchParams(window.location.search).get('ads')==='mercadolibre')setAdvertisingTab('mercadolibre');},[]);
 
@@ -733,7 +743,7 @@ function PanelApp() {
 
   useEffect(()=>{
     if (!periodOpen&&!customRangeOpen&&!currencyOpen&&!languageOpen&&!dashboardMenuOpen&&!profileOpen) return;
-    const close=()=>{setPeriodOpen(false);setCustomRangeOpen(false);setCurrencyOpen(false);setLanguageOpen(false);setDashboardMenuOpen(false);setProfileOpen(false);};
+    const close=()=>{setPeriodOpen(false);setCustomRangeOpen(false);setCurrencyOpen(false);setLanguageOpen(false);setDashboardMenuOpen(false);setProfileOpen(false);setAlertsOpen(false);};
     const outside=(event:PointerEvent)=>{if(event.target instanceof Element&&event.target.closest('.p-datePanel,.p-selectMenu'))return;if(event.target instanceof Node&&!toolbarRef.current?.contains(event.target))close();};
     const escape=(event:KeyboardEvent)=>{if(event.target instanceof Element&&event.target.closest('.p-datePanel,.p-selectMenu'))return;if(event.key==='Escape'){const trigger=toolbarRef.current?.querySelector<HTMLButtonElement>('button[aria-expanded="true"]');close();trigger?.focus();}};
     document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);
@@ -760,10 +770,14 @@ function PanelApp() {
   const meta=integrations.find(item=>item.provider==='meta'&&item.status==='connected');
   const hasSalesConnection=Boolean(tiendanube||integrations.some(item=>item.provider==='mercadolibre'&&['authorized','connected'].includes(mercadoLibreState.view?.connection?.status||item.status)));
   const connections=connectionHealth({loaded:integrationsLoaded,integrations,tiendanube:dashboard?.sync||null,meta:dashboard?.ads?.sync||adsData?.sync||null,metaSelected:Boolean(dashboard?.ads?.selected||adsData?.selected),mercadolibre:mercadoLibreState.view,tiendanubeRunning:syncing,metaRunning:syncingMeta,meliRunning:mercadoLibreState.running,meliError:mercadoLibreState.error});
+  const campaignMarginsNow=campaignMargins(dashboard);
+  const campaignRows=campaignProfits({meta:dashboard?.metrics.adSpendComparable?adsData?.campaigns||[]:[],mercadolibre:dashboard?.metrics.meliAdsComparable?productAdsState.data?.campaigns||[]:[],metaMargin:campaignMarginsNow.meta,meliMargin:campaignMarginsNow.mercadolibre});
+  const alertMetrics=(value:Dashboard|null)=>value?{revenue:value.metrics.totalRevenue,profit:value.metrics.profit,margin:value.metrics.margin,orders:value.metrics.totalOrders}:null;
+  const businessAlerts=buildAlerts({metrics:alertMetrics(dashboard),previous:alertMetrics(previousDashboard),quality:dashboard?.quality?{completeOrders:dashboard.quality.completeOrders,totalOrders:dashboard.quality.totalOrders}:null,adsConnected:Boolean(dashboard?.ads.connected),syncError:dashboard?.sync?.status==='error',products:productAnalytics.filter(row=>!row.rentia_archived),missingCosts:costRows.filter(row=>!row.rentia_archived&&row.effective_cost<=0).length,campaigns:campaignRows,settings:alertSettings,money});
   const navBadges={
     costs:costRows.filter(row=>!row.rentia_archived&&row.effective_cost<=0).length,
     inventory:productAnalytics.filter(row=>!row.rentia_archived&&row.stock!==null&&row.units_sold>0&&(row.stock<=0||(row.days_stock??0)<=14)).length,
-    actions:decisionCount(dashboard,productAnalytics.filter(row=>!row.rentia_archived),costRows.filter(row=>!row.rentia_archived),adsData),
+    actions:urgentAlerts(businessAlerts).length,
   };
   const activeLabel=t(sections.find(item=>item.id===active)?.label||'Configuración');
   const settingsActive=configurationSections.some(item=>item.id===active);
@@ -774,7 +788,7 @@ function PanelApp() {
   const dashboardModeLabel=dashboardLayout.sections.length===1&&['profitability','advertising','operation'].includes(dashboardLayout.sections[0].id)?dashboardLayout.sections[0].title:'Personalizado';
 
   const closeMenus=()=>{setPeriodOpen(false);setCustomRangeOpen(false);setCurrencyOpen(false);setLanguageOpen(false);setDashboardMenuOpen(false);setProfileOpen(false);};
-  const toggleMenu=(menu:'period'|'currency'|'language'|'dashboard'|'profile')=>{const open={period:periodOpen||customRangeOpen,currency:currencyOpen,language:languageOpen,dashboard:dashboardMenuOpen,profile:profileOpen}[menu];closeMenus();if(open)return;({period:setPeriodOpen,currency:setCurrencyOpen,language:setLanguageOpen,dashboard:setDashboardMenuOpen,profile:setProfileOpen})[menu](true);};
+  const toggleMenu=(menu:'period'|'currency'|'language'|'dashboard'|'profile'|'alerts')=>{const open={period:periodOpen||customRangeOpen,currency:currencyOpen,language:languageOpen,dashboard:dashboardMenuOpen,profile:profileOpen,alerts:alertsOpen}[menu];closeMenus();if(open)return;({period:setPeriodOpen,currency:setCurrencyOpen,language:setLanguageOpen,dashboard:setDashboardMenuOpen,profile:setProfileOpen,alerts:setAlertsOpen})[menu](true);};
   const navGroups:Array<[string,NavItem[],boolean]>=[[t('RESUMEN'),overviewSections,false],[t('OPERACIÓN'),operationSections,false],[t('CONFIGURACIÓN'),configurationSections,true]];
   const navCount:Record<string,number>={acciones:navBadges.actions,inventario:navBadges.inventory,costos:navBadges.costs};
   const periodLabel=customRange?displayPeriod:selectedPeriodDays===90?t('Trimestre'):selectedPeriodDays===365?t('Año'):`${t('Últimos')} ${t(period)}`;
@@ -805,6 +819,7 @@ function PanelApp() {
             <div className={`p-menu ${languageOpen?'p-open':''}`}>{([['es','Español'],['pt','Português'],['en','English']] as const).map(([value,label])=><button type="button" key={value} className={language===value?'p-on':''} onClick={()=>{setLanguage(value);setLanguageOpen(false);}}><span>{label}</span>{language===value&&'✓'}</button>)}</div></div>
           {active==='resumen'&&canManage&&<div className="p-ctrl"><button type="button" className="p-ctrlBtn" onClick={()=>toggleMenu('dashboard')} aria-expanded={dashboardMenuOpen} aria-label="Vista del dashboard"><LayoutGrid className="p-i" aria-hidden="true"/><span className="p-hideSm p-ctrlLabel">{dashboardModeLabel}</span><ChevronDown className="p-i" aria-hidden="true"/></button>
             <div className={`p-menu ${dashboardMenuOpen?'p-open':''}`}><small className="p-menuCap">VISTAS RÁPIDAS</small><button type="button" onClick={()=>applyDashboardPreset('profitability')}>Rentabilidad</button><button type="button" onClick={()=>applyDashboardPreset('advertising')}>Publicidad</button><button type="button" onClick={()=>applyDashboardPreset('operation')}>Operación</button><hr/><button type="button" onClick={()=>{setDashboardMenuOpen(false);setDashboardEditorOpen(true);setDashboardPreferenceMessage('');}}><Pencil className="p-i" aria-hidden="true"/>Personalizar dashboard</button></div></div>}
+          <AlertsBell alerts={businessAlerts} open={alertsOpen} onToggle={()=>toggleMenu('alerts')} onNavigate={section=>{closeMenus();selectSection(section);}}/>
           <div className="p-ctrl"><button type="button" className="p-avatar" onClick={()=>toggleMenu('profile')} aria-label="Abrir mi cuenta" aria-expanded={profileOpen}>{profileUser?.imageUrl?<img src={profileUser.imageUrl} alt=""/>:storeInitials}</button>
             <div className={`p-menu ${profileOpen?'p-open':''}`}><div className="p-menuUser"><b>{profileUser?.fullName||'Mi cuenta'}</b><small>{profileUser?.primaryEmailAddress?.emailAddress||'Perfil personal de Rentia'}</small></div><hr/><button type="button" onClick={openAccountSettings} disabled={!profileLoaded}><ShieldCheck className="p-i" aria-hidden="true"/><span>Administrar mi cuenta<small>Perfil, seguridad y dispositivos</small></span></button><div className="p-menuUser"><small className="p-menuCap" style={{padding:0}}>TIENDA ACTUAL</small><b>{store}</b></div><hr/><div className="p-showSm"><small className="p-menuCap">MONEDA</small><div className="p-menuSeg">{(['ARS','USD','EUR'] as DisplayCurrency[]).map(value=><button type="button" key={value} className={currency===value?'p-on':''} disabled={!rates[value]} onClick={()=>setCurrency(value)}>{value}</button>)}</div><small className="p-menuCap">IDIOMA</small><div className="p-menuSeg">{([['es','ES'],['pt','PT'],['en','EN']] as const).map(([value,label])=><button type="button" key={value} className={language===value?'p-on':''} onClick={()=>setLanguage(value)}>{label}</button>)}</div><hr/></div><button type="button" onClick={logout}><LogOut className="p-i" aria-hidden="true"/>{t('Cerrar sesión')}</button></div></div>
         </div>
@@ -819,14 +834,15 @@ function PanelApp() {
         <ConnectionNotice health={connections} onOpen={()=>selectSection('integraciones')}/>
         {settingsLoaded&&costsLoaded&&dashboard&&<SetupChecklist connected={hasSalesConnection} productCount={costRows.filter(row=>!row.rentia_archived).length} missingProductCosts={costRows.filter(row=>!row.rentia_archived&&row.cost_source==='sin_costo').length} costsConfigured={dashboard.quality.configurationSaved} adsConnected={Boolean(meta&&adsData?.selected)} canManage={canManage} onNavigate={selectSection}/>}
         <DashboardOverview dashboard={dashboard} previousDashboard={previousDashboard} syncing={syncing} days={selectedPeriodDays} layout={dashboardLayout} savingLayout={savingDashboard} onNavigate={selectSection} onEdit={()=>{setDashboardEditorOpen(true);setDashboardPreferenceMessage('');}} onLayoutReorder={next=>{setDashboardLayout(next);void saveDashboardPreferences(next,false);}} onChartChange={chart=>{const next={...dashboardLayout,chart};setDashboardLayout(next);void saveDashboardPreferences(next,false);}}/>
-      </>:active==='acciones'?<DecisionCenter dashboard={dashboard} products={productAnalytics.filter(row=>!row.rentia_archived)} costs={costRows.filter(row=>!row.rentia_archived)} ads={adsData} onNavigate={selectSection}/>
+      </>:active==='acciones'?<DecisionCenter dashboard={dashboard} products={productAnalytics.filter(row=>!row.rentia_archived)} costs={costRows.filter(row=>!row.rentia_archived)} alerts={businessAlerts} campaigns={campaignRows} alertSettings={alertSettings} canManage={canManage} onAlertSettings={setAlertSettings} onNavigate={selectSection}/>
+      :active==='semanal'?<WeeklySummary money={money} storeName={store} settings={alertSettings} onNavigate={selectSection}/>
       :active==='calidad'?<DataQualitySection dashboard={dashboard} onNavigate={selectSection}/>
       :active==='informes'?<ReportsSection dashboard={dashboard} products={productAnalytics} ads={adsData} period={displayPeriod} days={selectedPeriodDays} onPeriodChange={changePeriod}/>
       :active==='ordenes'?<OrdersSection orders={dashboard?.orders||[]} days={periodDaysRef.current} range={activeRangeRef.current} refreshKey={dashboard} period={displayPeriod} syncing={syncing} onSync={()=>void runSync()} onRefresh={()=>loadDashboard(periodDaysRef.current)} expandedOrder={expandedOrder} setExpandedOrder={setExpandedOrder}/>
       :active==='productos'?<ProductAnalyticsSection rows={productAnalytics.filter(row=>!row.rentia_archived)} period={displayPeriod} syncing={syncing} onSync={()=>void runSync()}/>
       :active==='inventario'?<InventorySection rows={productAnalytics.filter(row=>!row.rentia_archived)} period={displayPeriod} syncing={syncing} onSync={()=>void runSync()}/>
       :active==='lifetime'?<ComingSoonSection eyebrow="CLIENTES Y RECOMPRA" title="Lifetime Value" description="Acá vas a analizar cohortes, recompra y valor acumulado de cada cliente. Se habilitará después de consolidar el historial multicanal." action="Ver órdenes" onAction={()=>selectSection('ordenes')}/>
-      :active==='publicidad'?<><div style={{marginBottom:18}}><div className="p-tabs" role="tablist" aria-label="Plataforma publicitaria" style={{display:'inline-flex'}}><button type="button" role="tab" aria-selected={advertisingTab==='meta'} className={advertisingTab==='meta'?'p-on':''} onClick={()=>setAdvertisingTab('meta')}>Meta Ads</button><button type="button" role="tab" aria-selected={advertisingTab==='mercadolibre'} className={advertisingTab==='mercadolibre'?'p-on':''} onClick={()=>setAdvertisingTab('mercadolibre')}>Mercado Libre · Product Ads</button></div></div>{advertisingTab==='mercadolibre'?<ProductAds state={productAdsState} canManage={canManage} money={money}/>:<AdvertisingSection connected={Boolean(meta)} data={adsData} dashboard={dashboard} period={displayPeriod} syncing={syncingMeta} message={metaMessage} onSync={()=>void runMetaSync()} onConnect={()=>selectSection('integraciones')} onAccountChange={accountId=>void changeMetaAccount(accountId)}/>}</>
+      :active==='publicidad'?<><div style={{marginBottom:18}}><div className="p-tabs" role="tablist" aria-label="Plataforma publicitaria" style={{display:'inline-flex'}}><button type="button" role="tab" aria-selected={advertisingTab==='ganancia'} className={advertisingTab==='ganancia'?'p-on':''} onClick={()=>setAdvertisingTab('ganancia')}>Ganancia por campaña</button><button type="button" role="tab" aria-selected={advertisingTab==='meta'} className={advertisingTab==='meta'?'p-on':''} onClick={()=>setAdvertisingTab('meta')}>Meta Ads</button><button type="button" role="tab" aria-selected={advertisingTab==='mercadolibre'} className={advertisingTab==='mercadolibre'?'p-on':''} onClick={()=>setAdvertisingTab('mercadolibre')}>Mercado Libre · Product Ads</button></div></div>{advertisingTab==='ganancia'?<CampaignProfit rows={campaignRows} money={money} metaMargin={campaignMarginsNow.meta} meliMargin={campaignMarginsNow.mercadolibre} metaComparable={Boolean(dashboard?.metrics.adSpendComparable)} meliComparable={Boolean(dashboard?.metrics.meliAdsComparable)} metaConnected={Boolean(dashboard?.ads.connected)} meliConnected={Boolean(productAdsState.data?.connected)} period={displayPeriod} onNavigate={selectSection}/>:advertisingTab==='mercadolibre'?<ProductAds state={productAdsState} canManage={canManage} money={money}/>:<AdvertisingSection connected={Boolean(meta)} data={adsData} dashboard={dashboard} period={displayPeriod} syncing={syncingMeta} message={metaMessage} onSync={()=>void runMetaSync()} onConnect={()=>selectSection('integraciones')} onAccountChange={accountId=>void changeMetaAccount(accountId)}/>}</>
       :active==='costos'?<ProductCosts rows={costRows} draft={costDraft} onDraft={updates=>setCostDraft(current=>({...current,...updates}))} onSave={()=>void saveProductCosts()} saving={savingCosts} message={costState} onMessage={setCostState} onChanged={()=>Promise.all([loadProductCosts(),loadProductAnalytics(periodDaysRef.current)])} canManage={canManage} money={money}/>
       :active==='facturacion'?<ExternalRevenueSection onChanged={()=>loadDashboard(periodDaysRef.current)}/>
       :active==='moneda'?<ExchangeRateSection onChanged={()=>loadDashboard(periodDaysRef.current)}/>
@@ -1216,42 +1232,27 @@ function RpRing({value,size=54,color='#21d4c2',label}:{value:number;size?:number
   return <div className="p-ring" style={{width:size,height:size}}><svg viewBox={`0 0 ${size} ${size}`}><circle className="p-bgc" cx={size/2} cy={size/2} r={radius}/><circle className="p-fg" cx={size/2} cy={size/2} r={radius} stroke={color} strokeDasharray={circumference} strokeDashoffset={offset}/></svg><span>{label??`${Math.round(value)}%`}</span></div>;
 }
 
-function decisionCount(dashboard:Dashboard|null,products:ProductAnalyticsRow[],costs:ProductCostRow[],ads:MetaAdsData|null) {
-  if(!dashboard)return 0;
-  const metrics=dashboard.metrics;
-  const contribution=metrics.revenue-metrics.productCost-metrics.shipping-metrics.commissions-metrics.taxes-metrics.additional;
-  const breakEvenRoas=metrics.revenue>0&&contribution>0?metrics.revenue/contribution:0;
-  const risky=breakEvenRoas?(ads?.campaigns||[]).filter(campaign=>campaign.spend>0&&(campaign.effective_status||campaign.status)==='ACTIVE'&&campaign.reported_roas<breakEvenRoas).length:0;
-  return Number(costs.some(row=>row.effective_cost<=0))+Number(products.some(row=>row.units_sold>0&&row.profit<0))+Number(products.some(row=>row.stock!==null&&row.units_sold>0&&(row.days_stock===null||row.days_stock<=14)))+Number(risky>0)+Number(!dashboard.ads.connected);
-}
 
-function DecisionCenter({dashboard,products,costs,ads,onNavigate}:{dashboard:Dashboard|null;products:ProductAnalyticsRow[];costs:ProductCostRow[];ads:MetaAdsData|null;onNavigate:(section:string)=>void}) {
+function DecisionCenter({dashboard,products,costs,alerts,campaigns,alertSettings,canManage,onAlertSettings,onNavigate}:{dashboard:Dashboard|null;products:ProductAnalyticsRow[];costs:ProductCostRow[];alerts:BusinessAlert[];campaigns:CampaignProfitRow[];alertSettings:AlertSettings;canManage:boolean;onAlertSettings:(settings:AlertSettings)=>void;onNavigate:(section:string)=>void}) {
   const money=useMoney();
   const metrics=dashboard?.metrics;
-  const missingCosts=costs.filter(row=>row.effective_cost<=0);
   const losingProducts=products.filter(row=>row.units_sold>0&&row.profit<0).sort((a,b)=>a.profit-b.profit);
   const lowStock=products.filter(row=>row.stock!==null&&row.units_sold>0&&(row.days_stock===null||row.days_stock<=14)).sort((a,b)=>(a.days_stock??0)-(b.days_stock??0));
   const contribution=metrics?metrics.revenue-metrics.productCost-metrics.shipping-metrics.commissions-metrics.taxes-metrics.additional:0;
   const breakEvenRoas=metrics&&metrics.revenue>0&&contribution>0?metrics.revenue/contribution:0;
-  const activeCampaigns=(ads?.campaigns||[]).filter(campaign=>campaign.spend>0&&(campaign.effective_status||campaign.status)==='ACTIVE');
-  const riskyCampaigns=breakEvenRoas?activeCampaigns.filter(campaign=>campaign.reported_roas<breakEvenRoas).sort((a,b)=>a.reported_roas-b.reported_roas):[];
-  const winningCampaigns=breakEvenRoas?activeCampaigns.filter(campaign=>campaign.reported_roas>=breakEvenRoas*1.2).sort((a,b)=>b.reported_roas-a.reported_roas):[];
   const topProduct=products.filter(row=>row.units_sold>0&&row.profit>0).sort((a,b)=>b.profit-a.profit)[0];
-  const decisions:Array<{kind:'danger'|'warning'|'info'|'success';icon:string;title:string;detail:string;action:string;section:string}>=[];
-  if(missingCosts.length) decisions.push({kind:'danger',icon:'$',title:`${missingCosts.length} SKU sin costo`,detail:'La ganancia de las órdenes que contienen estos productos puede estar sobreestimada.',action:'Completar costos',section:'costos'});
-  if(losingProducts.length) decisions.push({kind:'danger',icon:'↓',title:`${losingProducts.length} producto${losingProducts.length===1?' pierde':'s pierden'} dinero`,detail:`El más urgente es ${losingProducts[0].product_name}: ${money(losingProducts[0].profit)} en el período.`,action:'Analizar productos',section:'productos'});
-  if(lowStock.length) decisions.push({kind:'warning',icon:'◈',title:`${lowStock.length} SKU requieren reposición`,detail:`${lowStock[0].product_name} tiene ${lowStock[0].stock||0} unidades y ${Math.max(0,lowStock[0].days_stock||0).toFixed(0)} días estimados de stock.`,action:'Revisar inventario',section:'inventario'});
-  if(riskyCampaigns.length) decisions.push({kind:'warning',icon:'↘',title:`${riskyCampaigns.length} campaña${riskyCampaigns.length===1?' está':'s están'} bajo el equilibrio`,detail:`${riskyCampaigns[0].name} reporta ${riskyCampaigns[0].reported_roas.toFixed(2)}x frente a un equilibrio estimado de ${breakEvenRoas.toFixed(2)}x.`,action:'Revisar campañas',section:'publicidad'});
-  if(!dashboard?.ads.connected) decisions.push({kind:'info',icon:'∞',title:'Meta Ads todavía no está conectado',detail:'Conectalo para comparar inversión, atribución y facturación completa de la tienda.',action:'Conectar Meta',section:'integraciones'});
-  if(!decisions.length) decisions.push({kind:'success',icon:'✓',title:'No detectamos urgencias con los datos actuales',detail:'Costos, margen, stock y publicidad están dentro de los umbrales configurados.',action:'Ver dashboard',section:'resumen'});
+  const decisions:BusinessAlert[]=alerts.length?alerts:[{id:'ok',kind:'success',icon:'✓',title:'No detectamos urgencias con los datos actuales',detail:'Costos, margen, stock y publicidad están dentro de los umbrales que configuraste.',action:'Ver dashboard',section:'resumen'}];
+  const losingCampaigns=campaigns.filter(row=>row.verdict==='pierde');
+  const bestCampaign=campaigns.filter(row=>row.verdict==='gana').sort((a,b)=>(b.profit||0)-(a.profit||0))[0];
   const tones={danger:['ALTA PRIORIDAD','r'],warning:['REVISAR','a'],info:['OPORTUNIDAD','b'],success:['TODO EN ORDEN','g']} as const;
   const pending=decisions.filter(item=>item.kind!=='success').length;
   return <>
     <div className="p-head"><div><div className="p-eyebrow">CENTRO DE DECISIONES</div><h1>Qué necesita <em>tu atención hoy</em></h1><p>Rentia cruza ventas, costos, inventario y publicidad para convertir los números en acciones. Todas las conclusiones usan datos reales del período seleccionado.</p></div><div className="p-actions"><div className={`p-scorePill ${pending?'':'p-ok'}`}><b>{pending}</b><span>acciones detectadas</span></div></div></div>
-    <div className="p-grid p-g4" style={{marginBottom:16}}>{([['ROAS de equilibrio estimado',breakEvenRoas?`${breakEvenRoas.toFixed(2).replace('.',',')}x`:'—','Facturación / margen antes de publicidad'],['Campañas bajo equilibrio',dashboard?.ads.connected?String(riskyCampaigns.length):'—','Lectura orientativa con atribución Meta'],['Productos con pérdida',String(losingProducts.length),'Con ventas en el período'],['Alertas de stock',String(lowStock.length),'Hasta 14 días de inventario']] as const).map(([label,value,detail],index)=><div className="p-card p-kpi p-reveal" style={{'--i':index} as React.CSSProperties} key={label}><small>{label}</small><b className="p-mono">{value}</b><span className="p-sub" style={{fontSize:11.5}}>{detail}</span></div>)}</div>
+    <div className="p-grid p-g4" style={{marginBottom:16}}>{([['ROAS de equilibrio estimado',breakEvenRoas?`${breakEvenRoas.toFixed(2).replace('.',',')}x`:'—','Facturación / margen antes de publicidad'],['Campañas que pierden',campaigns.length?String(losingCampaigns.length):'—','Ganancia estimada negativa'],['Productos con pérdida',String(losingProducts.length),'Con ventas en el período'],['Alertas de stock',String(lowStock.length),`Hasta ${alertSettings.stockDays} días de inventario`]] as const).map(([label,value,detail],index)=><div className="p-card p-kpi p-reveal" style={{'--i':index} as React.CSSProperties} key={label}><small>{label}</small><b className="p-mono">{value}</b><span className="p-sub" style={{fontSize:11.5}}>{detail}</span></div>)}</div>
     <div className="p-grid p-g2" style={{marginBottom:16}}>{decisions.map((item,index)=>{const [label,tone]=tones[item.kind];return <div className="p-action p-reveal" style={{'--i':index+4} as React.CSSProperties} key={`${item.title}-${index}`}><span className={`p-aic p-tone-${tone}`}>{item.icon}</span><div style={{flex:1}}><span className={`p-chip p-${tone}`} style={{marginBottom:8}}>{label}</span><b>{item.title}</b><p>{item.detail}</p><button type="button" className="p-btn p-small" onClick={()=>onNavigate(item.section)}>{item.action} <ArrowRight className="p-i" aria-hidden="true"/></button></div></div>;})}</div>
-    {(topProduct||winningCampaigns.length>0)&&<div className="p-card p-reveal" style={{marginBottom:16}}><div className="p-cardHead"><div><span className="p-eyebrowS">LO QUE ESTÁ FUNCIONANDO</span><h3>Ganadores del período</h3></div><Trophy className="p-i" aria-hidden="true"/></div><div className="p-grid p-g2">{topProduct&&<div className="p-win"><small>Producto más rentable</small><b>{topProduct.product_name}</b><span className="p-sub">{money(topProduct.profit)} de ganancia · {topProduct.margin.toFixed(1).replace('.',',')}% de margen</span></div>}{winningCampaigns[0]&&<div className="p-win"><small>Campaña con margen para escalar</small><b>{winningCampaigns[0].name}</b><span className="p-sub">{winningCampaigns[0].reported_roas.toFixed(2).replace('.',',')}x ROAS Meta · equilibrio estimado {breakEvenRoas.toFixed(2).replace('.',',')}x</span></div>}</div></div>}
-    <div className="p-note p-reveal"><b>Importante:</b> el ROAS por campaña sigue siendo el atribuido por Meta. La ganancia real por campaña se habilitará cuando sumemos atribución propia con Pixel/CAPI.</div>
+    {(topProduct||bestCampaign)&&<div className="p-card p-reveal" style={{marginBottom:16}}><div className="p-cardHead"><div><span className="p-eyebrowS">LO QUE ESTÁ FUNCIONANDO</span><h3>Ganadores del período</h3></div><Trophy className="p-i" aria-hidden="true"/></div><div className="p-grid p-g2">{topProduct&&<div className="p-win"><small>Producto más rentable</small><b>{topProduct.product_name}</b><span className="p-sub">{money(topProduct.profit)} de ganancia · {topProduct.margin.toFixed(1).replace('.',',')}% de margen</span></div>}{bestCampaign&&<div className="p-win"><small>Campaña que más ganancia deja</small><b>{bestCampaign.name}</b><span className="p-sub">{money(bestCampaign.profit||0)} estimados · ROAS {bestCampaign.roas.toFixed(2).replace('.',',')}x frente a un equilibrio de {(bestCampaign.breakEvenRoas||0).toFixed(2).replace('.',',')}x</span></div>}</div></div>}
+    <AlertSettingsCard key={JSON.stringify(alertSettings)} settings={alertSettings} canManage={canManage} onSaved={onAlertSettings}/>
+    <div className="p-note p-reveal" style={{marginTop:16}}><b>Sobre las campañas:</b> la ganancia por campaña es una estimación con las ventas que atribuye cada plataforma y tu margen real. La ves en detalle en <button type="button" className="p-linkBtn" onClick={()=>onNavigate('publicidad')}>Publicidad → Ganancia por campaña</button>.</div>
   </>;
 }
 
