@@ -7,13 +7,14 @@
 - No escribir contraseñas: los inicios de sesión los hace él.
 - Al probar en producción, no modificar sus datos reales (no guardar planes, no cargar ni borrar costos, no marcar alertas).
 - Las propuestas de diseño (carpeta `propuestas/`, excluida de git) quedan locales hasta que pida subirlas.
-- Después de publicar, verificar en el sitio (`rentia-ruby.vercel.app`) y contar lo que se vio, no lo que se supone.
+- Después de publicar, verificar en el sitio (`www.rentiaapp.com`) y contar lo que se vio, no lo que se supone.
 
 ## Qué es Rentia
 
 SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado Libre (ventas, cargos y Product Ads) y Meta Ads con los costos de cada tienda para mostrar la ganancia real. Compite con Escalafy y Ecomind.
 
 - Next.js 16.4 (App Router), React 19, TypeScript. Clerk (organizaciones: una por tienda; hoy instancia de **desarrollo**). Postgres en Neon.
+- Dominio `rentiaapp.com` (comprado en Hostinger, DNS ahí): `www.rentiaapp.com` es el principal y `rentiaapp.com` redirige; `rentia-ruby.vercel.app` sigue andando. Mail de contacto `hola@rentiaapp.com` (Hostinger), cargado en Vercel como `NEXT_PUBLIC_RENTIA_CONTACT_EMAIL`.
 - Vercel, plan Hobby, proyecto `nexo-6cb9/rentia`. Las funciones corren en `gru1` (San Pablo), igual que la base. Se publica solo con cada push a `main`.
 - `vercel-build` corre las migraciones de `migrations/` (la próxima es `0008_…`) y después compila.
 
@@ -59,7 +60,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 **Depende de él:**
 - Constituir la SRL (para cobrar con Mercado Pago y verificar el negocio en Meta).
 - Pasar a Vercel Pro y activar el límite de gasto.
-- Dominio propio y Clerk en producción. Revisar también la protección contra bots y el QR, que hoy apunta a `rentia-ruby`.
+- Clerk en producción (el dominio ya está). Agregar `https://www.rentiaapp.com` en las apps de Mercado Libre, Meta y Tiendanube y recién después poner `RENTIA_PUBLIC_ORIGIN=https://www.rentiaapp.com` en Vercel. Revisar también la protección contra bots.
 - Trámites de permisos en Meta, Mercado Libre (publicidad) y Tiendanube.
 - Revisión legal (incluye el paso de escribir "DAR DE BAJA").
 - Decidir si suma analítica de visitas.
