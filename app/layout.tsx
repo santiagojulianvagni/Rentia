@@ -22,13 +22,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Rentia — Rentabilidad real para tu e-commerce',
     description: 'Conectá tus ventas, costos y publicidad para conocer la ganancia real de tu tienda.',
-    images: [{ url: '/og.jpg', width: 1200, height: 675, alt: 'Rentia — La rentabilidad real de tu e-commerce' }],
+    images: [{ url: '/og-rentia.jpg', width: 1200, height: 630, alt: 'Rentia — La rentabilidad real de tu e-commerce' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Rentia — Rentabilidad real para tu e-commerce',
     description: 'Conectá tus ventas, costos y publicidad para conocer la ganancia real de tu tienda.',
-    images: ['/og.jpg'],
+    images: ['/og-rentia.jpg'],
   },
 };
 
