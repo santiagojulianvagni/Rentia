@@ -236,7 +236,7 @@
 .p-root .p-invalidNote{display:block;margin-top:6px;color:#ff8c99;font-size:12px;font-weight:600}
 .p-root .p-invalidNote::before{content:'! ';font-weight:800}
 /* Confirmaciones */
-dialog.p-confirm{width:min(440px,calc(100% - 32px));padding:0;border:1px solid #264560;border-radius:18px;background:#0b1726;color:#f2f7fb;box-shadow:0 24px 60px rgba(0,0,0,.55);font-family:var(--font-geist-sans),system-ui,sans-serif;animation:pSelectIn .22s cubic-bezier(.2,.8,.2,1)}
+dialog.p-confirm{position:fixed;inset:0;margin:auto;height:fit-content;max-height:calc(100% - 32px);width:min(440px,calc(100% - 32px));padding:0;border:1px solid #264560;border-radius:18px;background:#0b1726;color:#f2f7fb;box-shadow:0 24px 60px rgba(0,0,0,.55);font-family:var(--font-geist-sans),system-ui,sans-serif;animation:pSelectIn .22s cubic-bezier(.2,.8,.2,1)}
 dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-confirmBody{padding:22px 22px 6px}
 .p-confirmBody h3{margin:0 0 8px;font-size:17px;letter-spacing:-.01em}
