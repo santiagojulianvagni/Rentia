@@ -478,7 +478,7 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-heatRow{display:contents}
 .p-root .p-heatHour{color:var(--dim);font-size:10.5px;text-align:center}
 .p-root .p-heatDay{color:var(--muted);font-size:12px;align-self:center}
-.p-root .p-heat i{display:block;aspect-ratio:1;max-height:26px;border-radius:5px;background:rgba(33,212,194,var(--a));box-shadow:inset 0 0 0 1px rgba(39,70,96,.5)}
+.p-root .p-heat i{display:block;justify-self:center;width:min(100%,26px);aspect-ratio:1;border-radius:5px;background:rgba(33,212,194,var(--a));box-shadow:inset 0 0 0 1px rgba(39,70,96,.5)}
 .p-root tr.p-rowOn td{background:rgba(33,212,194,.06)}
 
 /* Objetivo del mes */
@@ -529,3 +529,10 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 @media (max-width:1000px){.p-root .p-eventHowBody{grid-template-columns:1fr}}
 @media (max-width:560px){.p-root .p-eventSteps{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.p-root .p-eventSteps li,.p-root .p-eventBar i{animation:none}}
+
+.p-root .p-slotGhost{visibility:hidden}
+.p-root .p-storeHead{display:flex;align-items:center;gap:14px}
+.p-root .p-storeHead>div{display:grid;gap:4px}
+.p-root .p-storeHead h3{margin:0;font-size:20px;letter-spacing:-.02em}
+.p-root .p-storeBadge{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:13px;background:rgba(33,212,194,.12);color:var(--cyan)}
+.p-root .p-storeBadge svg{width:22px;height:22px}
