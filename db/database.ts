@@ -939,3 +939,20 @@ export async function getProductImageUrl(userId:string,provider:string,externalP
   const row=await database().prepare('SELECT image_url FROM products WHERE user_id=? AND provider=? AND external_product_id=?').bind(userId,provider,externalProductId).first<{image_url:string|null}>();
   return row?.image_url||null;
 }
+
+// Eventos comerciales (Hot Sale, Cyber Monday, lanzamientos) de cada tienda.
+export type SalesEventRow={id:number;name:string;start:string;end:string};
+export async function listSalesEvents(userId:string):Promise<SalesEventRow[]> {
+  const rows=await database().prepare('SELECT id,name,start_date,end_date FROM sales_events WHERE user_id=? ORDER BY start_date DESC,id DESC LIMIT 100').bind(userId).all<{id:number;name:string;start_date:string;end_date:string}>();
+  return rows.results.map(row=>({id:Number(row.id),name:row.name,start:row.start_date,end:row.end_date}));
+}
+
+export async function createSalesEvent(userId:string,event:{name:string;start:string;end:string}) {
+  const row=await database().prepare('INSERT INTO sales_events (user_id,name,start_date,end_date,created_at) VALUES (?,?,?,?,?) RETURNING id').bind(userId,event.name,event.start,event.end,new Date().toISOString()).first<{id:number}>();
+  return {id:Number(row?.id),...event};
+}
+
+export async function deleteSalesEvent(userId:string,id:number) {
+  const row=await database().prepare('DELETE FROM sales_events WHERE id=? AND user_id=? RETURNING id').bind(id,userId).first<{id:number}>();
+  return Boolean(row);
+}

@@ -21,7 +21,7 @@ import {ConnectionNotice,ConnectionStatus,ConnectionUpdatedAt} from '../../compo
 import {automaticSyncDue,connectionHealth} from '../../lib/connection-health';
 import {salesChannelLabel,orderReturnNeedsReview} from '../../lib/sales-channels';
 import { createContext, FormEvent, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { CalendarRange, Share2, Wallet, Mail, Receipt, RefreshCw, Printer, Trophy, ArrowRight, LogOut, PanelLeft, Search, ArrowLeftRight, BadgeDollarSign, Boxes, CalendarDays, ChevronDown, ChevronLeft, Coins, CreditCard, Download, FileChartColumn, FilePlus2, GripVertical, Languages, LayoutDashboard, LayoutGrid, Menu, Megaphone, PackageSearch, Pencil, PlugZap, Plus, Settings2, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, TriangleAlert, UsersRound, X, type LucideIcon } from 'lucide-react';
+import { CalendarHeart, CalendarRange, Share2, Wallet, Mail, Receipt, RefreshCw, Printer, Trophy, ArrowRight, LogOut, PanelLeft, Search, ArrowLeftRight, BadgeDollarSign, Boxes, CalendarDays, ChevronDown, ChevronLeft, Coins, CreditCard, Download, FileChartColumn, FilePlus2, GripVertical, Languages, LayoutDashboard, LayoutGrid, Menu, Megaphone, PackageSearch, Pencil, PlugZap, Plus, Settings2, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, TriangleAlert, UsersRound, X, type LucideIcon } from 'lucide-react';
 import RpChart from '../../components/panel/rp-chart';
 import SetupChecklist from '../../components/setup-checklist';
 import type {ProductCostRow} from '../../components/product-costs';
@@ -55,6 +55,7 @@ const ShippingCommissionSettings=dynamic(()=>import('../../components/shipping-c
 const ExchangeRateSettings=dynamic(()=>import('../../components/exchange-rate-settings'),{loading:sectionLoading});
 const Cashflow=dynamic(()=>import('../../components/panel/cashflow'),{loading:sectionLoading});
 const WeeklySummary=dynamic(()=>import('../../components/panel/weekly-summary'),{loading:sectionLoading});
+const SalesEvents=dynamic(()=>import('../../components/panel/sales-events'),{loading:sectionLoading});
 const CampaignProfit=dynamic(()=>import('../../components/panel/campaign-profit'),{loading:sectionLoading});
 const AlertSettingsCard=dynamic(()=>import('../../components/panel/alert-settings'));
 const ShareDialog=dynamic(()=>import('../../components/panel/share-card'));
@@ -63,6 +64,7 @@ type NavItem={id:string;label:string;icon:LucideIcon;badge?:string};
 const overviewSections:NavItem[]=[
   {id:'resumen',label:'Dashboard',icon:LayoutDashboard},
   {id:'semanal',label:'Resumen semanal',icon:CalendarRange},
+  {id:'eventos',label:'Eventos',icon:CalendarHeart},
   {id:'cashflow',label:'Cashflow',icon:Wallet},
   {id:'acciones',label:'Acciones',icon:Sparkles},
   {id:'calidad',label:'Calidad de datos',icon:ShieldCheck},
@@ -857,6 +859,7 @@ function PanelApp() {
         <DashboardOverview dashboard={dashboard} previousDashboard={previousDashboard} syncing={syncing} days={selectedPeriodDays} storeName={store} periodLabel={displayPeriod} layout={dashboardLayout} savingLayout={savingDashboard} onNavigate={selectSection} onEdit={()=>{setDashboardEditorOpen(true);setDashboardPreferenceMessage('');}} onLayoutReorder={next=>{setDashboardLayout(next);void saveDashboardPreferences(next,false);}} onChartChange={chart=>{const next={...dashboardLayout,chart};setDashboardLayout(next);void saveDashboardPreferences(next,false);}}/>
       </>:active==='acciones'?<DecisionCenter dashboard={dashboard} products={productAnalytics.filter(row=>!row.rentia_archived)} costs={costRows.filter(row=>!row.rentia_archived)} alerts={businessAlerts} campaigns={campaignRows} alertSettings={alertSettings} canManage={canManage} onAlertSettings={setAlertSettings} onNavigate={selectSection}/>
       :active==='cashflow'?<Cashflow data={cashflowState.data} error={cashflowState.error} rules={costRules} money={money} onNavigate={selectSection}/>
+      :active==='eventos'?<SalesEvents money={money} canManage={canManage}/>
       :active==='semanal'?<WeeklySummary money={money} storeName={store} settings={alertSettings} onNavigate={selectSection}/>
       :active==='calidad'?<DataQualitySection dashboard={dashboard} onNavigate={selectSection}/>
       :active==='informes'?<ReportsSection dashboard={dashboard} products={productAnalytics} ads={adsData} period={displayPeriod} days={selectedPeriodDays} onPeriodChange={changePeriod}/>

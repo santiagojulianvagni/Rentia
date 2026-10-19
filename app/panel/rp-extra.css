@@ -413,3 +413,26 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-simCustom input{width:52px;border:0;background:none;color:var(--text);font:inherit;font-size:13px;text-align:right;outline:none}
 .p-root .p-simCustom.p-bad{border-color:#ff8c99;background:rgba(255,102,120,.1)}
 .p-root .p-simError{color:#ff8c99}
+
+/* Eventos */
+.p-root .p-eventForm{margin-bottom:16px}
+.p-root .p-eventFields{display:grid;grid-template-columns:minmax(0,1.4fr) 1fr 1fr;gap:12px}
+.p-root .p-eventFields .p-input input{flex:1;min-width:0;border:0;outline:0;background:none;color:var(--text);font:inherit}
+.p-root .p-eventLayout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;align-items:start}
+.p-root .p-eventList{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.p-root .p-eventList li{display:flex;align-items:center;gap:6px}
+.p-root .p-eventList li>button:first-child{display:flex;flex:1;align-items:center;gap:10px;min-width:0;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface2);color:inherit;font:inherit;text-align:left;cursor:pointer;transition:border-color .2s,background .2s}
+.p-root .p-eventList li>button:first-child:hover{border-color:var(--line2)}
+.p-root .p-eventList li>button.p-on{border-color:var(--cyan);background:rgba(33,212,194,.08)}
+.p-root .p-eventList svg{flex:0 0 18px;width:18px;height:18px;color:var(--cyan)}
+.p-root .p-eventList span{display:grid;min-width:0}
+.p-root .p-eventList b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px}
+.p-root .p-eventList small{color:var(--muted);font-size:12px}
+.p-root .p-eventVerdict b{font-size:22px;letter-spacing:-.02em}
+.p-root .p-kpi.p-tone-g{background:linear-gradient(170deg,rgba(50,213,131,.1),var(--surface2));color:inherit}
+.p-root .p-kpi.p-tone-g b{color:var(--green)}
+.p-root .p-kpi.p-warning{border-color:rgba(245,196,81,.4);background:linear-gradient(170deg,rgba(245,196,81,.09),var(--surface2))}
+.p-root .p-kpi.p-warning b{color:var(--amber,#f5c451)}
+.p-root .p-loading{padding:28px;text-align:center}
+@media (max-width:900px){.p-root .p-eventLayout{grid-template-columns:1fr}.p-root .p-eventList{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}}
+@media (max-width:640px){.p-root .p-eventFields{grid-template-columns:1fr}}
