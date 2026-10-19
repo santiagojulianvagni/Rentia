@@ -146,6 +146,10 @@ test('imports split the upstream 10,000-result window, resume after interruption
   assert.equal(next.since,'2026-09-30T23:55:00.000Z');assert.match(importOrdersPath(next),/updated_at_min/);
   assert.match(importOrdersPath(newImportProgress(null,new Date('2026-10-01T00:00:00.000Z'))),/created_at_min=2025-10-01/);
   assert.equal(newImportProgress({...progress,version:IMPORT_VERSION-1}).since,null);
+  // Un trabajo guardado con una versión anterior no traba la sincronización: arranca una importación completa.
+  const upgraded=parseImportProgress(JSON.stringify({...progress,version:IMPORT_VERSION-1,done:true}));
+  assert.equal(upgraded.version,IMPORT_VERSION);assert.equal(upgraded.since,null);assert.equal(upgraded.done,false);
+  assert.throws(()=>parseImportProgress(JSON.stringify({...progress,version:IMPORT_VERSION+1})),/no es válido/);
   const exact=newImportProgress(null);exact.productsDone=true;advanceImportWindow(exact,IMPORT_PAGE_SIZE);assert.equal(exact.done,false);advanceImportWindow(exact,0);assert.equal(exact.done,true);
   const narrow=newImportProgress(null);narrow.windows=[{start:'2026-10-01T00:00:00.000Z',end:'2026-10-01T00:00:00.500Z',page:1}];assert.throws(()=>splitImportWindow(narrow),/sin omitir/);assert.equal(narrow.done,false);
 });

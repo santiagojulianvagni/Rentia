@@ -16,7 +16,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 - Next.js 16.4 (App Router), React 19, TypeScript. Clerk (organizaciones: una por tienda; hoy instancia de **desarrollo**). Postgres en Neon.
 - Dominio `rentiaapp.com` (comprado en Hostinger, DNS ahí): `www.rentiaapp.com` es el principal y `rentiaapp.com` redirige; `rentia-ruby.vercel.app` sigue andando. Mail de contacto `hola@rentiaapp.com` (Hostinger), cargado en Vercel como `NEXT_PUBLIC_RENTIA_CONTACT_EMAIL`.
 - Vercel, plan Hobby, proyecto `nexo-6cb9/rentia`. Las funciones corren en `gru1` (San Pablo), igual que la base. Se publica solo con cada push a `main`.
-- `vercel-build` corre las migraciones de `migrations/` (la próxima es `0011_…`) y después compila.
+- `vercel-build` corre las migraciones de `migrations/` (la próxima es `0012_…`) y después compila.
 
 ## Código
 
@@ -51,6 +51,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 - 19/10: Eventos (sección del panel, tabla `sales_events`, lógica en `lib/sales-events.ts`): compara un evento contra el promedio diario de las 4 semanas anteriores (salteando la semana previa) y contra la semana siguiente.
 - 19/10: Locales físicos (sección `facturacion` del panel, antes "Facturación externa"): tabla `physical_stores` con costo de mercadería, comisiones e impuestos en %; las ventas diarias van en `external_revenue` con `store_id` (sin store_id = facturación externa vieja, sin costos). Carga a mano por mes o desde Excel/CSV (`lib/sales-import.ts`, librería `read-excel-file`). Un local con costo conocido suma como canal `local:ID` en el resumen; sin costo, queda aparte.
 - 19/10: UTMs y nombres (Publicidad → pestaña "UTMs y nombres", `?section=publicidad&ads=utm`): generador de parámetros de URL para Meta con nombres dinámicos, regla de nombres de campañas (tabla `ad_naming_rules`), revisión de anuncios activos leyendo Meta con ads_read (`fetchActiveMetaAds` en `lib/meta.ts`, lógica en `lib/utm.ts`) y links con UTMs para otros canales. Poner las UTMs automáticamente en Meta necesita ads_management (revisión de Meta + SRL).
+- 19/10: Clientes (reemplaza "Lifetime Value"): nuevos/recurrentes, provincias, ciudades, pagos, cuotas, envíos, canal y mapa de días/horas (`lib/customer-insights.ts`, `/api/insights/customers`). Las órdenes de Tiendanube guardan `customer_key` (hash anónimo, `lib/order-customer.ts`), provincia, ciudad, envío y storefront; los productos, `categories`. `IMPORT_VERSION` pasó a 10: la próxima sincronización reimporta 12 meses una vez. Mercado Libre todavía no trae datos del comprador.
 
 ## Pendiente
 

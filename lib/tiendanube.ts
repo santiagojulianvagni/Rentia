@@ -2,6 +2,7 @@ import { env } from './env';
 import { archiveProduct, claimWebhookEvent, countOrdersAwaitingSourceCommission, disconnectIntegrationByStore, finishReconciliationRun, getIntegrationCredentials, getIntegrationUser, getOrderForCommissionLookup, getOrdersAwaitingSourceCommission, getRetryableWebhookEvents, getSyncStatus, getVariantStoreCosts, markSyncCompleted, markSyncFailed, markSyncStarted, markWebhookEventFailed, markWebhookEventProcessed, markWebhookFailed, markWebhookProcessed, markWebhooksRegistered, registerWebhookEvent, resetSourceCommissionChecks, saveSourceCommission, saveTiendanubePlan, startReconciliationRun, SyncedOrder, SyncedProduct, upsertOrders, upsertProducts } from '../db/database';
 import { decryptToken } from './token-crypto';
 import { merchantShippingCost } from './tiendanube-shipping';
+import { tiendanubeCategories, tiendanubeOrderExtras } from './order-customer';
 import { merchantCommissionCost } from './tiendanube-commissions';
 import { tiendanubeFetch, tiendanubeRetryDelay } from './tiendanube-http';
 import {claimImportJob,checkpointImportJob,releaseImportJob,markSyncPending,recoverableSkippedOrders,forgetSkippedOrder} from '../db/database';
@@ -122,6 +123,7 @@ function normalizeProducts(rows:UnknownRecord[]):SyncedProduct[] {
     published:product.published!==false,
     createdAt:text(product.created_at)||null,
     updatedAt:text(product.updated_at)||null,
+    categories:tiendanubeCategories(product),
     variants:list(product.variants).map(value=>{
       const variant=record(value);
       return {externalId:text(variant.id),sku:text(variant.sku)||null,price:number(variant.price),cost:number(variant.cost),stock:nullableNumber(variant.stock),stockManagement:Boolean(variant.stock_management)};
@@ -138,7 +140,7 @@ function normalizeOrders(rows:UnknownRecord[],costs:Map<string,number>):SyncedOr
       :reportedPaymentType||(text(payment.credit_card_company)?'credit_card':null);
     return {
     externalId:text(order.id),number:text(order.number)||null,currency:text(order.currency)||'ARS',status:text(order.status)||'open',paymentStatus:text(order.payment_status)||'pending',paymentMethod:text(order.gateway)||reportedPaymentType||null,paymentType,paymentInstallments:nullableNumber(payment.installments),shippingStatus:text(order.shipping_status)||null,
-    shippingCost:merchantShippingCost(order),total:number(order.total),subtotal:number(order.subtotal),discount:number(order.discount),createdAt:text(order.created_at)||new Date().toISOString(),updatedAt:text(order.updated_at)||null,
+    ...tiendanubeOrderExtras(order),shippingCost:merchantShippingCost(order),total:number(order.total),subtotal:number(order.subtotal),discount:number(order.discount),createdAt:text(order.created_at)||new Date().toISOString(),updatedAt:text(order.updated_at)||null,
     items:list(order.products).map((value,index)=>{
       const item=record(value); const variantId=text(item.variant_id)||null;
       return {externalLineId:text(item.id)||`${text(order.id)}-${index}`,productId:text(item.product_id)||null,variantId,name:text(item.name)||'Producto',sku:text(item.sku)||null,quantity:Math.max(0,Math.round(number(item.quantity))),unitPrice:number(item.price),unitCost:variantId?costs.get(variantId)||0:0};

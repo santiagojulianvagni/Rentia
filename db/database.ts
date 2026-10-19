@@ -20,13 +20,14 @@ export type SubscriptionRecord = {
 
 export type SyncedProduct = {
   externalId:string; name:string; imageUrl:string|null; published:boolean;
-  createdAt:string|null; updatedAt:string|null;
+  createdAt:string|null; updatedAt:string|null; categories?:string[]|null;
   variants:Array<{externalId:string;sku:string|null;price:number;cost:number;stock:number|null;stockManagement:boolean}>;
 };
 
 export type SyncedOrder = {
   externalId:string; number:string|null; currency:string; status:string; paymentStatus:string;
   paymentMethod:string|null; paymentType:string|null; paymentInstallments:number|null; shippingStatus:string|null; shippingCost:number|null; total:number; subtotal:number; discount:number; createdAt:string; updatedAt:string|null;
+  customerKey?:string|null; province?:string|null; city?:string|null; shippingMethod?:string|null; storefront?:string|null;
   items:Array<{externalLineId:string;productId:string|null;variantId:string|null;name:string;sku:string|null;quantity:number;unitPrice:number;unitCost:number}>;
 };
 
@@ -432,8 +433,8 @@ export async function upsertProducts(userId:string,provider:string,products:Sync
   const now=new Date().toISOString();
   const statements:Statement[]=[];
   for (const product of products) {
-    statements.push(database().prepare("INSERT INTO products (user_id,provider,external_product_id,name,image_url,published,source_created_at,source_updated_at,synced_at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,provider,external_product_id) DO UPDATE SET name=excluded.name,image_url=excluded.image_url,published=excluded.published,source_updated_at=excluded.source_updated_at,synced_at=excluded.synced_at")
-      .bind(userId,provider,product.externalId,product.name,product.imageUrl,product.published?1:0,product.createdAt,product.updatedAt,now));
+    statements.push(database().prepare("INSERT INTO products (user_id,provider,external_product_id,name,image_url,published,source_created_at,source_updated_at,synced_at,categories) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,provider,external_product_id) DO UPDATE SET categories=COALESCE(excluded.categories,products.categories),name=excluded.name,image_url=excluded.image_url,published=excluded.published,source_updated_at=excluded.source_updated_at,synced_at=excluded.synced_at")
+      .bind(userId,provider,product.externalId,product.name,product.imageUrl,product.published?1:0,product.createdAt,product.updatedAt,now,product.categories?JSON.stringify(product.categories):null));
     for (const variant of product.variants) statements.push(database().prepare("INSERT INTO product_variants (user_id,provider,external_product_id,external_variant_id,sku,price,cost,stock,stock_management,synced_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,provider,external_variant_id) DO UPDATE SET external_product_id=excluded.external_product_id,sku=excluded.sku,price=excluded.price,cost=CASE WHEN excluded.cost>0 THEN excluded.cost ELSE product_variants.cost END,stock=excluded.stock,stock_management=excluded.stock_management,synced_at=excluded.synced_at")
       .bind(userId,provider,product.externalId,variant.externalId,variant.sku,variant.price,variant.cost,variant.stock,variant.stockManagement?1:0,now));
   }
@@ -448,8 +449,8 @@ export async function upsertOrders(userId:string,provider:string,orders:SyncedOr
   const groups:Statement[][]=[];
   for (const order of orders) {
     const statements:Statement[]=[];
-    statements.push(database().prepare("INSERT INTO orders (user_id,provider,external_order_id,order_number,currency,status,payment_status,payment_method,payment_type,payment_installments,shipping_status,source_shipping_cost,total,subtotal,discount,source_created_at,source_updated_at,synced_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,provider,external_order_id) DO UPDATE SET order_number=excluded.order_number,currency=excluded.currency,status=excluded.status,payment_status=excluded.payment_status,payment_method=excluded.payment_method,payment_type=COALESCE(excluded.payment_type,orders.payment_type),payment_installments=COALESCE(excluded.payment_installments,orders.payment_installments),shipping_status=excluded.shipping_status,source_shipping_cost=excluded.source_shipping_cost,source_commission_cost=CASE WHEN orders.source_updated_at IS DISTINCT FROM excluded.source_updated_at THEN NULL ELSE orders.source_commission_cost END,source_commission_checked_at=CASE WHEN orders.source_updated_at IS DISTINCT FROM excluded.source_updated_at THEN NULL ELSE orders.source_commission_checked_at END,total=excluded.total,subtotal=excluded.subtotal,discount=excluded.discount,source_updated_at=excluded.source_updated_at,synced_at=excluded.synced_at")
-      .bind(userId,provider,order.externalId,order.number,order.currency,order.status,order.paymentStatus,order.paymentMethod,order.paymentType,order.paymentInstallments,order.shippingStatus,order.shippingCost,order.total,order.subtotal,order.discount,order.createdAt,order.updatedAt,now));
+    statements.push(database().prepare("INSERT INTO orders (user_id,provider,external_order_id,order_number,currency,status,payment_status,payment_method,payment_type,payment_installments,shipping_status,source_shipping_cost,total,subtotal,discount,source_created_at,source_updated_at,synced_at,customer_key,ship_province,ship_city,shipping_method,storefront) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,provider,external_order_id) DO UPDATE SET customer_key=COALESCE(excluded.customer_key,orders.customer_key),ship_province=COALESCE(excluded.ship_province,orders.ship_province),ship_city=COALESCE(excluded.ship_city,orders.ship_city),shipping_method=COALESCE(excluded.shipping_method,orders.shipping_method),storefront=COALESCE(excluded.storefront,orders.storefront),order_number=excluded.order_number,currency=excluded.currency,status=excluded.status,payment_status=excluded.payment_status,payment_method=excluded.payment_method,payment_type=COALESCE(excluded.payment_type,orders.payment_type),payment_installments=COALESCE(excluded.payment_installments,orders.payment_installments),shipping_status=excluded.shipping_status,source_shipping_cost=excluded.source_shipping_cost,source_commission_cost=CASE WHEN orders.source_updated_at IS DISTINCT FROM excluded.source_updated_at THEN NULL ELSE orders.source_commission_cost END,source_commission_checked_at=CASE WHEN orders.source_updated_at IS DISTINCT FROM excluded.source_updated_at THEN NULL ELSE orders.source_commission_checked_at END,total=excluded.total,subtotal=excluded.subtotal,discount=excluded.discount,source_updated_at=excluded.source_updated_at,synced_at=excluded.synced_at")
+      .bind(userId,provider,order.externalId,order.number,order.currency,order.status,order.paymentStatus,order.paymentMethod,order.paymentType,order.paymentInstallments,order.shippingStatus,order.shippingCost,order.total,order.subtotal,order.discount,order.createdAt,order.updatedAt,now,order.customerKey??null,order.province??null,order.city??null,order.shippingMethod??null,order.storefront??null));
     statements.push(database().prepare("DELETE FROM order_items WHERE user_id=? AND provider=? AND external_order_id=?").bind(userId,provider,order.externalId));
     // Nine lines use 99 parameters per statement, which keeps each insert small.
     for(let index=0;index<order.items.length;index+=9) {
@@ -1030,4 +1031,15 @@ export async function saveNamingRule(userId:string,rule:{separator:string;segmen
   await database().prepare('INSERT INTO ad_naming_rules (user_id,separator,segments_json,updated_at) VALUES (?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET separator=excluded.separator,segments_json=excluded.segments_json,updated_at=excluded.updated_at')
     .bind(userId,rule.separator,JSON.stringify(rule.segments),new Date().toISOString()).run();
   return getNamingRule(userId);
+}
+
+// Órdenes pagas del período con lo necesario para el perfil de clientes. La primera compra
+// de cada cliente se busca en todo el historial importado.
+export async function getCustomerOrders(userId:string,since:string,until:string) {
+  const rows=await database().prepare(`SELECT o.provider,o.customer_key,o.ship_province,o.ship_city,o.shipping_method,o.payment_method,o.payment_type,o.payment_installments,o.source_created_at,o.total,o.storefront,
+    (SELECT MIN(f.source_created_at) FROM orders f WHERE f.user_id=o.user_id AND f.customer_key=o.customer_key AND f.payment_status='paid' AND f.status!='cancelled') AS first_order_at
+    FROM orders o WHERE o.user_id=? AND o.source_created_at>=? AND o.source_created_at<? AND o.payment_status='paid' AND o.status!='cancelled' ORDER BY o.source_created_at LIMIT 100000`)
+    .bind(userId,since,until).all<Record<string,unknown>>();
+  const str=(value:unknown)=>value===null||value===undefined||value===''?null:String(value);
+  return rows.results.map(row=>({provider:String(row.provider),customerKey:str(row.customer_key),firstOrderAt:str(row.first_order_at),province:str(row.ship_province),city:str(row.ship_city),shippingMethod:str(row.shipping_method),paymentMethod:str(row.payment_method),paymentType:str(row.payment_type),installments:row.payment_installments===null||row.payment_installments===undefined?null:Number(row.payment_installments),createdAt:String(row.source_created_at),total:Number(row.total||0),storefront:str(row.storefront)}));
 }

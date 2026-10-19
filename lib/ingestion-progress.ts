@@ -2,7 +2,8 @@ import {importHistoryStart} from './import-history';
 
 export type ImportWindow={start:string;end:string;page:number};
 export type ImportProgress={version:number;since:string|null;until:string;productsPage:number;productsDone:boolean;windows:ImportWindow[];orders:number;products:number;done:boolean};
-export const IMPORT_VERSION=9;
+// 10: las órdenes traen cliente anónimo, provincia, ciudad, envío y canal; los productos, categorías.
+export const IMPORT_VERSION=10;
 export const IMPORT_PAGE_SIZE=50;
 
 export function newImportProgress(previous:ImportProgress|null,now=new Date()):ImportProgress {
@@ -40,6 +41,8 @@ export function advanceImportWindow(progress:ImportProgress,count:number) {
 
 export function parseImportProgress(value:string):ImportProgress {
   const state=JSON.parse(value) as ImportProgress;
+  // Una importación de una versión anterior se reemplaza por una completa con los datos nuevos.
+  if(Number.isSafeInteger(state.version)&&state.version<IMPORT_VERSION)return newImportProgress(null);
   if(state.version!==IMPORT_VERSION||!Array.isArray(state.windows)||!Number.isFinite(Date.parse(state.until))||!Number.isSafeInteger(state.productsPage)||state.productsPage<1)throw new Error('El avance de importación no es válido');
   if(!state.since&&!state.done) {
     // Upgrade pending all-time imports without resetting completed jobs or
