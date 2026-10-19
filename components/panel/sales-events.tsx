@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { CalendarHeart, Trash2 } from 'lucide-react';
+import { CalendarClock, CalendarHeart, CalendarPlus, CalendarRange, Lightbulb, Scale, Trash2, TrendingUp } from 'lucide-react';
 import RpDate from './rp-date';
 import { confirmDialog } from './rp-confirm';
 import { EVENT_MAX_DAYS, EVENT_NAME_SUGGESTIONS, compareEvent, eventWindows, rangeDays, validEventDates, type EventMetrics, type EventRow } from '../../lib/sales-events';
@@ -112,13 +112,31 @@ export default function SalesEvents({money,canManage}:{money:(value:number)=>str
       {canManage&&!creating&&<div className="p-actions"><button type="button" className="p-btn p-primary" onClick={()=>{setCreating(true);setMessage('');}}>Nuevo evento</button></div>}</div>
 
     <details className="p-card p-reveal p-eventHow" open={!events||!events.length}>
-      <summary><b>Cómo funciona</b><span className="p-sub">Un ejemplo con números</span></summary>
-      <ol className="p-eventSteps">
-        <li><b>Cargás el evento y sus días.</b> Por ejemplo, "Cyber Monday", del lunes al miércoles: 3 días.</li>
-        <li><b>Rentia mira cuánto ganás en días normales.</b> Saca tu promedio por día de las 4 semanas anteriores (sin la semana justo antes, porque ahí la gente espera las ofertas) y lo lleva a 3 días. Por ejemplo: 3 días normales = $300.000 de ventas y $90.000 de ganancia.</li>
-        <li><b>Compara el evento contra eso.</b> Si en el Cyber vendiste $900.000 y, después de productos, envíos, comisiones y publicidad, te quedaron $240.000, el evento te dejó <b>$150.000 más</b> que 3 días normales. Si vendiste más pero te quedó menos, te avisa que los descuentos o la publicidad se comieron la diferencia.</li>
-        <li><b>Mira la semana siguiente.</b> Si después del evento vendiste mucho menos que lo normal, parte de esas ventas solo se adelantaron.</li>
-      </ol>
+      <summary><span className="p-eventHowIcon"><Lightbulb aria-hidden="true"/></span><span><b>Cómo funciona</b><small className="p-sub">Un ejemplo con números, en 4 pasos</small></span></summary>
+      <div className="p-eventHowBody">
+        <ol className="p-eventSteps">
+          {([
+            [CalendarPlus,'Cargás el evento','Nombre y días. Ej.: "Cyber Monday", de lunes a miércoles (3 días).'],
+            [CalendarRange,'Rentia mira tus días normales','Tu promedio de las 4 semanas anteriores, sin la semana previa (ahí la gente espera las ofertas).'],
+            [Scale,'Compara la ganancia','Después de productos, envíos, comisiones y publicidad. No solo las ventas.'],
+            [CalendarClock,'Revisa la semana siguiente','Si vendiste mucho menos que lo normal, esas ventas solo se adelantaron.'],
+          ] as const).map(([Icon,title,text],index)=><li key={title} style={{'--i':index} as React.CSSProperties}>
+            <span className="p-eventStepNum">{index+1}</span>
+            <Icon className="p-eventStepIcon" aria-hidden="true"/>
+            <b>{title}</b>
+            <p>{text}</p>
+          </li>)}
+        </ol>
+        <div className="p-eventExample" aria-label="Ejemplo: el Cyber Monday dejó 150.000 pesos más que tres días normales">
+          <span className="p-eyebrowS">EJEMPLO</span>
+          <div className="p-eventBars">
+            <div><small>3 días normales</small><div className="p-eventBar"><i className="p-eventSales" style={{width:'33%'}}/></div><div className="p-eventBar"><i className="p-eventProfit" style={{width:'37.5%'}}/></div><span>Ventas $300.000 · Ganancia <b>$90.000</b></span></div>
+            <div><small>Cyber Monday</small><div className="p-eventBar"><i className="p-eventSales" style={{width:'100%'}}/></div><div className="p-eventBar"><i className="p-eventProfit" style={{width:'100%'}}/></div><span>Ventas $900.000 · Ganancia <b>$240.000</b></span></div>
+          </div>
+          <div className="p-eventResult"><TrendingUp aria-hidden="true"/><span>El evento te dejó <b>$150.000 más</b> que 3 días normales.</span></div>
+          <p className="p-sub">Si vendés más pero ganás menos, te avisa que los descuentos o la publicidad se comieron la diferencia.</p>
+        </div>
+      </div>
     </details>
     {listError&&<div className="p-notice p-warning" role="alert"><div><b>No pudimos cargar tus eventos</b><p>Recargá la página para intentar de nuevo.</p></div></div>}
 
@@ -127,8 +145,8 @@ export default function SalesEvents({money,canManage}:{money:(value:number)=>str
       <div className="p-simChips" style={{marginBottom:12}}>{EVENT_NAME_SUGGESTIONS.map(item=><button type="button" key={item} className={name===item?'p-on':undefined} onClick={()=>setName(item)}>{item}</button>)}</div>
       <div className="p-eventFields">
         <div className="p-field"><label htmlFor="event-name">Nombre</label><div className="p-input"><input id="event-name" value={name} maxLength={80} onChange={change=>setName(change.target.value)} placeholder="Hot Sale 2026"/></div></div>
-        <div className="p-field"><label>Desde</label><RpDate value={start} max={end||undefined} onChange={change=>setStart(change.target.value)} aria-label="Fecha de inicio del evento"/></div>
-        <div className="p-field"><label>Hasta</label><RpDate value={end} min={start||undefined} onChange={change=>setEnd(change.target.value)} aria-label="Fecha de fin del evento"/></div>
+        <div className="p-field"><label>Desde</label><span className="p-input"><RpDate value={start} max={end||undefined} onChange={change=>setStart(change.target.value)} aria-label="Fecha de inicio del evento"/></span></div>
+        <div className="p-field"><label>Hasta</label><span className="p-input"><RpDate value={end} min={start||undefined} onChange={change=>setEnd(change.target.value)} aria-label="Fecha de fin del evento"/></span></div>
       </div>
       <div style={{display:'flex',alignItems:'center',gap:12,marginTop:14,flexWrap:'wrap'}}>
         <button type="submit" className="p-btn p-primary" disabled={saving}>{saving?'Guardando…':'Guardar y comparar'}</button>

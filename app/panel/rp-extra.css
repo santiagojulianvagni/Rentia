@@ -492,9 +492,40 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-cartList li{align-items:flex-start}
 .p-root .p-cartList .p-chip{display:inline-flex;align-items:center;gap:4px;margin-top:6px;white-space:normal}
 .p-root .p-cartGrid{align-items:start}
-.p-root .p-eventHow{margin-bottom:16px}
-.p-root .p-eventHow summary{display:flex;align-items:baseline;gap:10px;cursor:pointer;list-style:none}
+
+/* Eventos: cómo funciona */
+.p-root .p-eventHow{margin-bottom:16px;background:linear-gradient(160deg,rgba(33,212,194,.07),var(--surface) 55%)}
+.p-root .p-eventHow summary{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none}
 .p-root .p-eventHow summary::-webkit-details-marker{display:none}
-.p-root .p-eventHow summary:after{content:"+";margin-left:auto;color:var(--cyan);font-size:18px}
-.p-root .p-eventHow[open] summary:after{content:"−"}
-.p-root .p-eventSteps{display:grid;gap:10px;margin:14px 0 0;padding-left:20px;color:#c8d6e2;font-size:13.5px;line-height:1.6}
+.p-root .p-eventHow summary>span:nth-child(2){display:grid;gap:2px}
+.p-root .p-eventHow summary b{font-size:15px}
+.p-root .p-eventHow summary:after{content:"";margin-left:auto;width:9px;height:9px;border-right:2px solid var(--cyan);border-bottom:2px solid var(--cyan);transform:rotate(45deg);transition:transform .25s var(--ease)}
+.p-root .p-eventHow[open] summary:after{transform:rotate(225deg)}
+.p-root .p-eventHowIcon{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:rgba(33,212,194,.14);color:var(--cyan)}
+.p-root .p-eventHowIcon svg{width:19px;height:19px}
+.p-root .p-eventHowBody{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:16px;margin-top:18px}
+.p-root .p-eventSteps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0;padding:0;list-style:none}
+.p-root .p-eventSteps li{position:relative;display:grid;gap:6px;align-content:start;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface2);animation:p-stepIn .5s var(--ease) both;animation-delay:calc(var(--i)*80ms)}
+.p-root .p-eventSteps b{font-size:14px}
+.p-root .p-eventSteps p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+.p-root .p-eventStepNum{position:absolute;top:14px;right:14px;display:grid;place-items:center;width:22px;height:22px;border-radius:7px;background:var(--raise);color:var(--cyan);font-size:11px;font-weight:800}
+.p-root .p-eventStepIcon{width:20px;height:20px;color:var(--cyan)}
+.p-root .p-eventExample{display:grid;gap:12px;align-content:start;padding:16px;border:1px solid rgba(33,212,194,.3);border-radius:14px;background:var(--bg)}
+.p-root .p-eventBars{display:grid;gap:14px}
+.p-root .p-eventBars>div{display:grid;gap:5px}
+.p-root .p-eventBars small{color:var(--muted);font-size:12px;font-weight:700}
+.p-root .p-eventBars span{color:var(--muted);font-size:12.5px}
+.p-root .p-eventBars span b{color:var(--green)}
+.p-root .p-eventBar{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden}
+.p-root .p-eventBar i{display:block;height:100%;border-radius:inherit;transform-origin:left;animation:p-barGrow .9s var(--ease) both}
+.p-root .p-eventSales{background:#3b8cff}
+.p-root .p-eventProfit{background:linear-gradient(90deg,var(--cyan),var(--green))}
+.p-root .p-eventResult{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;background:rgba(50,213,131,.1);color:#c8f5dd;font-size:13.5px}
+.p-root .p-eventResult svg{flex:0 0 18px;width:18px;height:18px;color:var(--green)}
+.p-root .p-eventResult b{color:var(--green)}
+.p-root .p-eventExample>.p-sub{margin:0;font-size:12px}
+@keyframes p-stepIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes p-barGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media (max-width:1000px){.p-root .p-eventHowBody{grid-template-columns:1fr}}
+@media (max-width:560px){.p-root .p-eventSteps{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.p-root .p-eventSteps li,.p-root .p-eventBar i{animation:none}}
