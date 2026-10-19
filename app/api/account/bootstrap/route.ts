@@ -66,7 +66,10 @@ async function bootstrap(request:Request) {
     throw error;
   }
 
-  return NextResponse.json({ok:true,organizationId:organization.id,account:await getAccount(storeUserId),migrated:Boolean(legacyAccount),needsChannels:true});
+  // Una tienda que ya existía (por ejemplo, al pasar el inicio de sesión a otra instancia de
+  // Clerk) se reconecta por email con todos sus datos y no repite la elección de canales.
+  const needsChannels=legacyAccount?!await getSettings(storeUserId):true;
+  return NextResponse.json({ok:true,organizationId:organization.id,account:await getAccount(storeUserId),migrated:Boolean(legacyAccount),needsChannels});
 }
 
 // Clerk and database failures are logged with the provider's error code, so a

@@ -57,3 +57,22 @@ test('the sign-in setup sends pending sessions to onboarding and never shows an 
   const onboarding=await readFile(new URL('../app/onboarding/page.tsx',import.meta.url),'utf8');
   assert.doesNotMatch(onboarding,/router\.replace\('\/(registro|ingresar)'\)/,'onboarding must not bounce between pages');
 });
+
+test('an existing store reconnects by email to a new sign-in account, keeping its data and channels',async()=>{
+  const {pg,driver}=await createTestDatabase();setDatabase(driver);
+  // La tienda ya existía con otra cuenta de Clerk (por ejemplo, la instancia de desarrollo).
+  await pg.query("INSERT INTO accounts (user_id,email,owner_name,store_name,trial_started_at,created_at,updated_at) VALUES ('store-old','ana@example.invalid','Ana','Casa Norte','2026-09-01','2026-09-01','2026-09-01')");
+  await pg.query("INSERT INTO store_identity_links (store_user_id,clerk_organization_id,owner_clerk_user_id,created_at,updated_at) VALUES ('store-old','org_dev','user_dev','2026-09-01','2026-09-01')");
+  await pg.query("INSERT INTO store_settings (user_id,updated_at) VALUES ('store-old','2026-09-01')");
+  globalThis.__clerk={userId:'user_prod',orgId:null,created:[]};
+
+  const response=await post({});
+  assert.equal(response.status,200);
+  const body=await response.json();
+  assert.equal(body.organizationId,'org_1');
+  assert.equal(body.migrated,true);
+  assert.equal(body.needsChannels,false,'channels were already configured');
+  const link=(await pg.query("SELECT clerk_organization_id,owner_clerk_user_id FROM store_identity_links WHERE store_user_id='store-old'")).rows[0];
+  assert.deepEqual(link,{clerk_organization_id:'org_1',owner_clerk_user_id:'user_prod'});
+  assert.equal(Number((await pg.query('SELECT COUNT(*) AS n FROM accounts')).rows[0].n),1,'no empty duplicate store');
+});
