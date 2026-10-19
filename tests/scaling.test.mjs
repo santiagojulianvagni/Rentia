@@ -184,6 +184,6 @@ test('long historical ranges are valid and every migration applies to an empty d
   assert.ok(readdirSync(new URL('../migrations/',import.meta.url)).some(name=>name.endsWith('.sql')));
   const adapter=await fixture();
   const tables=await adapter.pg.query("SELECT COUNT(*) AS total FROM information_schema.tables WHERE table_schema='public'");
-  assert.equal(tables.rows[0].total,36);
+  assert.equal(tables.rows[0].total,37);
   await adapter.close();
 });

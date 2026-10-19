@@ -135,3 +135,27 @@ export async function syncMetaAds(userId:string) {
     throw error;
   }
 }
+
+// Anuncios activos con sus parámetros de URL, para revisar UTMs y nombres. Solo lectura
+// (permiso ads_read): Rentia no cambia nada en la cuenta.
+export type MetaAdForAudit={id:string;name:string;status:string;campaignId:string;campaignName:string;adsetName:string;urlTags:string;link:string};
+export async function fetchActiveMetaAds(userId:string):Promise<{account:{id:string;name:string}|null;ads:MetaAdForAudit[]}> {
+  const runtime=metaRuntime();
+  const integration=await getIntegrationCredentials(userId,'meta');
+  if (!integration) throw new Error('meta_not_connected');
+  if (!runtime.TOKEN_ENCRYPTION_KEY) throw new Error('Falta la clave de cifrado del servidor');
+  const selected=await getSelectedMetaAdAccount(userId);
+  if (!selected) return {account:null,ads:[]};
+  const token=await decryptToken(integration.encrypted_access_token,integration.token_iv,runtime.TOKEN_ENCRYPTION_KEY);
+  const rows=await fetchAll(`${selected.external_account_id}/ads`,token,{
+    fields:'id,name,effective_status,campaign{id,name},adset{name},creative{url_tags,object_story_spec{link_data{link},video_data{call_to_action{value{link}}},template_data{link}},asset_feed_spec{link_urls{website_url}}}',
+    effective_status:JSON.stringify(['ACTIVE']),
+    limit:'200',
+  },5);
+  const ads=rows.map(row=>{
+    const creative=record(row.creative),story=record(creative.object_story_spec);
+    const link=text(record(story.link_data).link)||text(record(record(record(story.video_data).call_to_action).value).link)||text(record(story.template_data).link)||text(record(list(record(creative.asset_feed_spec).link_urls)[0]).website_url);
+    return {id:text(row.id),name:text(row.name),status:text(row.effective_status),campaignId:text(record(row.campaign).id),campaignName:text(record(row.campaign).name),adsetName:text(record(row.adset).name),urlTags:text(creative.url_tags),link};
+  }).filter(ad=>ad.id);
+  return {account:{id:selected.external_account_id,name:selected.name||selected.external_account_id},ads};
+}

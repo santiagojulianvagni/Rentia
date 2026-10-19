@@ -16,7 +16,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 - Next.js 16.4 (App Router), React 19, TypeScript. Clerk (organizaciones: una por tienda; hoy instancia de **desarrollo**). Postgres en Neon.
 - Dominio `rentiaapp.com` (comprado en Hostinger, DNS ahí): `www.rentiaapp.com` es el principal y `rentiaapp.com` redirige; `rentia-ruby.vercel.app` sigue andando. Mail de contacto `hola@rentiaapp.com` (Hostinger), cargado en Vercel como `NEXT_PUBLIC_RENTIA_CONTACT_EMAIL`.
 - Vercel, plan Hobby, proyecto `nexo-6cb9/rentia`. Las funciones corren en `gru1` (San Pablo), igual que la base. Se publica solo con cada push a `main`.
-- `vercel-build` corre las migraciones de `migrations/` (la próxima es `0010_…`) y después compila.
+- `vercel-build` corre las migraciones de `migrations/` (la próxima es `0011_…`) y después compila.
 
 ## Código
 
@@ -24,7 +24,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 - Sin controles genéricos del navegador: usar `RpSelect`, `RpDate`, `confirmDialog` y botones propios.
 - Cálculos puros en `lib/` con pruebas en `tests/*.test.mjs` (Node test runner y PGlite): `campaign-profit`, `alerts`, `achievements`, `records`, `cashflow`. La lógica nueva va en `lib/` y lleva su prueba.
 - Las rutas de API usan `route()` de `server/http/route.ts`: sesión, rol, origen, validación con zod y registro de errores en `error_reports`. Los archivos `route.ts` solo pueden exportar los métodos HTTP.
-- `tests/scaling.test.mjs` cuenta las tablas (hoy 36): actualizarlo al agregar una.
+- `tests/scaling.test.mjs` cuenta las tablas (hoy 37): actualizarlo al agregar una.
 - Ojo al editar con scripts de Node: en `String.replace` los patrones `$'` y `` $` `` son especiales.
 
 ## Cómo publicar
@@ -50,6 +50,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 - 19/10: portada en inglés (`/en`) y portugués (`/pt`) con selector de idioma y hreflang. Textos en `lib/landing-i18n.ts` (el español es el original; una prueba verifica que los tres idiomas tengan los mismos textos). Legales, blog y app siguen en español. En/pt avisan que hoy funciona con tiendas de Argentina.
 - 19/10: Eventos (sección del panel, tabla `sales_events`, lógica en `lib/sales-events.ts`): compara un evento contra el promedio diario de las 4 semanas anteriores (salteando la semana previa) y contra la semana siguiente.
 - 19/10: Locales físicos (sección `facturacion` del panel, antes "Facturación externa"): tabla `physical_stores` con costo de mercadería, comisiones e impuestos en %; las ventas diarias van en `external_revenue` con `store_id` (sin store_id = facturación externa vieja, sin costos). Carga a mano por mes o desde Excel/CSV (`lib/sales-import.ts`, librería `read-excel-file`). Un local con costo conocido suma como canal `local:ID` en el resumen; sin costo, queda aparte.
+- 19/10: UTMs y nombres (Publicidad → pestaña "UTMs y nombres", `?section=publicidad&ads=utm`): generador de parámetros de URL para Meta con nombres dinámicos, regla de nombres de campañas (tabla `ad_naming_rules`), revisión de anuncios activos leyendo Meta con ads_read (`fetchActiveMetaAds` en `lib/meta.ts`, lógica en `lib/utm.ts`) y links con UTMs para otros canales. Poner las UTMs automáticamente en Meta necesita ads_management (revisión de Meta + SRL).
 
 ## Pendiente
 

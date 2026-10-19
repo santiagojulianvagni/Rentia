@@ -1017,3 +1017,17 @@ export async function importStoreSales(userId:string,storeId:number,days:Array<{
   }
   await database().batch(statements);
 }
+
+// Regla de nombres de campañas (null si la tienda no definió ninguna).
+export async function getNamingRule(userId:string):Promise<{separator:string;segments:string[]}|null> {
+  const row=await database().prepare('SELECT separator,segments_json FROM ad_naming_rules WHERE user_id=?').bind(userId).first<{separator:string;segments_json:string}>();
+  if(!row)return null;
+  try {return {separator:row.separator,segments:JSON.parse(row.segments_json) as string[]};} catch {return null;}
+}
+
+export async function saveNamingRule(userId:string,rule:{separator:string;segments:string[]}|null) {
+  if(!rule){await database().prepare('DELETE FROM ad_naming_rules WHERE user_id=?').bind(userId).run();return null;}
+  await database().prepare('INSERT INTO ad_naming_rules (user_id,separator,segments_json,updated_at) VALUES (?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET separator=excluded.separator,segments_json=excluded.segments_json,updated_at=excluded.updated_at')
+    .bind(userId,rule.separator,JSON.stringify(rule.segments),new Date().toISOString()).run();
+  return getNamingRule(userId);
+}

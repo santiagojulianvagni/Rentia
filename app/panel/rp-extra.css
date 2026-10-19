@@ -453,3 +453,15 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-importMap{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
 @media (max-width:900px){.p-root .p-storeFields,.p-root .p-importMap{grid-template-columns:1fr 1fr}}
 @media (max-width:560px){.p-root .p-storeFields,.p-root .p-importMap{grid-template-columns:1fr}}
+
+/* UTMs y nombres */
+.p-root .p-codeBox{margin:0;padding:12px 14px;border:1px solid var(--line2);border-radius:11px;background:var(--bg);color:var(--cyan);font-family:var(--font-geist-mono),monospace;font-size:12.5px;line-height:1.6;white-space:pre-wrap;word-break:break-all}
+.p-root .p-namingParts{display:grid;gap:8px;margin-bottom:10px}
+.p-root .p-namingPart{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) auto;gap:8px;align-items:center}
+.p-root .p-namingPart .p-cellInput{width:100%}
+.p-root .p-chips{display:flex;flex-wrap:wrap;gap:4px}
+.p-root .p-utmLink{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px}
+.p-root .p-utmLink .p-input input{flex:1;min-width:0;border:0;outline:0;background:none;color:var(--text);font:inherit}
+.p-root .p-utmGrid{align-items:start}
+@media (max-width:900px){.p-root .p-utmGrid{grid-template-columns:1fr}}
+@media (max-width:560px){.p-root .p-utmLink{grid-template-columns:1fr}.p-root .p-namingPart{grid-template-columns:1fr 1fr auto}}
