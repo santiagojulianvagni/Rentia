@@ -436,3 +436,20 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-loading{padding:28px;text-align:center}
 @media (max-width:900px){.p-root .p-eventLayout{grid-template-columns:1fr}.p-root .p-eventList{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}}
 @media (max-width:640px){.p-root .p-eventFields{grid-template-columns:1fr}}
+
+/* Locales físicos */
+.p-root .p-storeTabs{width:fit-content;max-width:100%;margin-bottom:16px;overflow-x:auto}
+.p-root .p-storeTabs button{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.p-root .p-storeTabs svg{width:14px;height:14px}
+.p-root .p-storeFields{grid-template-columns:repeat(4,minmax(0,1fr))}
+.p-root .p-storeFields label:first-child span input{width:100%}
+.p-root .p-dropzone{position:relative;display:flex;align-items:center;gap:14px;padding:22px;border:1.5px dashed var(--line2);border-radius:14px;background:var(--surface2);cursor:pointer;transition:border-color .2s,background .2s}
+.p-root .p-dropzone:hover{border-color:var(--cyan);background:rgba(33,212,194,.05)}
+.p-root .p-dropzone.p-disabled{opacity:.5;cursor:not-allowed}
+.p-root .p-dropzone input{position:absolute;inset:0;opacity:0;cursor:inherit}
+.p-root .p-dropzone svg{flex:0 0 28px;width:28px;height:28px;color:var(--cyan)}
+.p-root .p-dropzone span{display:grid;gap:2px}
+.p-root .p-dropzone small{color:var(--muted)}
+.p-root .p-importMap{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+@media (max-width:900px){.p-root .p-storeFields,.p-root .p-importMap{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.p-root .p-storeFields,.p-root .p-importMap{grid-template-columns:1fr}}

@@ -31,7 +31,7 @@ export type SyncedOrder = {
 };
 
 export type ExternalRevenueEntry = {
-  revenueDate:string; orderCount:number; revenue:number; currency:string;
+  revenueDate:string; orderCount:number; revenue:number; currency:string; productCost?:number|null;
 };
 
 export type ExchangeRateSettings = {
@@ -524,7 +524,7 @@ export async function getDashboardData(userId:string,days:number,offsetDays=0,ra
     getSyncReliability(userId,'tiendanube'),
     getSettings(userId),
     getCostRules(userId),
-    database().prepare("SELECT revenue_date,order_count,revenue,currency FROM external_revenue WHERE user_id=? AND revenue_date>=? AND revenue_date<? ORDER BY revenue_date").bind(userId,sinceDate,untilDate).all<Record<string,unknown>>(),
+    database().prepare("SELECT revenue_date,order_count,revenue,currency,store_id,product_cost FROM external_revenue WHERE user_id=? AND revenue_date>=? AND revenue_date<? ORDER BY revenue_date").bind(userId,sinceDate,untilDate).all<Record<string,unknown>>(),
     getExchangeRateSettings(userId),
     database().prepare(PAID_TOTAL_SQL).bind(userId,since,until).first<{orders:number;revenue:number}>(),
     database().prepare("SELECT DISTINCT payment_method FROM orders WHERE user_id=? AND source_created_at>=? AND source_created_at<? AND payment_method IS NOT NULL ORDER BY payment_method").bind(userId,since,until).all<{payment_method:string}>(),
@@ -580,20 +580,20 @@ export async function getPaidOrderTotals(userId:string,days:number,range?:Analyt
   return {orders:Number(row?.orders||0),revenue:Number(row?.revenue||0)};
 }
 
-export async function getExternalRevenue(userId:string,from:string,to:string) {
+export async function getExternalRevenue(userId:string,from:string,to:string,storeId:number|null=null) {
   await ensureSchema();
-  return database().prepare("SELECT revenue_date,order_count,revenue,currency,updated_at FROM external_revenue WHERE user_id=? AND revenue_date>=? AND revenue_date<=? ORDER BY revenue_date")
-    .bind(userId,from,to).all<Record<string,unknown>>();
+  return database().prepare("SELECT revenue_date,order_count,revenue,currency,product_cost,updated_at FROM external_revenue WHERE user_id=? AND COALESCE(store_id,0)=? AND revenue_date>=? AND revenue_date<=? ORDER BY revenue_date")
+    .bind(userId,storeId||0,from,to).all<Record<string,unknown>>();
 }
 
-export async function saveExternalRevenueMonth(userId:string,month:string,entries:ExternalRevenueEntry[]) {
+export async function saveExternalRevenueMonth(userId:string,month:string,entries:ExternalRevenueEntry[],storeId:number|null=null) {
   await ensureSchema();
   const now=new Date().toISOString();
-  const statements:Statement[]=[database().prepare("DELETE FROM external_revenue WHERE user_id=? AND revenue_date LIKE ?").bind(userId,`${month}-%`)];
+  const statements:Statement[]=[database().prepare("DELETE FROM external_revenue WHERE user_id=? AND COALESCE(store_id,0)=? AND revenue_date LIKE ?").bind(userId,storeId||0,`${month}-%`)];
   for (const entry of entries) {
     if (entry.orderCount===0&&entry.revenue===0) continue;
-    statements.push(database().prepare("INSERT INTO external_revenue (user_id,revenue_date,order_count,revenue,currency,updated_at) VALUES (?,?,?,?,?,?)")
-      .bind(userId,entry.revenueDate,entry.orderCount,entry.revenue,entry.currency,now));
+    statements.push(database().prepare("INSERT INTO external_revenue (user_id,store_id,revenue_date,order_count,revenue,product_cost,currency,updated_at) VALUES (?,?,?,?,?,?,?,?)")
+      .bind(userId,storeId,entry.revenueDate,entry.orderCount,entry.revenue,entry.productCost??null,entry.currency,now));
   }
   // Un mes completo en una sola transacción: el panel nunca ve el mes vacío a mitad del guardado.
   await database().batch(statements);
@@ -862,6 +862,7 @@ const DASHBOARD_VERSION_SQL=`SELECT concat_ws('|',
   (SELECT COALESCE(MAX(updated_at),'') FROM store_settings WHERE user_id=?),
   (SELECT COUNT(*)::text||':'||COALESCE(MAX(updated_at),'') FROM cost_rules WHERE user_id=?),
   (SELECT COUNT(*)::text||':'||COALESCE(MAX(updated_at),'') FROM external_revenue WHERE user_id=?),
+  (SELECT COUNT(*)::text||':'||COALESCE(MAX(updated_at),'') FROM physical_stores WHERE user_id=?),
   (SELECT COALESCE(MAX(updated_at),'') FROM exchange_rate_settings WHERE user_id=?),
   (SELECT COUNT(*)::text||':'||COALESCE(MAX(updated_at),'') FROM order_item_cost_overrides WHERE user_id=?),
   (SELECT COUNT(*)::text||':'||COALESCE(MAX(synced_at),'') FROM meta_insights_daily WHERE user_id=?),
@@ -874,7 +875,7 @@ const DASHBOARD_VERSION_SQL=`SELECT concat_ws('|',
 ) AS version`;
 
 export async function getDashboardVersion(userId:string,now=new Date()) {
-  const row=await database().prepare(DASHBOARD_VERSION_SQL).bind(...Array.from({length:15},()=>userId)).first<{version:string}>();
+  const row=await database().prepare(DASHBOARD_VERSION_SQL).bind(...Array.from({length:16},()=>userId)).first<{version:string}>();
   return `${now.toISOString().slice(0,13)}|${row?.version||''}`;
 }
 
@@ -955,4 +956,64 @@ export async function createSalesEvent(userId:string,event:{name:string;start:st
 export async function deleteSalesEvent(userId:string,id:number) {
   const row=await database().prepare('DELETE FROM sales_events WHERE id=? AND user_id=? RETURNING id').bind(id,userId).first<{id:number}>();
   return Boolean(row);
+}
+
+// Locales físicos: un canal de venta con costos estimados en porcentaje de la venta.
+export type PhysicalStore={id:number;name:string;costPercent:number;feePercent:number;taxPercent:number};
+export type PhysicalStoreInput=Omit<PhysicalStore,'id'>;
+const storeRow=(row:Record<string,unknown>):PhysicalStore=>({id:Number(row.id),name:String(row.name),costPercent:Number(row.cost_percent),feePercent:Number(row.fee_percent),taxPercent:Number(row.tax_percent)});
+
+export async function listPhysicalStores(userId:string) {
+  const rows=await database().prepare('SELECT id,name,cost_percent,fee_percent,tax_percent FROM physical_stores WHERE user_id=? ORDER BY id').bind(userId).all<Record<string,unknown>>();
+  return rows.results.map(storeRow);
+}
+
+export async function createPhysicalStore(userId:string,input:PhysicalStoreInput) {
+  const now=new Date().toISOString();
+  const row=await database().prepare('INSERT INTO physical_stores (user_id,name,cost_percent,fee_percent,tax_percent,created_at,updated_at) VALUES (?,?,?,?,?,?,?) ON CONFLICT(user_id,name) DO NOTHING RETURNING id,name,cost_percent,fee_percent,tax_percent')
+    .bind(userId,input.name,input.costPercent,input.feePercent,input.taxPercent,now,now).first<Record<string,unknown>>();
+  return row?storeRow(row):null;
+}
+
+export async function updatePhysicalStore(userId:string,id:number,input:PhysicalStoreInput) {
+  const row=await database().prepare('UPDATE physical_stores SET name=?,cost_percent=?,fee_percent=?,tax_percent=?,updated_at=? WHERE id=? AND user_id=? RETURNING id,name,cost_percent,fee_percent,tax_percent')
+    .bind(input.name,input.costPercent,input.feePercent,input.taxPercent,new Date().toISOString(),id,userId).first<Record<string,unknown>>();
+  return row?storeRow(row):null;
+}
+
+// Borra el local y, por la clave foránea, todas sus ventas cargadas.
+export async function deletePhysicalStore(userId:string,id:number) {
+  const row=await database().prepare('DELETE FROM physical_stores WHERE id=? AND user_id=? RETURNING id').bind(id,userId).first<{id:number}>();
+  return Boolean(row);
+}
+
+export async function physicalStoreExists(userId:string,id:number) {
+  return Boolean(await database().prepare('SELECT id FROM physical_stores WHERE id=? AND user_id=?').bind(id,userId).first<{id:number}>());
+}
+
+// Cuántos días tiene cargados cada local y la facturación externa sin local.
+export async function externalRevenueCounts(userId:string) {
+  const rows=await database().prepare('SELECT COALESCE(store_id,0) AS store_id,COUNT(*) AS days,MIN(revenue_date) AS first_date,MAX(revenue_date) AS last_date FROM external_revenue WHERE user_id=? GROUP BY COALESCE(store_id,0)').bind(userId).all<Record<string,unknown>>();
+  return rows.results.map(row=>({storeId:Number(row.store_id)||null,days:Number(row.days),firstDate:String(row.first_date||''),lastDate:String(row.last_date||'')}));
+}
+
+// Pasa la facturación externa sin local a un local (solo si el local todavía no tiene ventas).
+export async function adoptExternalRevenue(userId:string,storeId:number) {
+  const busy=await database().prepare('SELECT 1 AS found FROM external_revenue WHERE user_id=? AND store_id=? LIMIT 1').bind(userId,storeId).first<{found:number}>();
+  if(busy)return false;
+  await database().prepare('UPDATE external_revenue SET store_id=?,updated_at=? WHERE user_id=? AND store_id IS NULL').bind(storeId,new Date().toISOString(),userId).run();
+  return true;
+}
+
+// Importación desde Excel o CSV: reemplaza solo los días que trae el archivo, todo junto.
+export async function importStoreSales(userId:string,storeId:number,days:Array<{date:string;orders:number;revenue:number;productCost:number|null}>) {
+  const now=new Date().toISOString();
+  const statements:Statement[]=[];
+  for(let start=0;start<days.length;start+=500) {
+    const chunk=days.slice(start,start+500);
+    statements.push(database().prepare(`DELETE FROM external_revenue WHERE user_id=? AND store_id=? AND revenue_date IN (${chunk.map(()=>'?').join(',')})`).bind(userId,storeId,...chunk.map(day=>day.date)));
+    statements.push(database().prepare(`INSERT INTO external_revenue (user_id,store_id,revenue_date,order_count,revenue,product_cost,currency,updated_at) VALUES ${chunk.map(()=>"(?,?,?,?,?,?,'ARS',?)").join(',')}`)
+      .bind(...chunk.flatMap(day=>[userId,storeId,day.date,day.orders,day.revenue,day.productCost,now])));
+  }
+  await database().batch(statements);
 }
