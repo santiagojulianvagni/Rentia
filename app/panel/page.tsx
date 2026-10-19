@@ -968,6 +968,7 @@ const teamRoles=[
 const teamErrors:Record<string,string>={
   forbidden:'Tu acceso no permite gestionar el equipo.',
   team_limit_reached:'El cupo está completo. Cancelá una invitación pendiente o revisá los planes.',
+  team_provider_limit:'Por ahora cada tienda puede tener hasta 5 personas. Pronto ampliamos el cupo; mientras tanto, cancelá una invitación pendiente para sumar a alguien.',
   team_limit_unconfigured:'El cupo de Enterprise debe acordarse antes de invitar.',
   team_busy:'Hay otra invitación en proceso. Esperá y actualizá el equipo antes de reintentar.',
   already_invited:'Ese correo ya pertenece al equipo o tiene una invitación pendiente.',

@@ -60,7 +60,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 **Depende de él:**
 - Constituir la SRL (para cobrar con Mercado Pago y verificar el negocio en Meta).
 - Pasar a Vercel Pro y activar el límite de gasto.
-- Clerk en producción: listo desde el 19/10 (dominio rentiaapp.com verificado, organizaciones con membresía obligatoria, contraseña de 8 con fuerza mínima y rechazo de filtradas, Google con credenciales propias del proyecto de Google Cloud "Rentia" publicado en producción). Pendiente: plan Pro de Clerk para exigir mayúscula, minúscula, número y símbolo. Agregar `https://www.rentiaapp.com` en las apps de Mercado Libre, Meta y Tiendanube y recién después poner `RENTIA_PUBLIC_ORIGIN=https://www.rentiaapp.com` en Vercel.
+- Clerk en producción: listo desde el 19/10 (dominio rentiaapp.com verificado, organizaciones con membresía obligatoria, contraseña de 8 con fuerza mínima y rechazo de filtradas, Google con credenciales propias del proyecto de Google Cloud "Rentia" publicado en producción). Pendiente: plan Pro de Clerk para exigir mayúscula, minúscula, número y símbolo, y para más de 5 miembros por tienda (los planes Pro y Scale de Rentia prometen 10 y 20). Al pasarlo, poner CLERK_ORG_MEMBER_CAP en Vercel. Agregar `https://www.rentiaapp.com` en las apps de Mercado Libre, Meta y Tiendanube y recién después poner `RENTIA_PUBLIC_ORIGIN=https://www.rentiaapp.com` en Vercel.
 - Trámites de permisos en Meta, Mercado Libre (publicidad) y Tiendanube.
 - Revisión legal (incluye el paso de escribir "DAR DE BAJA").
 - Decidir si suma analítica de visitas.

@@ -7,6 +7,7 @@ import { rentiaInvitationUrl } from '../../../lib/invitation-url';
 import { acquireTeamAdmission, releaseTeamAdmission, renewTeamAdmission, teamSnapshot } from '../../../lib/team-capacity';
 import { getOrCreateSubscription } from '../../../db/database';
 import { teamEntitlement } from '../../../lib/plans';
+import { clerkMemberLimit } from '../../../lib/clerk-limits';
 
 function roleLabel(role:string,owner:boolean) {
   return owner?'Propietario':role==='org:admin'?'Administrador':'Miembro · consulta';
@@ -52,7 +53,10 @@ export const POST=route({access:'manager',body:InviteBody,invalidBody:'invalid_d
     if(capacity.limit===null) return failure('team_limit_unconfigured',409);
     if(capacity.remaining===0) throw new HttpError(409,'team_limit_reached',{capacity});
     if(!await renewTeamAdmission(user.id,token)) return failure('team_busy',409);
-    await client.organizations.updateOrganization(user.organizationId,{maxAllowedMemberships:capacity.limit});
+    // Clerk no acepta un límite mayor al de su plan: se pide el menor entre el plan de Rentia y ese tope.
+    const providerLimit=clerkMemberLimit(capacity.limit);
+    if(capacity.used>=providerLimit) return failure('team_provider_limit',409);
+    await client.organizations.updateOrganization(user.organizationId,{maxAllowedMemberships:providerLimit});
     const config=env as unknown as {RENTIA_PUBLIC_ORIGIN?:string};
     const redirectUrl=rentiaInvitationUrl(config.RENTIA_PUBLIC_ORIGIN||new URL(request.url).origin,user.organizationId);
     invitationInFlight=true;

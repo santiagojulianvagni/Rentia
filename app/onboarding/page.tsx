@@ -4,7 +4,7 @@ import { useAuth, useClerk, useUser } from '@clerk/nextjs';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { onboardingRequest, OnboardingRequestError } from '../../lib/onboarding-request';
-import SignedOutCard from '../../components/signed-out-card';
+import SignedOutCard, { StatusCard } from '../../components/signed-out-card';
 
 type Step='checking'|'store'|'channels'|'connections';
 type Channel='tiendanube'|'mercadolibre';
@@ -62,7 +62,7 @@ export default function Onboarding() {
       if (cancelled) return;
       if (reason instanceof OnboardingRequestError&&reason.status===409&&reason.code==='store_required') {setName(current=>current||user?.fullName||'');setStep('store');return;}
       if (reason instanceof OnboardingRequestError&&reason.status===401) {setError('Tu sesión todavía no está lista. Tocá Reintentar o volvé a ingresar.');return;}
-      setError('No pudimos preparar tu cuenta. Podés reintentar sin volver a registrarte.');
+      setError('Hubo un problema al crear tu espacio de trabajo.');
     });
     return ()=>{cancelled=true;};
   },[isLoaded,isSignedIn,setActive,user?.fullName,attempt]);
@@ -115,7 +115,7 @@ export default function Onboarding() {
 
   if (step==='checking'&&signedOut&&!isSignedIn) return <main className="onboardingPage"><header className="onboardingNav"><Link className="brand" href="/"><span className="brandMark"><img src="/favicon.svg" alt=""/></span>Rentia</Link><span>Primeros pasos</span></header><SignedOutCard/></main>;
 
-  if (step==='checking') return <main className="onboardingPage"><header className="onboardingNav"><Link className="brand" href="/"><span className="brandMark"><img src="/favicon.svg" alt=""/></span>Rentia</Link><span>Preparando tu espacio de trabajo</span></header><section className="onboardingShell onboardingChecking">{!error&&<span className="onboardingSpinner"/>}<h2>{error?'No pudimos preparar tu cuenta':'Preparando tu cuenta…'}</h2>{error&&<><p className="formError" role="alert">{error}</p><button type="button" className="button" onClick={()=>setAttempt(current=>current+1)}>Reintentar</button><Link className="outline" href="/ingresar">Volver al ingreso</Link></>}</section></main>;
+  if (step==='checking') return <main className="onboardingPage"><header className="onboardingNav"><Link className="brand" href="/"><span className="brandMark"><img src="/favicon.svg" alt=""/></span>Rentia</Link><span>Preparando tu espacio de trabajo</span></header>{error?<StatusCard tone="error" tag="ALGO SE TRABÓ" title="No pudimos terminar de preparar tu cuenta" text={<>{error} No es tu culpa y tus datos están a salvo.</>} actions={<><button type="button" className="signedOutPrimary" onClick={()=>setAttempt(current=>current+1)}>Reintentar</button><Link className="signedOutSecondary" href="/ingresar">Volver al ingreso</Link></>} note={<>Si sigue pasando, escribinos a <a href="mailto:hola@rentiaapp.com">hola@rentiaapp.com</a> y lo resolvemos.</>}/>:<StatusCard busy tag="PREPARANDO TU ESPACIO" title="Estamos armando tu cuenta" text="Tarda unos segundos. Después te pedimos el nombre de tu tienda y listo."/>}</main>;
 
   const progress=step==='store'?1:step==='channels'?2:3;
 

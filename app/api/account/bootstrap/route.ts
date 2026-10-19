@@ -51,7 +51,6 @@ async function bootstrap(request:Request) {
   const organization=await client.organizations.createOrganization({
     name:storeName,
     createdBy:userId,
-    maxAllowedMemberships:25,
     privateMetadata:{storeUserId},
   });
 
