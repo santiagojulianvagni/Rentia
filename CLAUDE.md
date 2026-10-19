@@ -16,7 +16,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 - Next.js 16.4 (App Router), React 19, TypeScript. Clerk (organizaciones: una por tienda; hoy instancia de **desarrollo**). Postgres en Neon.
 - Dominio `rentiaapp.com` (comprado en Hostinger, DNS ahí): `www.rentiaapp.com` es el principal y `rentiaapp.com` redirige; `rentia-ruby.vercel.app` sigue andando. Mail de contacto `hola@rentiaapp.com` (Hostinger), cargado en Vercel como `NEXT_PUBLIC_RENTIA_CONTACT_EMAIL`.
 - Vercel, plan Hobby, proyecto `nexo-6cb9/rentia`. Las funciones corren en `gru1` (San Pablo), igual que la base. Se publica solo con cada push a `main`.
-- `vercel-build` corre las migraciones de `migrations/` (la próxima es `0012_…`) y después compila.
+- `vercel-build` corre las migraciones de `migrations/` (la próxima es `0013_…`) y después compila.
 
 ## Código
 
@@ -24,7 +24,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 - Sin controles genéricos del navegador: usar `RpSelect`, `RpDate`, `confirmDialog` y botones propios.
 - Cálculos puros en `lib/` con pruebas en `tests/*.test.mjs` (Node test runner y PGlite): `campaign-profit`, `alerts`, `achievements`, `records`, `cashflow`. La lógica nueva va en `lib/` y lleva su prueba.
 - Las rutas de API usan `route()` de `server/http/route.ts`: sesión, rol, origen, validación con zod y registro de errores en `error_reports`. Los archivos `route.ts` solo pueden exportar los métodos HTTP.
-- `tests/scaling.test.mjs` cuenta las tablas (hoy 37): actualizarlo al agregar una.
+- `tests/scaling.test.mjs` cuenta las tablas (hoy 38): actualizarlo al agregar una.
 - Ojo al editar con scripts de Node: en `String.replace` los patrones `$'` y `` $` `` son especiales.
 
 ## Cómo publicar
@@ -53,6 +53,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 - 19/10: UTMs y nombres (Publicidad → pestaña "UTMs y nombres", `?section=publicidad&ads=utm`): generador de parámetros de URL para Meta con nombres dinámicos, regla de nombres de campañas (tabla `ad_naming_rules`), revisión de anuncios activos leyendo Meta con ads_read (`fetchActiveMetaAds` en `lib/meta.ts`, lógica en `lib/utm.ts`) y links con UTMs para otros canales. Poner las UTMs automáticamente en Meta necesita ads_management (revisión de Meta + SRL).
 - 19/10: Clientes (reemplaza "Lifetime Value"): nuevos/recurrentes, provincias, ciudades, pagos, cuotas, envíos, canal y mapa de días/horas (`lib/customer-insights.ts`, `/api/insights/customers`). Las órdenes de Tiendanube guardan `customer_key` (hash anónimo, `lib/order-customer.ts`), provincia, ciudad, envío y storefront; los productos, `categories`. `IMPORT_VERSION` pasó a 10: la próxima sincronización reimporta 12 meses una vez. Mercado Libre todavía no trae datos del comprador.
 - 19/10: Productos con resumen por categoría que filtra la tabla (`lib/categories.ts`); Cashflow con "Objetivo del mes" (`goalPlan` en `lib/cashflow.ts`); gráfico del resumen con selector Día/Semana/Mes.
+- 19/10: Carritos abandonados (sección `carritos`): tabla `abandoned_checkouts` sin datos de contacto, se leen de Tiendanube (`GET /checkouts`, permiso read_orders) en cada conciliación (`syncAbandonedCheckouts`), resumen en `lib/abandoned-carts.ts`. Política de privacidad actualizada (`PRIVACY_UPDATED`) para describir los datos de Clientes y carritos; él tiene que revisarla.
 
 ## Pendiente
 

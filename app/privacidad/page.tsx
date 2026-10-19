@@ -1,16 +1,16 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import LegalPage from '../../components/site/legal-page';
-import { LEGAL, LEGAL_UPDATED } from '../../lib/legal';
+import { LEGAL, PRIVACY_UPDATED } from '../../lib/legal';
 import '../landing-v2.css';
 
 export const metadata: Metadata = { title: 'Política de privacidad — Rentia', description: 'Qué datos usa Rentia, para qué, con quién se comparten y cómo pedir que los borremos.' };
 
 export default function PrivacyPage() {
-  return <LegalPage eyebrow="Política de privacidad" title="Tus datos, cuidados y bajo tu control." updated={LEGAL_UPDATED}
+  return <LegalPage eyebrow="Política de privacidad" title="Tus datos, cuidados y bajo tu control." updated={PRIVACY_UPDATED}
     intro="Rentia necesita leer los datos de tu tienda para calcular tu ganancia. Acá contamos qué datos usamos, para qué y cómo podés pedir que los borremos."
     sections={[
-      { id: 'que', title: 'Qué datos usamos', body: <><p><b>De tu cuenta:</b> nombre, email, foto de perfil y los datos de las personas que invitás a tu equipo.</p><p><b>De tu tienda:</b> órdenes, productos, stock, costos, envíos, comisiones, cargos de Mercado Libre y datos de tus campañas publicitarias, según las conexiones que autorices.</p><p><b>De tus clientes:</b> solo los datos de las órdenes que las plataformas informan y que hacen falta para calcular la rentabilidad. No los usamos para contactarlos ni para otros fines.</p></> },
+      { id: 'que', title: 'Qué datos usamos', body: <><p><b>De tu cuenta:</b> nombre, email, foto de perfil y los datos de las personas que invitás a tu equipo.</p><p><b>De tu tienda:</b> órdenes, productos, stock, costos, envíos, comisiones, cargos de Mercado Libre y datos de tus campañas publicitarias, según las conexiones que autorices.</p><p><b>De tus clientes:</b> solo los datos de las órdenes que las plataformas informan y que hacen falta para calcular la rentabilidad y armar las estadísticas de tus ventas: provincia y ciudad de entrega, forma de envío y de pago, y un código anónimo que permite saber si alguien volvió a comprar, sin guardar su nombre ni su email para eso. De los carritos abandonados guardamos solo la fecha, el importe y los productos, sin datos de contacto. No usamos estos datos para contactar a tus clientes ni para otros fines.</p></> },
       { id: 'para', title: 'Para qué los usamos', body: <p>Para prestarte el servicio: calcular tu ganancia, mostrarte informes, enviarte avisos sobre tu cuenta y cobrarte el plan que elijas. No vendemos tus datos ni los usamos para publicidad de terceros.</p> },
       { id: 'quien', title: 'Con quién los compartimos', body: <p>Solo con proveedores que necesitamos para funcionar y que tratan los datos por nuestra cuenta: Vercel (servidores), Neon (base de datos), Clerk (inicio de sesión) y, cuando estén activos los cobros, Mercado Pago. También nos comunicamos con Tiendanube, Mercado Libre y Meta para leer los datos que autorizaste.</p> },
       { id: 'seguridad', title: 'Cómo los protegemos', body: <p>Las conexiones viajan cifradas. Los accesos a tus plataformas se guardan cifrados y nunca pedimos sus contraseñas. Cada persona de tu equipo entra con su propia cuenta y los permisos se verifican en el servidor.</p> },

@@ -1043,3 +1043,26 @@ export async function getCustomerOrders(userId:string,since:string,until:string)
   const str=(value:unknown)=>value===null||value===undefined||value===''?null:String(value);
   return rows.results.map(row=>({provider:String(row.provider),customerKey:str(row.customer_key),firstOrderAt:str(row.first_order_at),province:str(row.ship_province),city:str(row.ship_city),shippingMethod:str(row.shipping_method),paymentMethod:str(row.payment_method),paymentType:str(row.payment_type),installments:row.payment_installments===null||row.payment_installments===undefined?null:Number(row.payment_installments),createdAt:String(row.source_created_at),total:Number(row.total||0),storefront:str(row.storefront)}));
 }
+
+// Carritos abandonados (sin datos de contacto). Un carrito ya guardado se actualiza si cambia.
+export async function upsertAbandonedCarts(userId:string,provider:string,carts:Array<{externalId:string;createdAt:string;completedAt:string|null;total:number;currency:string;units:number;items:unknown[]}>) {
+  if(!carts.length)return;
+  const now=new Date().toISOString();
+  const statements:Statement[]=carts.map(cart=>database().prepare('INSERT INTO abandoned_checkouts (user_id,provider,external_id,created_at,completed_at,total,currency,units,items_json,synced_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,provider,external_id) DO UPDATE SET completed_at=excluded.completed_at,total=excluded.total,units=excluded.units,items_json=excluded.items_json,synced_at=excluded.synced_at')
+    .bind(userId,provider,cart.externalId,cart.createdAt,cart.completedAt,cart.total,cart.currency,cart.units,JSON.stringify(cart.items),now));
+  await runInChunks(statements);
+}
+
+export async function getAbandonedCarts(userId:string,since:string,until:string) {
+  const [carts,orders]=await Promise.all([
+    database().prepare('SELECT external_id,created_at,completed_at,total,currency,units,items_json FROM abandoned_checkouts WHERE user_id=? AND created_at>=? AND created_at<? ORDER BY created_at LIMIT 50000').bind(userId,since,until).all<Record<string,unknown>>(),
+    database().prepare("SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND provider='tiendanube' AND source_created_at>=? AND source_created_at<? AND payment_status='paid' AND status!='cancelled'").bind(userId,since,until).first<{total:number}>(),
+  ]);
+  const parse=(value:unknown)=>{try{const items=JSON.parse(String(value)) as unknown;return Array.isArray(items)?items:[];}catch{return [];}};
+  return {carts:carts.results.map(row=>({externalId:String(row.external_id),createdAt:String(row.created_at),completedAt:row.completed_at?String(row.completed_at):null,total:Number(row.total||0),currency:String(row.currency||'ARS'),units:Number(row.units||0),items:parse(row.items_json)})),paidOrders:Number(orders?.total||0)};
+}
+
+export async function abandonedCartsSyncedAt(userId:string) {
+  const row=await database().prepare("SELECT MAX(synced_at) AS synced_at FROM abandoned_checkouts WHERE user_id=?").bind(userId).first<{synced_at:string|null}>();
+  return row?.synced_at||null;
+}

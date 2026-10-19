@@ -8,3 +8,5 @@ export const LEGAL={
 };
 
 export const LEGAL_UPDATED='12 de octubre de 2026';
+// La política de privacidad se actualizó aparte: datos para Clientes y carritos abandonados.
+export const PRIVACY_UPDATED='19 de octubre de 2026';

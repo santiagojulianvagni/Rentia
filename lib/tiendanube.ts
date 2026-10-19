@@ -3,6 +3,8 @@ import { archiveProduct, claimWebhookEvent, countOrdersAwaitingSourceCommission,
 import { decryptToken } from './token-crypto';
 import { merchantShippingCost } from './tiendanube-shipping';
 import { tiendanubeCategories, tiendanubeOrderExtras } from './order-customer';
+import { normalizeTiendanubeCheckout, type AbandonedCart } from './abandoned-carts';
+import { upsertAbandonedCarts } from '../db/database';
 import { merchantCommissionCost } from './tiendanube-commissions';
 import { tiendanubeFetch, tiendanubeRetryDelay } from './tiendanube-http';
 import {claimImportJob,checkpointImportJob,releaseImportJob,markSyncPending,recoverableSkippedOrders,forgetSkippedOrder} from '../db/database';
@@ -382,6 +384,8 @@ export async function reconcileTiendanube(userId:string,requestUrl:string,trigge
     try { await ensureTiendanubeWebhooksForUser(userId,requestUrl); }
     catch (error) { automatic=false;automaticError=error instanceof Error?error.message:'No pudimos activar los webhooks'; }
     const sync=await syncTiendanube(userId,triggerSource!=='manual');
+    // Los carritos no frenan la conciliación: si Tiendanube falla, se reintentan en la próxima vuelta.
+    await syncAbandonedCheckouts(userId).catch(()=>undefined);
     const recoveredOrders=await recoverSkippedTiendanubeOrders(userId).catch(()=>0);
     const summary={...sync,retry,automatic,automaticError,recoveredOrders};
     await finishReconciliationRun(runId,sync.pending?'pending':'success',summary);
@@ -478,4 +482,23 @@ export async function recoverSkippedTiendanubeOrders(userId:string) {
     recovered++;
   }
   return recovered;
+}
+
+// Carritos abandonados de los últimos 30 días (lo que Tiendanube deja consultar). Se guardan
+// sin datos de contacto; con el permiso read_orders que la app ya tiene.
+export async function syncAbandonedCheckouts(userId:string) {
+  const integration=await getIntegrationCredentials(userId,'tiendanube');
+  const key=runtime().TOKEN_ENCRYPTION_KEY;
+  if(!integration||!key)return 0;
+  const token=await decryptToken(integration.encrypted_access_token,integration.token_iv,key);
+  const since=new Date(Date.now()-30*24*60*60*1000).toISOString();
+  let saved=0;
+  for(let page=1;page<=20;page++) {
+    const rows=await fetchImportPage(integration.external_store_id,token,`checkouts?${new URLSearchParams({created_at_min:since,per_page:'200',page:String(page)})}`);
+    const carts=rows.map(normalizeTiendanubeCheckout).filter((cart):cart is AbandonedCart=>Boolean(cart));
+    await upsertAbandonedCarts(userId,'tiendanube',carts);
+    saved+=carts.length;
+    if(rows.length<200)break;
+  }
+  return saved;
 }
