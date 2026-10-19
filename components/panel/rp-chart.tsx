@@ -34,17 +34,18 @@ export default function RpChart({data,valueKey,secondKey=null,type='area',color=
   const vals=data.map(point=>Number(point[valueKey]||0));
   const sec=secondKey?data.map(point=>Number(point[secondKey]||0)):null;
   const max=Math.max(1,...vals,...(sec||[]))*1.12;
-  const x=(index:number)=>P.l+(W-P.l-P.r)*(data.length<=1?.5:index/(data.length-1));
+  const slot=(W-P.l-P.r)/Math.max(1,data.length);
+  // Las barras van en el centro de su espacio (no sobre el borde) para no salirse con pocos datos.
+  const x=(index:number)=>type==='bar'?P.l+slot*(index+.5):P.l+(W-P.l-P.r)*(data.length<=1?.5:index/(data.length-1));
   const y=(value:number)=>H-P.b-(H-P.t-P.b)*Math.max(0,value)/max;
   const path=(values:number[])=>values.map((value,index)=>`${index?'L':'M'}${x(index).toFixed(1)} ${y(value).toFixed(1)}`).join(' ');
   const axis=axisFormat||format;
   const step=Math.max(1,Math.ceil(data.length/Math.max(3,Math.floor(W/90))));
-  const slot=(W-P.l-P.r)/Math.max(1,data.length);
-  const barWidth=Math.max(3,slot*(sec?.38:.6));
+  const barWidth=Math.min(sec?28:48,Math.max(3,slot*(sec?.38:.6)));
   const move=(event:React.MouseEvent<SVGSVGElement>)=>{
     if(!data.length)return;
     const rect=event.currentTarget.getBoundingClientRect();
-    const index=Math.round((event.clientX-rect.left-P.l)/(W-P.l-P.r)*(data.length-1));
+    const index=type==='bar'?Math.floor((event.clientX-rect.left-P.l)/slot):Math.round((event.clientX-rect.left-P.l)/(W-P.l-P.r)*(data.length-1));
     setHover(Math.max(0,Math.min(data.length-1,index)));
   };
   const active=hover===null?null:data[hover];

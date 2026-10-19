@@ -16,6 +16,7 @@ test('Tiendanube orders keep only an anonymous customer code plus where and how 
   assert.equal(tiendanubeOrderExtras({shipping_pickup_type:'pickup'}).shippingMethod,'Retiro en el local');
   assert.equal(tiendanubeOrderExtras({}).customerKey,null);
   assert.equal(placeName('ciudad autónoma de buenos aires'),'Ciudad Autónoma de Buenos Aires');
+  assert.equal(placeName('caba (capital federal)'),'CABA (Capital Federal)');
   assert.deepEqual(tiendanubeCategories({categories:[{name:{es:'Remeras'}},{name:{es:'Verano'}},{name:{es:'Remeras'}}]}),['Remeras','Verano']);
 });
 

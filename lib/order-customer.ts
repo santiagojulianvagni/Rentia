@@ -12,7 +12,8 @@ const translated=(value:unknown)=>{
 };
 // "BUENOS AIRES" y "Buenos Aires" son la misma provincia.
 const SMALL_WORDS=new Set(['de','del','la','las','los','y','el']);
-export const placeName=(value:string)=>value.toLocaleLowerCase('es-AR').replace(/\s+/g,' ').trim().split(' ').map((word,index)=>index>0&&SMALL_WORDS.has(word)?word:word.charAt(0).toLocaleUpperCase('es-AR')+word.slice(1)).join(' ');
+const ACRONYMS=new Set(['caba','cp']);
+export const placeName=(value:string)=>value.toLocaleLowerCase('es-AR').replace(/\s+/g,' ').trim().split(' ').map((word,index)=>ACRONYMS.has(word.replace(/[^a-z]/g,''))?word.toLocaleUpperCase('es-AR'):index>0&&SMALL_WORDS.has(word)?word:word.replace(/^(\P{L}*)(\p{L})/u,(_,before:string,letter:string)=>before+letter.toLocaleUpperCase('es-AR'))).join(' ');
 
 export function customerKey(provider:string,identity:string) {
   const value=identity.trim().toLowerCase();

@@ -37,3 +37,14 @@ test('the contact for recovering a cart and a ready WhatsApp message',async()=>{
   assert.equal(whatsappLink('123',''),null);
   assert.match(recoveryMessage('Naturae','Ana Pérez','https://t.co/x'),/^¡Hola Ana! Te escribimos de Naturae\..*https:\/\/t\.co\/x/);
 });
+
+test('contacted carts go last, and a later payment counts as recovered after the message',()=>{
+  const base={currency:'ARS',units:1,items:[]};
+  const summary=cartSummary([
+    {...base,externalId:'a',createdAt:'2026-10-10T10:00:00Z',completedAt:null,total:1000,contactedAt:'2026-10-10T12:00:00Z',contactedBy:'Santi',contactedVia:'whatsapp'},
+    {...base,externalId:'b',createdAt:'2026-10-09T10:00:00Z',completedAt:null,total:2000},
+    {...base,externalId:'c',createdAt:'2026-10-08T10:00:00Z',completedAt:'2026-10-08T20:00:00Z',total:3000,contactedAt:'2026-10-08T12:00:00Z'},
+  ],10);
+  assert.deepEqual(summary.recent.map(cart=>cart.externalId),['b','a']);
+  assert.deepEqual([summary.contacted,summary.pendingContact,summary.recoveredAfterContact,summary.recoveredValue],[2,1,1,3000]);
+});

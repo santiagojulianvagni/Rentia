@@ -1055,11 +1055,11 @@ export async function upsertAbandonedCarts(userId:string,provider:string,carts:A
 
 export async function getAbandonedCarts(userId:string,since:string,until:string) {
   const [carts,orders]=await Promise.all([
-    database().prepare('SELECT external_id,created_at,completed_at,total,currency,units,items_json,contact_encrypted,contact_iv FROM abandoned_checkouts WHERE user_id=? AND created_at>=? AND created_at<? ORDER BY created_at LIMIT 50000').bind(userId,since,until).all<Record<string,unknown>>(),
+    database().prepare('SELECT external_id,created_at,completed_at,total,currency,units,items_json,contact_encrypted,contact_iv,contacted_at,contacted_by,contacted_via FROM abandoned_checkouts WHERE user_id=? AND created_at>=? AND created_at<? ORDER BY created_at LIMIT 50000').bind(userId,since,until).all<Record<string,unknown>>(),
     database().prepare("SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND provider='tiendanube' AND source_created_at>=? AND source_created_at<? AND payment_status='paid' AND status!='cancelled'").bind(userId,since,until).first<{total:number}>(),
   ]);
   const parse=(value:unknown)=>{try{const items=JSON.parse(String(value)) as unknown;return Array.isArray(items)?items:[];}catch{return [];}};
-  return {carts:carts.results.map(row=>({externalId:String(row.external_id),createdAt:String(row.created_at),completedAt:row.completed_at?String(row.completed_at):null,total:Number(row.total||0),currency:String(row.currency||'ARS'),units:Number(row.units||0),items:parse(row.items_json),contactEncrypted:row.contact_encrypted?String(row.contact_encrypted):null,contactIv:row.contact_iv?String(row.contact_iv):null})),paidOrders:Number(orders?.total||0)};
+  return {carts:carts.results.map(row=>({externalId:String(row.external_id),createdAt:String(row.created_at),completedAt:row.completed_at?String(row.completed_at):null,total:Number(row.total||0),currency:String(row.currency||'ARS'),units:Number(row.units||0),items:parse(row.items_json),contactEncrypted:row.contact_encrypted?String(row.contact_encrypted):null,contactIv:row.contact_iv?String(row.contact_iv):null,contactedAt:row.contacted_at?String(row.contacted_at):null,contactedBy:row.contacted_by?String(row.contacted_by):null,contactedVia:row.contacted_via?String(row.contacted_via):null})),paidOrders:Number(orders?.total||0)};
 }
 
 export async function abandonedCartsSyncedAt(userId:string) {
@@ -1071,4 +1071,13 @@ export async function abandonedCartsSyncedAt(userId:string) {
 export async function purgeOldCartContacts(userId:string,now=Date.now()) {
   const cutoff=new Date(now-90*24*60*60*1000).toISOString();
   await database().prepare('UPDATE abandoned_checkouts SET contact_encrypted=NULL,contact_iv=NULL WHERE user_id=? AND created_at<? AND contact_encrypted IS NOT NULL').bind(userId,cutoff).run();
+}
+
+// Marca (o desmarca, con via null) que alguien del equipo le escribió al comprador del carrito.
+export async function markCartContacted(userId:string,externalId:string,by:string,via:string|null) {
+  const row=await database().prepare(via
+    ?'UPDATE abandoned_checkouts SET contacted_at=?,contacted_by=?,contacted_via=? WHERE user_id=? AND external_id=? RETURNING external_id'
+    :'UPDATE abandoned_checkouts SET contacted_at=NULL,contacted_by=NULL,contacted_via=NULL WHERE user_id=? AND external_id=? RETURNING external_id')
+    .bind(...(via?[new Date().toISOString(),by,via,userId,externalId]:[userId,externalId])).first<{external_id:string}>();
+  return Boolean(row);
 }

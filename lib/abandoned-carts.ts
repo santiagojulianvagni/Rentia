@@ -6,7 +6,7 @@ const text=(value:unknown)=>value===null||value===undefined?'':String(value).tri
 const number=(value:unknown)=>{const parsed=Number(value);return Number.isFinite(parsed)?parsed:0;};
 
 export type CartItem={name:string;quantity:number;price:number;productId:string|null;variantId:string|null};
-export type AbandonedCart={externalId:string;createdAt:string;completedAt:string|null;total:number;currency:string;units:number;items:CartItem[]};
+export type AbandonedCart={externalId:string;createdAt:string;completedAt:string|null;total:number;currency:string;units:number;items:CartItem[];contactedAt?:string|null;contactedBy?:string|null;contactedVia?:string|null};
 
 export function normalizeTiendanubeCheckout(row:UnknownRecord):AbandonedCart|null {
   const externalId=text(row.id);
@@ -36,14 +36,22 @@ export function cartSummary(carts:AbandonedCart[],paidOrders:number) {
   }
   const days=new Map<string,{date:string;carts:number;value:number}>();
   for(const cart of open){const date=cart.createdAt.slice(0,10);const day=days.get(date)||{date,carts:0,value:0};day.carts++;day.value+=cart.total;days.set(date,day);}
+  const contacted=carts.filter(cart=>cart.contactedAt);
+  // Recuperado después del mensaje: se pagó más tarde que el contacto.
+  const recoveredAfterContact=contacted.filter(cart=>cart.completedAt&&cart.completedAt>=cart.contactedAt!);
   return {
     count:open.length,value,average:open.length?value/open.length:0,
     recovered:carts.length-open.length,
+    contacted:contacted.length,
+    recoveredAfterContact:recoveredAfterContact.length,
+    recoveredValue:recoveredAfterContact.reduce((sum,cart)=>sum+cart.total,0),
+    pendingContact:open.filter(cart=>!cart.contactedAt).length,
     // De cada 100 compras que empezaron con datos de contacto, cuántas no se terminaron.
     rate:open.length+paidOrders?open.length/(open.length+paidOrders):0,
     topProducts:[...products.values()].sort((a,b)=>b.carts-a.carts||b.value-a.value).slice(0,10),
     daily:[...days.values()].sort((a,b)=>a.date.localeCompare(b.date)),
-    recent:open.slice().sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,20),
+    // Primero los que falta contactar; los contactados, después.
+    recent:open.slice().sort((a,b)=>Number(Boolean(a.contactedAt))-Number(Boolean(b.contactedAt))||b.createdAt.localeCompare(a.createdAt)).slice(0,40),
   };
 }
 
