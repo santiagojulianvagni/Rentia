@@ -514,3 +514,42 @@
 /* Registro/ingreso con sesión ya iniciada: aviso en lugar de una tarjeta vacía. */
 .authContinue{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#07111f;color:#f4f8fb;font-size:18px}
 .authContinue .button{font-size:14px}
+
+/* Sesión cerrada: logo que se arma y métricas que flotan, en lugar de un aviso seco. */
+.signedOut{display:flex;flex-direction:column;align-items:center;max-width:520px;margin:0 auto;padding:56px 24px 64px;text-align:center}
+.signedOutArt{position:relative;width:300px;height:190px;margin-bottom:22px}
+.signedOutGlow{position:absolute;left:50%;top:50%;width:220px;height:220px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(33,212,194,.22),rgba(33,212,194,0) 70%);animation:signedOutPulse 4s ease-in-out infinite}
+.signedOutLogo{position:absolute;left:50%;top:50%;display:grid;grid-template-columns:repeat(2,34px);gap:8px;transform:translate(-50%,-50%)}
+.signedOutLogo i{display:block;width:34px;height:34px;border-radius:10px;background:#3b8cff;animation:signedOutBlock .7s cubic-bezier(.2,.9,.3,1.3) both}
+.signedOutLogo i:nth-child(1){animation-delay:.05s}
+.signedOutLogo i:nth-child(2){width:24px;height:24px;margin:10px 0 0 0;background:#1f6fe0;animation-delay:.18s}
+.signedOutLogo i:nth-child(3){width:24px;height:24px;margin:0 0 0 10px;background:#1f6fe0;animation-delay:.31s}
+.signedOutLogo i:nth-child(4){background:#6fb4ff;animation-delay:.44s}
+.signedOutChip{position:absolute;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid #264560;border-radius:12px;background:rgba(13,26,42,.92);color:#9bb0c1;font-size:12px;white-space:nowrap;box-shadow:0 12px 30px rgba(0,0,0,.35);animation:signedOutIn .6s ease-out both,signedOutFloat 5s ease-in-out infinite}
+.signedOutChip b{color:#32d583;font-size:13px}
+.signedOutChip.c1{left:0;top:18px;animation-delay:.6s,1.2s}
+.signedOutChip.c2{right:0;top:58px;animation-delay:.8s,.2s}
+.signedOutChip.c3{left:24px;bottom:4px;animation-delay:1s,2.4s}
+.signedOutChip.c3 b{color:#21d4c2}
+.signedOutTag{color:#21d4c2;font-size:11px;font-weight:800;letter-spacing:.14em}
+.signedOut h1{margin:10px 0 10px;font-size:34px;line-height:1.1;letter-spacing:-.03em;color:#f2f7fb}
+.signedOut p{max-width:420px;margin:0 0 26px;color:#9bb0c1;font-size:16px;line-height:1.55}
+.signedOutActions{display:flex;gap:12px;justify-content:center;width:100%}
+.signedOutActions a{display:inline-flex;align-items:center;justify-content:center;min-width:180px;height:48px;padding:0 22px;border-radius:13px;font-size:15px;font-weight:700;text-decoration:none;transition:transform .2s,box-shadow .2s,border-color .2s}
+.signedOutPrimary{background:#21d4c2;color:#031513;box-shadow:0 10px 30px rgba(33,212,194,.25)}
+.signedOutPrimary:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(33,212,194,.35)}
+.signedOutSecondary{border:1px solid #2c4a63;color:#f2f7fb;background:rgba(255,255,255,.02)}
+.signedOutSecondary:hover{transform:translateY(-2px);border-color:#21d4c2}
+.signedOut small{margin-top:18px;color:#7890a5;font-size:13px}
+@keyframes signedOutBlock{from{opacity:0;transform:translateY(-26px) scale(.6) rotate(-12deg)}to{opacity:1;transform:none}}
+@keyframes signedOutIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes signedOutFloat{0%,100%{translate:0 0}50%{translate:0 -8px}}
+@keyframes signedOutPulse{0%,100%{opacity:.7;scale:1}50%{opacity:1;scale:1.08}}
+@media (max-width:560px){
+  .signedOut{padding-top:36px}
+  .signedOut h1{font-size:28px}
+  .signedOutActions{flex-direction:column}
+  .signedOutActions a{width:100%}
+  .signedOutArt{width:280px}
+}
+@media (prefers-reduced-motion:reduce){.signedOut *{animation:none!important}}

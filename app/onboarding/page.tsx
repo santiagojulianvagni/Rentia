@@ -4,6 +4,7 @@ import { useAuth, useClerk, useUser } from '@clerk/nextjs';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { onboardingRequest, OnboardingRequestError } from '../../lib/onboarding-request';
+import SignedOutCard from '../../components/signed-out-card';
 
 type Step='checking'|'store'|'channels'|'connections';
 type Channel='tiendanube'|'mercadolibre';
@@ -112,7 +113,7 @@ export default function Onboarding() {
     finally {setSaving(false);}
   }
 
-  if (step==='checking'&&signedOut&&!isSignedIn) return <main className="onboardingPage"><header className="onboardingNav"><Link className="brand" href="/"><span className="brandMark"><img src="/favicon.svg" alt=""/></span>Rentia</Link><span>Primeros pasos</span></header><section className="onboardingShell onboardingChecking"><h2>Iniciá sesión para seguir</h2><p className="onboardingLead">No encontramos una sesión activa en este navegador.</p><Link className="button" href="/ingresar">Ingresar</Link><Link className="outline" href="/registro">Crear una cuenta</Link></section></main>;
+  if (step==='checking'&&signedOut&&!isSignedIn) return <main className="onboardingPage"><header className="onboardingNav"><Link className="brand" href="/"><span className="brandMark"><img src="/favicon.svg" alt=""/></span>Rentia</Link><span>Primeros pasos</span></header><SignedOutCard/></main>;
 
   if (step==='checking') return <main className="onboardingPage"><header className="onboardingNav"><Link className="brand" href="/"><span className="brandMark"><img src="/favicon.svg" alt=""/></span>Rentia</Link><span>Preparando tu espacio de trabajo</span></header><section className="onboardingShell onboardingChecking">{!error&&<span className="onboardingSpinner"/>}<h2>{error?'No pudimos preparar tu cuenta':'Preparando tu cuenta…'}</h2>{error&&<><p className="formError" role="alert">{error}</p><button type="button" className="button" onClick={()=>setAttempt(current=>current+1)}>Reintentar</button><Link className="outline" href="/ingresar">Volver al ingreso</Link></>}</section></main>;
 
