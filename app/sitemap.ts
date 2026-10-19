@@ -3,7 +3,7 @@ import { landingProducts } from '../lib/landing-products';
 import { siteOrigin } from '../lib/site-origin';
 import { comparisons, guides } from '../lib/guides';
 
-const PAGES=['','/producto','/blog','/registro','/ingresar','/terminos','/privacidad','/baja'];
+const PAGES=['','/en','/pt','/producto','/blog','/registro','/ingresar','/terminos','/privacidad','/baja'];
 
 export default function sitemap():MetadataRoute.Sitemap {
   const origin=siteOrigin();

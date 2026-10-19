@@ -3,7 +3,8 @@ import type { CSSProperties } from 'react';
 import { ArrowRight, Check, ShieldCheck } from 'lucide-react';
 import { findLandingProduct, landingProducts } from '../../lib/landing-products';
 import { productIcons } from './product-icons';
-import ProductScene, { sceneTabs } from './product-scenes';
+import ProductScene, { sceneOrder } from './product-scenes';
+import { landingCopy } from '../../lib/landing-i18n';
 import SiteHeader from './site-header';
 import SiteFooter from './site-footer';
 import SiteEffects from './site-effects';
@@ -39,7 +40,7 @@ export default function ProductDetail({ slug }: { slug: string }) {
         </div>
         <div className="fadeUp" style={delay(350)}>
           <div className="sceneCard" data-autoscene data-tilt>
-            <div className="stageInner"><div className="stageBar"><i/><i/><i/><span>{sceneTabs[product.kind]} · ejemplo</span></div><ProductScene kind={product.kind} uid="hero"/></div>
+            <div className="stageInner"><div className="stageBar"><i/><i/><i/><span>{landingCopy.es.tour.tabs[sceneOrder.indexOf(product.kind)]} · ejemplo</span></div><ProductScene kind={product.kind} uid="hero"/></div>
           </div>
           <p className="sceneNote">Vista ilustrativa. No son resultados de una tienda real.</p>
         </div>

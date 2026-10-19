@@ -662,3 +662,16 @@ html{scroll-behavior:smooth}
   .rl .compareRow .compareRentia:before{color:var(--cyan)}
   .rl .guideCta .button{width:100%}
 }
+
+/* Selector de idioma */
+.rl .langPick{position:relative}
+.rl .langPick summary{display:flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--line2);border-radius:10px;color:#c6d4df;font-size:13px;font-weight:700;cursor:pointer;list-style:none;transition:border-color .2s,color .2s}
+.rl .langPick summary::-webkit-details-marker{display:none}
+.rl .langPick summary:hover,.rl .langPick[open] summary{border-color:var(--cyan);color:var(--text)}
+.rl .langPick summary svg{width:15px;height:15px}
+.rl .langMenu{position:absolute;right:0;top:calc(100% + 8px);z-index:60;display:grid;min-width:150px;padding:6px;border:1px solid var(--line2);border-radius:12px;background:#0c1828;box-shadow:var(--shadow)}
+.rl .langMenu a{padding:9px 12px;border-radius:8px;color:var(--muted);font-weight:600}
+.rl .langMenu a:hover{background:#112033;color:var(--text)}
+.rl .langMenu a[aria-current]{color:var(--cyan)}
+.rl .availability{display:flex;gap:8px;align-items:flex-start;max-width:520px;margin-top:18px;color:var(--dim);font-size:13.5px;line-height:1.5}
+@media (max-width:560px){.rl .navActions{gap:10px}.rl .langPick summary{padding:6px 8px}}

@@ -71,7 +71,7 @@ export default function SiteEffects() {
       const start = performance.now(), duration = reduce ? 0 : 1600;
       const tick = (now: number) => {
         const progressValue = duration ? Math.min(1, (now - start) / duration) : 1;
-        counter.textContent = prefix + Math.round(target * (1 - Math.pow(1 - progressValue, 3))).toLocaleString('es-AR') + suffix;
+        counter.textContent = prefix + Math.round(target * (1 - Math.pow(1 - progressValue, 3))).toLocaleString(counter.closest('[lang]')?.getAttribute('lang') === 'en' ? 'en-US' : 'es-AR') + suffix;
         if (progressValue < 1) requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
