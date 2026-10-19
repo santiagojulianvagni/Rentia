@@ -23,6 +23,7 @@ export default function SiteHeader({ home = false }: { home?: boolean }) {
         <a href={`${anchor}#integraciones`}>Integraciones</a>
         <a href={`${anchor}#precios`}>Precios</a>
         <a href={`${anchor}#faq`}>FAQ</a>
+        <Link href="/blog">Blog</Link>
       </nav>
       <div className="navActions"><Link className="login" href="/ingresar">Ingresar</Link><Link className="button small" href="/registro">Crear cuenta</Link></div>
     </div>

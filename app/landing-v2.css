@@ -432,7 +432,7 @@ html{scroll-behavior:smooth}
 /* Footer */
 .rl footer{padding:36px 0 48px;border-top:1px solid var(--line);color:var(--dim);font-size:14px}
 .rl .footIn{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
-.rl footer nav{display:flex;gap:24px}
+.rl footer nav{display:flex;flex-wrap:wrap;gap:12px 24px}
 .rl footer a:hover{color:var(--text)}
 
 
@@ -599,4 +599,66 @@ html{scroll-behavior:smooth}
   .rl .hub b{font-size:17px}
   .rl .hub span{margin:8px 0;font-size:11px;line-height:1.45}
   .rl .hub small{padding-top:8px;font-size:10px;line-height:1.35}
+}
+
+/* Blog y comparaciones */
+.rl.guidePage .legalHero{padding-bottom:30px}
+.rl .guideBack{display:inline-block;margin-bottom:18px;color:var(--muted);font-size:14px}
+.rl .guideBack:hover{color:var(--cyan)}
+.rl .guideList{padding-bottom:56px}
+.rl .guideListTitle{margin:12px 0 22px;font-size:clamp(26px,3.4vw,36px);letter-spacing:-.03em}
+.rl .guideGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.rl .guideCard{display:flex;flex-direction:column;gap:10px;padding:24px;border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(170deg,var(--surface),var(--surface2));transition:border-color .25s,transform .25s var(--ease)}
+.rl .guideCard:hover{border-color:rgba(33,212,194,.55);transform:translateY(-3px)}
+.rl .guideCard small{color:var(--cyan);font-size:11px;font-weight:800;letter-spacing:.12em}
+.rl .guideCard b{font-size:18px;line-height:1.3;letter-spacing:-.01em}
+.rl .guideCard p{margin:0;color:var(--muted);font-size:14.5px;line-height:1.55}
+.rl .guideCard span{display:flex;align-items:center;gap:6px;margin-top:auto;padding-top:8px;color:var(--dim);font-size:13px}
+.rl .guideCard span svg{width:14px;height:14px;color:var(--cyan)}
+.rl .guideFormula{display:grid;gap:6px;margin:6px 0 16px;padding:16px 18px;border:1px solid var(--line2);border-radius:14px;background:#0b1727}
+.rl .guideFormula code{color:var(--cyan);font-family:var(--font-geist-mono),monospace;font-size:14.5px;line-height:1.6}
+.rl .guideFormula small{color:var(--dim);font-size:13px}
+.rl .guideTip{margin:6px 0 16px;padding:14px 18px;border-left:3px solid var(--amber);border-radius:0 12px 12px 0;background:rgba(245,196,81,.07)}
+.rl .guideTip b{color:var(--amber);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.rl .guideTip p{margin:4px 0 0}
+.rl .guideCta{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:24px 26px;border:1px solid rgba(33,212,194,.4);border-radius:20px;background:linear-gradient(160deg,rgba(33,212,194,.1),rgba(12,23,38,.6))}
+.rl .guideCta b{font-size:18px}
+.rl .guideCta p{margin:4px 0 0;color:var(--muted)}
+.rl .guideMore{padding-bottom:80px}
+.rl .guideMore .guideGrid{margin-top:16px}
+.rl .guideFaq{display:grid;gap:10px}
+.rl .guideFaq details{border:1px solid var(--line);border-radius:14px;background:var(--surface2)}
+.rl .guideFaq summary{padding:16px 18px;font-weight:700;cursor:pointer;list-style:none}
+.rl .guideFaq summary::-webkit-details-marker{display:none}
+.rl .guideFaq summary:after{content:"+";float:right;color:var(--cyan);font-weight:400}
+.rl .guideFaq details[open] summary:after{content:"−"}
+.rl .guideFaq details p{margin:0;padding:0 18px 16px}
+.rl .guideChecks{display:grid;gap:12px;margin:0;padding:0;list-style:none}
+.rl .guideChecks li{display:flex;gap:10px;color:#c8d6e2;font-size:15.5px;line-height:1.55}
+.rl .guideChecks svg{flex:0 0 18px;width:18px;height:18px;margin-top:2px;color:var(--cyan)}
+.rl .compareTable{display:grid;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--surface2)}
+.rl .compareRow{display:grid;grid-template-columns:1.1fr 1fr 1.2fr;border-top:1px solid var(--line)}
+.rl .compareRow>*{padding:16px 20px;font-size:15px;line-height:1.5}
+.rl .compareRow>span{color:var(--muted)}
+.rl .compareRow b{font-weight:700}
+.rl .compareRow .compareRentia{color:var(--text);background:rgba(33,212,194,.06)}
+.rl .compareHead{border-top:0;background:#0e1d2f}
+.rl .compareHead span{color:var(--dim);font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.rl .compareHead .compareRentia{display:flex;align-items:center;gap:8px;color:var(--cyan)}
+.rl .compareHead img{width:18px;height:18px}
+.rl .compareChoose{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:34px 0}
+.rl .compareChoose>div{padding:24px;border:1px solid var(--line);border-radius:20px;background:var(--surface2)}
+.rl .compareChoose .compareChooseRentia{border-color:rgba(33,212,194,.45);background:linear-gradient(160deg,rgba(33,212,194,.08),var(--surface2))}
+.rl .compareChoose h2{margin:0 0 16px;font-size:20px;letter-spacing:-.02em}
+.rl .compareBody{grid-template-columns:minmax(0,1fr)}
+@media (max-width:900px){.rl .guideGrid{grid-template-columns:1fr 1fr}}
+@media (max-width:700px){
+  .rl .guideGrid,.rl .compareChoose{grid-template-columns:1fr}
+  .rl .compareHead{display:none}
+  .rl .compareRow{grid-template-columns:1fr 1fr}
+  .rl .compareRow b{grid-column:1/-1;padding-bottom:4px}
+  .rl .compareRow>span{padding-top:4px;font-size:14px}
+  .rl .compareRow>span:before{content:attr(data-label);display:block;margin-bottom:4px;color:var(--dim);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+  .rl .compareRow .compareRentia:before{color:var(--cyan)}
+  .rl .guideCta .button{width:100%}
 }
