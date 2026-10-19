@@ -1081,3 +1081,10 @@ export async function markCartContacted(userId:string,externalId:string,by:strin
     .bind(...(via?[new Date().toISOString(),by,via,userId,externalId]:[userId,externalId])).first<{external_id:string}>();
   return Boolean(row);
 }
+
+// Todas las órdenes pagas con cliente identificado, para el valor de vida (LTV).
+export async function getLifetimeOrders(userId:string) {
+  const rows=await database().prepare("SELECT customer_key,source_created_at,total FROM orders WHERE user_id=? AND customer_key IS NOT NULL AND payment_status='paid' AND status!='cancelled' ORDER BY source_created_at LIMIT 300000")
+    .bind(userId).all<{customer_key:string;source_created_at:string;total:number}>();
+  return rows.results.map(row=>({customerKey:String(row.customer_key),createdAt:String(row.source_created_at),total:Number(row.total||0)}));
+}

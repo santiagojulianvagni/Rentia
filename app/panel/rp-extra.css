@@ -536,3 +536,15 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-storeHead h3{margin:0;font-size:20px;letter-spacing:-.02em}
 .p-root .p-storeBadge{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:13px;background:rgba(33,212,194,.12);color:var(--cyan)}
 .p-root .p-storeBadge svg{width:22px;height:22px}
+
+/* Valor de vida */
+.p-root .p-ltvCheck{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.p-root .p-ltvCheck>div{display:grid;gap:4px;padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--surface2)}
+.p-root .p-ltvCheck small{color:var(--muted);font-size:12.5px;font-weight:600}
+.p-root .p-ltvCheck b{font-size:22px;font-weight:600}
+.p-root .p-ltvVerdict{margin:12px 0 0;font-size:13.5px;font-weight:600}
+.p-root .p-card.p-tone-g .p-ltvVerdict{color:var(--green)}
+.p-root .p-card.p-tone-r .p-ltvVerdict{color:#ff8c99}
+.p-root .p-card.p-tone-g,.p-root .p-card.p-tone-r{color:inherit}
+.p-root .p-cohort td.p-cohortCell{background:rgba(33,212,194,var(--a));font-size:12px}
+@media (max-width:760px){.p-root .p-ltvCheck{grid-template-columns:1fr}}

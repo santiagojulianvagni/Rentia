@@ -21,7 +21,7 @@ import {ConnectionNotice,ConnectionStatus,ConnectionUpdatedAt} from '../../compo
 import {automaticSyncDue,connectionHealth} from '../../lib/connection-health';
 import {salesChannelLabel,orderReturnNeedsReview} from '../../lib/sales-channels';
 import { createContext, FormEvent, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { CalendarHeart, ShoppingBasket, Store, CalendarRange, Share2, Wallet, Mail, Receipt, RefreshCw, Printer, Trophy, ArrowRight, LogOut, PanelLeft, Search, ArrowLeftRight, BadgeDollarSign, Boxes, CalendarDays, ChevronDown, ChevronLeft, Coins, CreditCard, Download, FileChartColumn, GripVertical, Languages, LayoutDashboard, LayoutGrid, Menu, Megaphone, PackageSearch, Pencil, PlugZap, Plus, Settings2, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, TriangleAlert, UsersRound, X, type LucideIcon } from 'lucide-react';
+import { Repeat, CalendarHeart, ShoppingBasket, Store, CalendarRange, Share2, Wallet, Mail, Receipt, RefreshCw, Printer, Trophy, ArrowRight, LogOut, PanelLeft, Search, ArrowLeftRight, BadgeDollarSign, Boxes, CalendarDays, ChevronDown, ChevronLeft, Coins, CreditCard, Download, FileChartColumn, GripVertical, Languages, LayoutDashboard, LayoutGrid, Menu, Megaphone, PackageSearch, Pencil, PlugZap, Plus, Settings2, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, TriangleAlert, UsersRound, X, type LucideIcon } from 'lucide-react';
 import { inCategory } from '../../lib/categories';
 import RpChart from '../../components/panel/rp-chart';
 import SetupChecklist from '../../components/setup-checklist';
@@ -59,6 +59,7 @@ const WeeklySummary=dynamic(()=>import('../../components/panel/weekly-summary'),
 const UtmTools=dynamic(()=>import('../../components/panel/utm-tools'),{loading:sectionLoading});
 const CategorySummary=dynamic(()=>import('../../components/panel/category-summary'));
 const AbandonedCarts=dynamic(()=>import('../../components/panel/abandoned-carts'),{loading:sectionLoading});
+const LifetimeValue=dynamic(()=>import('../../components/panel/lifetime'),{loading:sectionLoading});
 const Customers=dynamic(()=>import('../../components/panel/customers'),{loading:sectionLoading});
 const SalesEvents=dynamic(()=>import('../../components/panel/sales-events'),{loading:sectionLoading});
 const CampaignProfit=dynamic(()=>import('../../components/panel/campaign-profit'),{loading:sectionLoading});
@@ -81,6 +82,7 @@ const operationSections:NavItem[]=[
   {id:'productos',label:'Productos',icon:PackageSearch},
   {id:'inventario',label:'Inventario',icon:Boxes},
   {id:'clientes',label:'Clientes',icon:UsersRound},
+  {id:'lifetime',label:'Lifetime Value',icon:Repeat},
   {id:'publicidad',label:'Publicidad',icon:Megaphone},
 ];
 const configurationSections:NavItem[]=[
@@ -874,7 +876,8 @@ function PanelApp() {
       :active==='productos'?<ProductAnalyticsSection rows={productAnalytics.filter(row=>!row.rentia_archived)} period={displayPeriod} syncing={syncing} onSync={()=>void runSync()}/>
       :active==='inventario'?<InventorySection rows={productAnalytics.filter(row=>!row.rentia_archived)} period={displayPeriod} syncing={syncing} onSync={()=>void runSync()}/>
       :active==='carritos'?<AbandonedCarts query={analyticsQuery(periodOptions.find(option=>option.label===period)?.days||30,customRange)} period={displayPeriod} money={money} tiendanubeConnected={Boolean(tiendanube)} onConnect={()=>selectSection('integraciones')}/>
-      :active==='clientes'||active==='lifetime'?<Customers query={analyticsQuery(periodOptions.find(option=>option.label===period)?.days||30,customRange)} period={displayPeriod} money={money}/>
+      :active==='lifetime'?<LifetimeValue query={analyticsQuery(periodOptions.find(option=>option.label===period)?.days||30,customRange)} period={displayPeriod} money={money} marginBeforeAds={dashboard?.metrics.revenue?dashboard.metrics.profitBeforeAds/dashboard.metrics.revenue:null} adSpend={dashboard?.metrics.totalAdSpend??dashboard?.metrics.adSpend??0}/>
+      :active==='clientes'?<Customers query={analyticsQuery(periodOptions.find(option=>option.label===period)?.days||30,customRange)} period={displayPeriod} money={money}/>
       :active==='publicidad'?<><div style={{marginBottom:18}}><div className="p-tabs" role="tablist" aria-label="Plataforma publicitaria" style={{display:'inline-flex'}}><button type="button" role="tab" aria-selected={advertisingTab==='ganancia'} className={advertisingTab==='ganancia'?'p-on':''} onClick={()=>setAdvertisingTab('ganancia')}>Ganancia por campaña</button><button type="button" role="tab" aria-selected={advertisingTab==='meta'} className={advertisingTab==='meta'?'p-on':''} onClick={()=>setAdvertisingTab('meta')}>Meta Ads</button><button type="button" role="tab" aria-selected={advertisingTab==='mercadolibre'} className={advertisingTab==='mercadolibre'?'p-on':''} onClick={()=>setAdvertisingTab('mercadolibre')}>Mercado Libre · Product Ads</button><button type="button" role="tab" aria-selected={advertisingTab==='utm'} className={advertisingTab==='utm'?'p-on':''} onClick={()=>setAdvertisingTab('utm')}>UTMs y nombres</button></div></div>{advertisingTab==='utm'?<UtmTools canManage={canManage} onConnect={()=>selectSection('integraciones')}/>:advertisingTab==='ganancia'?<CampaignProfit rows={campaignRows} money={money} metaMargin={campaignMarginsNow.meta} meliMargin={campaignMarginsNow.mercadolibre} metaComparable={Boolean(dashboard?.metrics.adSpendComparable)} meliComparable={Boolean(dashboard?.metrics.meliAdsComparable)} metaConnected={Boolean(dashboard?.ads.connected)} meliConnected={Boolean(productAdsState.data?.connected)} period={displayPeriod} onNavigate={selectSection}/>:advertisingTab==='mercadolibre'?<ProductAds state={productAdsState} canManage={canManage} money={money}/>:<AdvertisingSection connected={Boolean(meta)} data={adsData} dashboard={dashboard} period={displayPeriod} syncing={syncingMeta} message={metaMessage} onSync={()=>void runMetaSync()} onConnect={()=>selectSection('integraciones')} onAccountChange={accountId=>void changeMetaAccount(accountId)}/>}</>
       :active==='costos'?<ProductCosts rows={costRows} draft={costDraft} onDraft={updates=>setCostDraft(current=>({...current,...updates}))} onSave={()=>void saveProductCosts()} saving={savingCosts} message={costState} onMessage={setCostState} onChanged={()=>Promise.all([loadProductCosts(),loadProductAnalytics(periodDaysRef.current)])} canManage={canManage} money={money}/>
       :active==='facturacion'?<ExternalRevenueSection onChanged={()=>loadDashboard(periodDaysRef.current)}/>
