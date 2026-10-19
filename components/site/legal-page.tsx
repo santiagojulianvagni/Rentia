@@ -2,12 +2,15 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import SiteHeader from './site-header';
 import SiteFooter from './site-footer';
+import SiteEffects from './site-effects';
 
 export type LegalSection={id:string;title:string;body:ReactNode};
 
 // Página legal con el estilo del sitio: índice a la izquierda y secciones numeradas.
 export default function LegalPage({eyebrow,title,intro,updated,sections,highlight}:{eyebrow:string;title:string;intro:ReactNode;updated:string;sections:LegalSection[];highlight?:ReactNode}) {
   return <main className="rl">
+    <div id="progress"/>
+    <SiteEffects/>
     <SiteHeader/>
     <section className="shell legalHero">
       <span className="tag">{eyebrow}</span>

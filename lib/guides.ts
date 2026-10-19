@@ -8,7 +8,7 @@ export type Guide={
 };
 export type Comparison={
   slug:string;label:string;title:string;description:string;intro:string;
-  otherName:string;rows:Array<[string,string,string]>;
+  otherName:string;chooseOtherTitle:string;rows:Array<[string,string,string]>;
   chooseOther:string[];chooseRentia:string[];
   sections:GuideSection[];faqs:Array<[string,string]>;
 };
@@ -153,7 +153,7 @@ export const guides:Guide[]=[
 
 export const comparisons:Comparison[]=[
   {
-    slug:'planillas-de-excel',label:'Planillas de Excel',otherName:'Planilla',
+    slug:'planillas-de-excel',label:'Planillas de Excel',otherName:'Planilla',chooseOtherTitle:'Te alcanza con una planilla si…',
     title:'Rentia vs una planilla de Excel',
     description:'Calcular la ganancia de tu tienda en una planilla funciona al principio. Qué cambia cuando las ventas, los cargos y la publicidad se cargan solos.',
     intro:'La planilla es el primer paso de casi todas las tiendas, y está bien: obliga a mirar los costos. El problema aparece cuando vendés todos los días, por más de un canal, y mantenerla al día te lleva horas.',
@@ -193,7 +193,7 @@ export const comparisons:Comparison[]=[
     ],
   },
   {
-    slug:'apps-de-estadisticas',label:'Apps de estadísticas',otherName:'App de estadísticas',
+    slug:'apps-de-estadisticas',label:'Apps de estadísticas',otherName:'App de estadísticas',chooseOtherTitle:'Te conviene una app de estadísticas si…',
     title:'Rentia vs una app de estadísticas de tu tienda',
     description:'Las apps de estadísticas te muestran cuánto vendés. Rentia te muestra cuánto ganás. Cuándo te sirve cada una.',
     intro:'Las apps de estadísticas suman una capa de lectura sobre el panel de tu tienda: ventas, pedidos, productos más vendidos y evolución entre períodos. Son útiles para entender qué pasa con las ventas. Rentia mira otra cosa: qué queda de esas ventas después de los costos y la publicidad.',
@@ -233,7 +233,7 @@ export const comparisons:Comparison[]=[
     ],
   },
   {
-    slug:'roas-de-meta',label:'Mirar solo el ROAS de Meta',otherName:'Solo el ROAS de Meta',
+    slug:'roas-de-meta',label:'Mirar solo el ROAS de Meta',otherName:'Solo el ROAS de Meta',chooseOtherTitle:'Te alcanza con el ROAS de Meta…',
     title:'Rentia vs mirar solo el ROAS de Meta',
     description:'El ROAS de Meta compara ventas atribuidas con inversión, pero no conoce tus costos. Qué te falta para saber si tus anuncios dejan ganancia.',
     intro:'El administrador de anuncios de Meta es la mejor herramienta para comparar tus anuncios entre sí. Pero el ROAS que muestra no sabe cuánto te cuesta cada producto, el envío ni las comisiones. Un ROAS de 3 puede ser excelente o puede estar haciéndote perder plata.',

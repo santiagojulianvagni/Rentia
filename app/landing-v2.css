@@ -673,5 +673,5 @@ html{scroll-behavior:smooth}
 .rl .langMenu a{padding:9px 12px;border-radius:8px;color:var(--muted);font-weight:600}
 .rl .langMenu a:hover{background:#112033;color:var(--text)}
 .rl .langMenu a[aria-current]{color:var(--cyan)}
-.rl .availability{display:flex;gap:8px;align-items:flex-start;max-width:520px;margin-top:18px;color:var(--dim);font-size:13.5px;line-height:1.5}
+.rl .heroCopy p.availability{display:flex;gap:8px;align-items:flex-start;max-width:520px;margin:18px 0 0;color:var(--dim);font-size:13.5px;line-height:1.5}
 @media (max-width:560px){.rl .navActions{gap:10px}.rl .langPick summary{padding:6px 8px}}

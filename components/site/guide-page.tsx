@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { ArrowRight, Check } from 'lucide-react';
 import SiteHeader from './site-header';
 import SiteFooter from './site-footer';
+import SiteEffects from './site-effects';
 import { comparisons, guides, type GuideBlock, type GuideSection } from '../../lib/guides';
 
 function Block({block}:{block:GuideBlock}) {
@@ -43,7 +44,7 @@ export function GuideFaq({faqs}:{faqs:Array<[string,string]>}) {
 }
 
 export function GuideShell({children}:{children:ReactNode}) {
-  return <main className="rl guidePage"><SiteHeader/>{children}<SiteFooter/></main>;
+  return <main className="rl guidePage"><div id="progress"/><SiteEffects/><SiteHeader/>{children}<SiteFooter/></main>;
 }
 
 export function JsonLd({data}:{data:unknown}) {

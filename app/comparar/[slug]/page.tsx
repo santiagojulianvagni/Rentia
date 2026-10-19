@@ -37,7 +37,7 @@ export default async function ComparisonPage({params}:Params) {
       </div>
     </section>
     <section className="shell compareChoose">
-      <div><h2>Te conviene {item.otherName.toLowerCase()} si…</h2><CheckList items={item.chooseOther}/></div>
+      <div><h2>{item.chooseOtherTitle}</h2><CheckList items={item.chooseOther}/></div>
       <div className="compareChooseRentia"><h2>Te conviene Rentia si…</h2><CheckList items={item.chooseRentia}/></div>
     </section>
     <section className="shell legalBody compareBody">
