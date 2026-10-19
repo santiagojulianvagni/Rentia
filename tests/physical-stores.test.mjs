@@ -50,3 +50,19 @@ test('stores keep their own days, imports replace only the file days, and old ex
   assert.equal((await pg.query('SELECT COUNT(*) AS total FROM external_revenue WHERE store_id=$1',[belgrano.id])).rows[0].total,0);
   await pg.close();
 });
+
+test('a channel can be wholesale without a store, and old cart contacts are erased after 90 days',async()=>{
+  const {pg,driver}=await createTestDatabase();setDatabase(driver);
+  await pg.query("INSERT INTO accounts (user_id,email,owner_name,store_name,trial_started_at,created_at,updated_at) VALUES ('s','s@example.invalid','Owner','Store','2026-08-01','2026-08-01','2026-08-01')");
+  const wholesale=await database.createPhysicalStore('s',{name:'Mayorista',kind:'mayorista',costPercent:55,feePercent:0,taxPercent:3});
+  assert.equal(wholesale.kind,'mayorista');
+  assert.equal((await database.createPhysicalStore('s',{name:'Local',costPercent:40,feePercent:0,taxPercent:0})).kind,'local');
+  const cart=(id,createdAt)=>({externalId:id,createdAt,completedAt:null,total:1000,currency:'ARS',units:1,items:[],contactEncrypted:'cifrado',contactIv:'iv'});
+  await database.upsertAbandonedCarts('s','tiendanube',[cart('viejo','2026-06-01T10:00:00Z'),cart('nuevo','2026-10-15T10:00:00Z')]);
+  // Una actualización sin contacto no borra el que ya estaba guardado.
+  await database.upsertAbandonedCarts('s','tiendanube',[{...cart('nuevo','2026-10-15T10:00:00Z'),contactEncrypted:null,contactIv:null}]);
+  await database.purgeOldCartContacts('s',Date.parse('2026-10-19T00:00:00Z'));
+  const rows=(await pg.query('SELECT external_id,contact_encrypted FROM abandoned_checkouts ORDER BY external_id')).rows;
+  assert.deepEqual(rows.map(row=>[row.external_id,row.contact_encrypted]),[['nuevo','cifrado'],['viejo',null]]);
+  await pg.close();
+});

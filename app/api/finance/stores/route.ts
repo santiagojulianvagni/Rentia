@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import { createPhysicalStore, deletePhysicalStore, externalRevenueCounts, listPhysicalStores, updatePhysicalStore } from '../../../../db/database';
 import { HttpError, route } from '../../../../server/http/route';
+import { CHANNEL_KINDS } from '../../../../lib/physical-stores';
 
 const percent=z.number().min(0).max(100);
-const StoreBody=z.object({name:z.string().trim().min(1).max(60),costPercent:percent,feePercent:percent,taxPercent:percent});
+
+const StoreBody=z.object({name:z.string().trim().min(1).max(60),kind:z.enum(CHANNEL_KINDS).default('local'),costPercent:percent,feePercent:percent,taxPercent:percent});
 const UpdateBody=StoreBody.extend({id:z.number().int().positive()});
 const DeleteBody=z.object({id:z.number().int().positive()});
 

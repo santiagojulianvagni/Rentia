@@ -16,7 +16,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 - Next.js 16.4 (App Router), React 19, TypeScript. Clerk (organizaciones: una por tienda; hoy instancia de **desarrollo**). Postgres en Neon.
 - Dominio `rentiaapp.com` (comprado en Hostinger, DNS ahí): `www.rentiaapp.com` es el principal y `rentiaapp.com` redirige; `rentia-ruby.vercel.app` sigue andando. Mail de contacto `hola@rentiaapp.com` (Hostinger), cargado en Vercel como `NEXT_PUBLIC_RENTIA_CONTACT_EMAIL`.
 - Vercel, plan Hobby, proyecto `nexo-6cb9/rentia`. Las funciones corren en `gru1` (San Pablo), igual que la base. Se publica solo con cada push a `main`.
-- `vercel-build` corre las migraciones de `migrations/` (la próxima es `0013_…`) y después compila.
+- `vercel-build` corre las migraciones de `migrations/` (la próxima es `0014_…`) y después compila.
 
 ## Código
 
@@ -54,6 +54,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 - 19/10: Clientes (reemplaza "Lifetime Value"): nuevos/recurrentes, provincias, ciudades, pagos, cuotas, envíos, canal y mapa de días/horas (`lib/customer-insights.ts`, `/api/insights/customers`). Las órdenes de Tiendanube guardan `customer_key` (hash anónimo, `lib/order-customer.ts`), provincia, ciudad, envío y storefront; los productos, `categories`. `IMPORT_VERSION` pasó a 10: la próxima sincronización reimporta 12 meses una vez. Mercado Libre todavía no trae datos del comprador.
 - 19/10: Productos con resumen por categoría que filtra la tabla (`lib/categories.ts`); Cashflow con "Objetivo del mes" (`goalPlan` en `lib/cashflow.ts`); gráfico del resumen con selector Día/Semana/Mes.
 - 19/10: Carritos abandonados (sección `carritos`): tabla `abandoned_checkouts` sin datos de contacto, se leen de Tiendanube (`GET /checkouts`, permiso read_orders) en cada conciliación (`syncAbandonedCheckouts`), resumen en `lib/abandoned-carts.ts`. Política de privacidad actualizada (`PRIVACY_UPDATED`) para describir los datos de Clientes y carritos; él tiene que revisarla.
+- 19/10: "Locales físicos" pasó a "Otros canales" con tipo (`physical_stores.kind`: local, mayorista, showroom, feria, revendedores, otro): se puede vender por mayor sin local. Carritos: él pidió guardar el contacto; va cifrado con TOKEN_ENCRYPTION_KEY (`contact_encrypted`), lo descifra la API solo para propietario/administrador, se borra a los 90 días (`purgeOldCartContacts`); botones de WhatsApp y email con mensaje y link de recuperación. Política de privacidad actualizada en consecuencia.
 
 ## Pendiente
 

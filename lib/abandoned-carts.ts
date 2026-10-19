@@ -46,3 +46,30 @@ export function cartSummary(carts:AbandonedCart[],paidOrders:number) {
     recent:open.slice().sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,20),
   };
 }
+
+// Contacto del comprador para recuperar la venta. Se guarda cifrado, se borra a los 90 días y
+// solo lo ven el propietario y los administradores de la tienda.
+export type CartContact={name:string|null;email:string|null;phone:string|null;recoveryUrl:string|null};
+export function checkoutContact(row:UnknownRecord):CartContact|null {
+  const contact={name:text(row.contact_name)||null,email:text(row.contact_email)||null,phone:text(row.contact_phone)||null,recoveryUrl:/^https:\/\//.test(text(row.abandoned_checkout_url))?text(row.abandoned_checkout_url):null};
+  return contact.name||contact.email||contact.phone||contact.recoveryUrl?contact:null;
+}
+
+// Link de WhatsApp con un mensaje listo. Los celulares argentinos van como 549 + área + número.
+export function whatsappLink(phone:string|null,message:string) {
+  let digits=(phone||'').replace(/\D/g,'');
+  if(!digits)return null;
+  if(digits.startsWith('00'))digits=digits.slice(2);
+  if(digits.startsWith('0'))digits=digits.slice(1);
+  // Formato local con 15 (11 15 5555-0000): se saca el 15 que va después del código de área.
+  if(digits.length===12&&!digits.startsWith('54'))for(const area of [2,3,4]) if(digits.slice(area,area+2)==='15'){digits=digits.slice(0,area)+digits.slice(area+2);break;}
+  if(digits.startsWith('54')&&!digits.startsWith('549')&&digits.length===12)digits=`549${digits.slice(2)}`;
+  else if(!digits.startsWith('54')&&digits.length===10)digits=`549${digits}`;
+  if(digits.length<11||digits.length>15)return null;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}
+
+export function recoveryMessage(storeName:string,name:string|null,url:string|null) {
+  const hello=name?`¡Hola ${name.split(' ')[0]}!`:'¡Hola!';
+  return `${hello} Te escribimos de ${storeName}. Vimos que dejaste productos en tu carrito.${url?` Podés terminar tu compra acá: ${url}`:''} Si tenés alguna duda, contanos.`;
+}

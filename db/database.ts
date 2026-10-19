@@ -960,25 +960,25 @@ export async function deleteSalesEvent(userId:string,id:number) {
 }
 
 // Locales físicos: un canal de venta con costos estimados en porcentaje de la venta.
-export type PhysicalStore={id:number;name:string;costPercent:number;feePercent:number;taxPercent:number};
-export type PhysicalStoreInput=Omit<PhysicalStore,'id'>;
-const storeRow=(row:Record<string,unknown>):PhysicalStore=>({id:Number(row.id),name:String(row.name),costPercent:Number(row.cost_percent),feePercent:Number(row.fee_percent),taxPercent:Number(row.tax_percent)});
+export type PhysicalStore={id:number;name:string;kind:string;costPercent:number;feePercent:number;taxPercent:number};
+export type PhysicalStoreInput=Omit<PhysicalStore,'id'|'kind'>&{kind?:string};
+const storeRow=(row:Record<string,unknown>):PhysicalStore=>({id:Number(row.id),name:String(row.name),kind:String(row.kind||'local'),costPercent:Number(row.cost_percent),feePercent:Number(row.fee_percent),taxPercent:Number(row.tax_percent)});
 
 export async function listPhysicalStores(userId:string) {
-  const rows=await database().prepare('SELECT id,name,cost_percent,fee_percent,tax_percent FROM physical_stores WHERE user_id=? ORDER BY id').bind(userId).all<Record<string,unknown>>();
+  const rows=await database().prepare('SELECT id,name,kind,cost_percent,fee_percent,tax_percent FROM physical_stores WHERE user_id=? ORDER BY id').bind(userId).all<Record<string,unknown>>();
   return rows.results.map(storeRow);
 }
 
 export async function createPhysicalStore(userId:string,input:PhysicalStoreInput) {
   const now=new Date().toISOString();
-  const row=await database().prepare('INSERT INTO physical_stores (user_id,name,cost_percent,fee_percent,tax_percent,created_at,updated_at) VALUES (?,?,?,?,?,?,?) ON CONFLICT(user_id,name) DO NOTHING RETURNING id,name,cost_percent,fee_percent,tax_percent')
-    .bind(userId,input.name,input.costPercent,input.feePercent,input.taxPercent,now,now).first<Record<string,unknown>>();
+  const row=await database().prepare('INSERT INTO physical_stores (user_id,name,kind,cost_percent,fee_percent,tax_percent,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(user_id,name) DO NOTHING RETURNING id,name,kind,cost_percent,fee_percent,tax_percent')
+    .bind(userId,input.name,input.kind||'local',input.costPercent,input.feePercent,input.taxPercent,now,now).first<Record<string,unknown>>();
   return row?storeRow(row):null;
 }
 
 export async function updatePhysicalStore(userId:string,id:number,input:PhysicalStoreInput) {
-  const row=await database().prepare('UPDATE physical_stores SET name=?,cost_percent=?,fee_percent=?,tax_percent=?,updated_at=? WHERE id=? AND user_id=? RETURNING id,name,cost_percent,fee_percent,tax_percent')
-    .bind(input.name,input.costPercent,input.feePercent,input.taxPercent,new Date().toISOString(),id,userId).first<Record<string,unknown>>();
+  const row=await database().prepare('UPDATE physical_stores SET name=?,kind=?,cost_percent=?,fee_percent=?,tax_percent=?,updated_at=? WHERE id=? AND user_id=? RETURNING id,name,kind,cost_percent,fee_percent,tax_percent')
+    .bind(input.name,input.kind||'local',input.costPercent,input.feePercent,input.taxPercent,new Date().toISOString(),id,userId).first<Record<string,unknown>>();
   return row?storeRow(row):null;
 }
 
@@ -1045,24 +1045,30 @@ export async function getCustomerOrders(userId:string,since:string,until:string)
 }
 
 // Carritos abandonados (sin datos de contacto). Un carrito ya guardado se actualiza si cambia.
-export async function upsertAbandonedCarts(userId:string,provider:string,carts:Array<{externalId:string;createdAt:string;completedAt:string|null;total:number;currency:string;units:number;items:unknown[]}>) {
+export async function upsertAbandonedCarts(userId:string,provider:string,carts:Array<{externalId:string;createdAt:string;completedAt:string|null;total:number;currency:string;units:number;items:unknown[];contactEncrypted?:string|null;contactIv?:string|null}>) {
   if(!carts.length)return;
   const now=new Date().toISOString();
-  const statements:Statement[]=carts.map(cart=>database().prepare('INSERT INTO abandoned_checkouts (user_id,provider,external_id,created_at,completed_at,total,currency,units,items_json,synced_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,provider,external_id) DO UPDATE SET completed_at=excluded.completed_at,total=excluded.total,units=excluded.units,items_json=excluded.items_json,synced_at=excluded.synced_at')
-    .bind(userId,provider,cart.externalId,cart.createdAt,cart.completedAt,cart.total,cart.currency,cart.units,JSON.stringify(cart.items),now));
+  const statements:Statement[]=carts.map(cart=>database().prepare('INSERT INTO abandoned_checkouts (user_id,provider,external_id,created_at,completed_at,total,currency,units,items_json,synced_at,contact_encrypted,contact_iv) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,provider,external_id) DO UPDATE SET completed_at=excluded.completed_at,total=excluded.total,units=excluded.units,items_json=excluded.items_json,synced_at=excluded.synced_at,contact_encrypted=CASE WHEN excluded.contact_encrypted IS NOT NULL THEN excluded.contact_encrypted ELSE abandoned_checkouts.contact_encrypted END,contact_iv=CASE WHEN excluded.contact_encrypted IS NOT NULL THEN excluded.contact_iv ELSE abandoned_checkouts.contact_iv END')
+    .bind(userId,provider,cart.externalId,cart.createdAt,cart.completedAt,cart.total,cart.currency,cart.units,JSON.stringify(cart.items),now,cart.contactEncrypted??null,cart.contactIv??null));
   await runInChunks(statements);
 }
 
 export async function getAbandonedCarts(userId:string,since:string,until:string) {
   const [carts,orders]=await Promise.all([
-    database().prepare('SELECT external_id,created_at,completed_at,total,currency,units,items_json FROM abandoned_checkouts WHERE user_id=? AND created_at>=? AND created_at<? ORDER BY created_at LIMIT 50000').bind(userId,since,until).all<Record<string,unknown>>(),
+    database().prepare('SELECT external_id,created_at,completed_at,total,currency,units,items_json,contact_encrypted,contact_iv FROM abandoned_checkouts WHERE user_id=? AND created_at>=? AND created_at<? ORDER BY created_at LIMIT 50000').bind(userId,since,until).all<Record<string,unknown>>(),
     database().prepare("SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND provider='tiendanube' AND source_created_at>=? AND source_created_at<? AND payment_status='paid' AND status!='cancelled'").bind(userId,since,until).first<{total:number}>(),
   ]);
   const parse=(value:unknown)=>{try{const items=JSON.parse(String(value)) as unknown;return Array.isArray(items)?items:[];}catch{return [];}};
-  return {carts:carts.results.map(row=>({externalId:String(row.external_id),createdAt:String(row.created_at),completedAt:row.completed_at?String(row.completed_at):null,total:Number(row.total||0),currency:String(row.currency||'ARS'),units:Number(row.units||0),items:parse(row.items_json)})),paidOrders:Number(orders?.total||0)};
+  return {carts:carts.results.map(row=>({externalId:String(row.external_id),createdAt:String(row.created_at),completedAt:row.completed_at?String(row.completed_at):null,total:Number(row.total||0),currency:String(row.currency||'ARS'),units:Number(row.units||0),items:parse(row.items_json),contactEncrypted:row.contact_encrypted?String(row.contact_encrypted):null,contactIv:row.contact_iv?String(row.contact_iv):null})),paidOrders:Number(orders?.total||0)};
 }
 
 export async function abandonedCartsSyncedAt(userId:string) {
   const row=await database().prepare("SELECT MAX(synced_at) AS synced_at FROM abandoned_checkouts WHERE user_id=?").bind(userId).first<{synced_at:string|null}>();
   return row?.synced_at||null;
+}
+
+// El contacto de un carrito se borra a los 90 días, como hace Tiendanube; el resumen queda.
+export async function purgeOldCartContacts(userId:string,now=Date.now()) {
+  const cutoff=new Date(now-90*24*60*60*1000).toISOString();
+  await database().prepare('UPDATE abandoned_checkouts SET contact_encrypted=NULL,contact_iv=NULL WHERE user_id=? AND created_at<? AND contact_encrypted IS NOT NULL').bind(userId,cutoff).run();
 }

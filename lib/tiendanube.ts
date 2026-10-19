@@ -3,8 +3,9 @@ import { archiveProduct, claimWebhookEvent, countOrdersAwaitingSourceCommission,
 import { decryptToken } from './token-crypto';
 import { merchantShippingCost } from './tiendanube-shipping';
 import { tiendanubeCategories, tiendanubeOrderExtras } from './order-customer';
-import { normalizeTiendanubeCheckout, type AbandonedCart } from './abandoned-carts';
-import { upsertAbandonedCarts } from '../db/database';
+import { checkoutContact, normalizeTiendanubeCheckout, type AbandonedCart } from './abandoned-carts';
+import { purgeOldCartContacts, upsertAbandonedCarts } from '../db/database';
+import { encryptToken } from './token-crypto';
 import { merchantCommissionCost } from './tiendanube-commissions';
 import { tiendanubeFetch, tiendanubeRetryDelay } from './tiendanube-http';
 import {claimImportJob,checkpointImportJob,releaseImportJob,markSyncPending,recoverableSkippedOrders,forgetSkippedOrder} from '../db/database';
@@ -484,8 +485,8 @@ export async function recoverSkippedTiendanubeOrders(userId:string) {
   return recovered;
 }
 
-// Carritos abandonados de los últimos 30 días (lo que Tiendanube deja consultar). Se guardan
-// sin datos de contacto; con el permiso read_orders que la app ya tiene.
+// Carritos abandonados de los últimos 30 días (lo que Tiendanube deja consultar), con el
+// permiso read_orders que la app ya tiene. El contacto se guarda cifrado y se borra a los 90 días.
 export async function syncAbandonedCheckouts(userId:string) {
   const integration=await getIntegrationCredentials(userId,'tiendanube');
   const key=runtime().TOKEN_ENCRYPTION_KEY;
@@ -495,10 +496,19 @@ export async function syncAbandonedCheckouts(userId:string) {
   let saved=0;
   for(let page=1;page<=20;page++) {
     const rows=await fetchImportPage(integration.external_store_id,token,`checkouts?${new URLSearchParams({created_at_min:since,per_page:'200',page:String(page)})}`);
-    const carts=rows.map(normalizeTiendanubeCheckout).filter((cart):cart is AbandonedCart=>Boolean(cart));
-    await upsertAbandonedCarts(userId,'tiendanube',carts);
+    const carts=[];
+    for(const row of rows) {
+      const cart=normalizeTiendanubeCheckout(row);
+      if(!cart)continue;
+      // El contacto va cifrado con la misma clave que las credenciales de las integraciones.
+      const contact=checkoutContact(row);
+      const sealed=contact?await encryptToken(JSON.stringify(contact),key):null;
+      carts.push({...cart,contactEncrypted:sealed?.encryptedToken??null,contactIv:sealed?.iv??null});
+    }
+    await upsertAbandonedCarts(userId,'tiendanube',carts as Array<AbandonedCart&{contactEncrypted:string|null;contactIv:string|null}>);
     saved+=carts.length;
     if(rows.length<200)break;
   }
+  await purgeOldCartContacts(userId);
   return saved;
 }

@@ -39,3 +39,8 @@ export function splitStoreSales(rows:StoreSaleRow[],stores:StoreCosts[]) {
   const totals=priced.reduce((sum,day)=>({orders:sum.orders+day.orders,revenue:sum.revenue+day.revenue,productCost:sum.productCost+day.productCost,fees:sum.fees+day.fees,taxes:sum.taxes+day.taxes,profit:sum.profit+day.profit}),{orders:0,revenue:0,productCost:0,fees:0,taxes:0,profit:0});
   return {priced,unpriced,channels:[...channels.values()],totals};
 }
+
+// Tipos de canal propio: no hace falta tener local para cargar ventas por mayor o en ferias.
+export const CHANNEL_KINDS=['local','mayorista','showroom','feria','revendedores','otro'] as const;
+export type ChannelKind=typeof CHANNEL_KINDS[number];
+export const CHANNEL_KIND_LABELS:Record<ChannelKind,string>={local:'Local físico',mayorista:'Venta mayorista',showroom:'Showroom',feria:'Ferias y eventos',revendedores:'Revendedores',otro:'Otro canal'};

@@ -25,3 +25,15 @@ test('the summary counts open carts, money left behind, the abandonment rate and
   assert.equal(summary.topProducts[0].name,'Remera');assert.equal(summary.topProducts[0].carts,2);
   assert.deepEqual(summary.daily,[{date:'2026-10-10',carts:2,value:14000}]);
 });
+
+test('the contact for recovering a cart and a ready WhatsApp message',async()=>{
+  const {checkoutContact,whatsappLink,recoveryMessage}=await import('../lib/abandoned-carts.ts');
+  assert.deepEqual(checkoutContact({contact_name:'Ana Pérez',contact_email:'ana@example.com',contact_phone:'011 15-5555-0000',abandoned_checkout_url:'https://tienda.com/checkout/v3/abc'}),{name:'Ana Pérez',email:'ana@example.com',phone:'011 15-5555-0000',recoveryUrl:'https://tienda.com/checkout/v3/abc'});
+  assert.equal(checkoutContact({abandoned_checkout_url:'javascript:alert(1)'}),null);
+  assert.equal(whatsappLink('11 5555 0000','hola'),'https://wa.me/5491155550000?text=hola');
+  assert.equal(whatsappLink('+54 11 5555 0000','hola'),'https://wa.me/5491155550000?text=hola');
+  assert.equal(whatsappLink('011 15-5555-0000','hola'),'https://wa.me/5491155550000?text=hola');
+  assert.equal(whatsappLink('0351 15 555-0000','hola'),'https://wa.me/5493515550000?text=hola');
+  assert.equal(whatsappLink('123',''),null);
+  assert.match(recoveryMessage('Naturae','Ana Pérez','https://t.co/x'),/^¡Hola Ana! Te escribimos de Naturae\..*https:\/\/t\.co\/x/);
+});

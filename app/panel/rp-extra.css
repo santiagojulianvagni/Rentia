@@ -486,3 +486,4 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-goalInput .p-input{width:220px}
 .p-root .p-goalInput input{flex:1;min-width:0;border:0;outline:0;background:none;color:var(--text);font:inherit;font-size:16px;font-weight:600}
 .p-root .p-goalReached{margin:12px 0 0;color:var(--green);font-weight:600}
+.p-root .p-cartActions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}

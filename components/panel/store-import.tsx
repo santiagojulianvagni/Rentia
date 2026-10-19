@@ -68,7 +68,7 @@ export default function StoreImport({storeId,storeName,canManage,money,onImporte
   }
 
   return <div className="p-card p-reveal p-storeImport">
-    <div className="p-cardHead"><div><span className="p-eyebrowS">DESDE TU SISTEMA DE CAJA</span><h3>Subir Excel o CSV</h3><span className="p-sub">Exportá las ventas desde tu sistema (una fila por venta o por día) y subí el archivo. Reconocemos las columnas solas y podés corregirlas antes de guardar.</span></div></div>
+    <div className="p-cardHead"><div><span className="p-eyebrowS">DESDE TU SISTEMA O TU PLANILLA</span><h3>Subir Excel o CSV</h3><span className="p-sub">Subí el Excel de tu sistema de caja o de facturación, o tu propia planilla de ventas (una fila por venta, por factura o por día). Reconocemos las columnas solas y podés corregirlas antes de guardar.</span></div></div>
     <label className={`p-dropzone${!canManage?' p-disabled':''}`} onDragOver={event=>event.preventDefault()} onDrop={event=>{event.preventDefault();if(canManage)void choose(event.dataTransfer.files[0]);}}>
       <input ref={input} type="file" accept=".xlsx,.csv,.txt" disabled={!canManage} onChange={event=>void choose(event.target.files?.[0])}/>
       {fileName?<FileSpreadsheet aria-hidden="true"/>:<Upload aria-hidden="true"/>}
