@@ -722,7 +722,7 @@ export async function getProductAnalyticsData(userId:string,days:number,range?:A
   await ensureSchema();
   const {since,until}=analyticsWindow(days,0,range);
   const [catalog,totals,settings,costRules]=await Promise.all([
-    database().prepare("SELECT p.id AS product_id,p.rentia_archived,pv.id AS variant_id,pv.provider,pv.external_product_id,pv.external_variant_id,pv.sku,pv.price,COALESCE(pv.manual_cost,pv.cost,0) AS effective_cost,pv.stock,p.name AS product_name,p.image_url,CASE WHEN pv.manual_cost IS NOT NULL THEN 'manual' WHEN pv.cost>0 THEN 'tiendanube' ELSE 'sin_costo' END AS cost_source FROM product_variants pv JOIN products p ON p.user_id=pv.user_id AND p.provider=pv.provider AND p.external_product_id=pv.external_product_id WHERE pv.user_id=? ORDER BY p.name,pv.id").bind(userId).all<Record<string,unknown>>(),
+    database().prepare("SELECT p.id AS product_id,p.rentia_archived,pv.id AS variant_id,pv.provider,pv.external_product_id,pv.external_variant_id,pv.sku,pv.price,COALESCE(pv.manual_cost,pv.cost,0) AS effective_cost,pv.stock,p.name AS product_name,p.image_url,p.categories,CASE WHEN pv.manual_cost IS NOT NULL THEN 'manual' WHEN pv.cost>0 THEN 'tiendanube' ELSE 'sin_costo' END AS cost_source FROM product_variants pv JOIN products p ON p.user_id=pv.user_id AND p.provider=pv.provider AND p.external_product_id=pv.external_product_id WHERE pv.user_id=? ORDER BY p.name,pv.id").bind(userId).all<Record<string,unknown>>(),
     database().prepare(PAID_TOTAL_SQL).bind(userId,since,until).first<{orders:number;revenue:number}>(),
     getSettings(userId),
     getCostRules(userId),

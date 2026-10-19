@@ -46,6 +46,6 @@ export function cashflowView(data:CashflowData,rules:CashflowRule[]) {
   const marginBeforeAds=result.margin!==null&&m.revenue>0?result.margin+ads/m.revenue:null;
   const attributed=(m.adSpendComparable?m.metaReportedRevenue||0:0)+(m.meliAdsComparable?current.meliAds?.summary?.attributedRevenue||0:0);
   const scale=m.revenue>0?result.projectedRevenue/m.revenue:0;
-  const simulation=m.revenue>0?{revenue:result.projectedRevenue,productCost:m.productCost*scale,shipping:m.shipping*scale,commissions:m.commissions*scale,taxes:m.taxes*scale,refundLoss:(m.refundLoss||0)*scale,ads:ads*scale,fixed:result.fixed,percentageRate:percentageCostRate(rules),roas:ads>0?attributed/ads:0}:null;
+  const simulation=m.revenue>0?{revenue:result.projectedRevenue,productCost:m.productCost*scale,shipping:m.shipping*scale,commissions:m.commissions*scale,taxes:m.taxes*scale,refundLoss:(m.refundLoss||0)*scale,ads:ads*scale,fixed:result.fixed,percentageRate:percentageCostRate(rules),roas:ads>0?attributed/ads:0,orders:m.orders*scale}:null;
   return {result,daily,recentAds,marginBeforeAds,simulation,revenue:m.revenue,incomplete:current.quality.totalOrders>current.quality.completeOrders};
 }

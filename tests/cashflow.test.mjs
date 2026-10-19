@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cashflow,monthlyFixedCosts,daysInMonth,weeklySchedule,simulate} from '../lib/cashflow.ts';
+import {cashflow,monthlyFixedCosts,daysInMonth,weeklySchedule,simulate,goalPlan} from '../lib/cashflow.ts';
 
 const rule=(name,amount,extra={})=>({category:'additional',calculation:'fixed_monthly',amount,percentage:0,starts_at:null,ends_at:null,enabled:1,name,...extra});
 // Al 10 de octubre: vendiste 100.000 con 60.000 de costos variables (margen 40%).
@@ -65,4 +65,20 @@ test('the simulator shows what more ads or new prices would leave',()=>{
   // +10% de precios con las mismas unidades: suma la facturación menos la comisión proporcional.
   const price=simulate(base,0,0.1);
   assert.equal(Math.round(price.deltaProfit),30000-1500);
+});
+
+test('the profit goal says how much to sell with today\'s margin, or how much margin is needed',()=>{
+  // Ventas $1.000.000, costos variables $600.000 (incluye $100.000 de publicidad), fijos $200.000 → ganancia $200.000, margen 40%.
+  const base={revenue:1000000,productCost:350000,shipping:50000,commissions:60000,taxes:40000,refundLoss:0,ads:100000,fixed:200000,percentageRate:0,roas:4,orders:100};
+  const plan=goalPlan(base,400000,30);
+  assert.equal(Math.round(plan.margin*100),40);
+  assert.equal(plan.currentProfit,200000);
+  assert.equal(Math.round(plan.requiredRevenue),1500000);
+  assert.equal(Math.round(plan.extraPercent),50);
+  assert.equal(plan.requiredOrders,150);
+  assert.equal(Math.round(plan.perDay),50000);
+  // Vendiendo lo mismo, haría falta un margen del 60%: 20 puntos más.
+  assert.equal(Math.round(plan.marginGap),20);
+  assert.equal(goalPlan(base,100000).reached,true);
+  assert.equal(goalPlan({...base,productCost:1000000},100000).requiredRevenue,null,'without margin there is no sales target');
 });

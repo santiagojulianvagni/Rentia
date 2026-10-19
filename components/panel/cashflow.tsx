@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { simulate, weeklySchedule, type ScheduleRule } from '../../lib/cashflow';
+import { goalPlan, simulate, weeklySchedule, type ScheduleRule, type SimulationBase } from '../../lib/cashflow';
 import { cashflowView, type CashflowData } from './use-cashflow';
 
 const monthLabel=new Intl.DateTimeFormat('es-AR',{month:'long',year:'numeric',timeZone:'UTC'});
@@ -65,6 +65,27 @@ function PercentPicker({label,steps,value,onChange,min,max,disabled=false,hint}:
 
 function readBalance() {
   try { return window.localStorage.getItem(BALANCE_KEY)||''; } catch { return ''; }
+}
+
+// Objetivo de ganancia del mes: cuánto vender (o cuánto margen) para llegar.
+function GoalCard({base,money,monthName,days}:{base:SimulationBase;money:(value:number)=>string;monthName:string;days:number}) {
+  const [text,setText]=useState('');
+  const target=Number(text.replace(/./g,'').replace(',','.'));
+  const plan=text&&Number.isFinite(target)&&target>0?goalPlan(base,target,days):null;
+  const pct=(value:number)=>`${value.toFixed(1).replace('.',',')}%`;
+  return <div className="p-card p-reveal" style={{marginBottom:16}}>
+    <div className="p-cardHead"><div><span className="p-eyebrowS">OBJETIVO DEL MES</span><h3>¿Cuánto querés ganar en {monthName}?</h3><span className="p-sub">Te decimos cuánto tenés que vender con tu margen de hoy, o cuánto margen te haría falta vendiendo lo mismo.</span></div></div>
+    <div className="p-goalInput"><span className="p-input"><b>$</b><input inputMode="numeric" value={text} placeholder={String(Math.max(0,Math.round(simulate(base,0,0).current.profit*1.2/1000)*1000)||500000)} aria-label="Ganancia que querés lograr este mes" onChange={event=>setText(event.target.value.replace(/[^0-9.,]/g,''))}/></span><small className="p-sub">Proyección actual: {money(simulate(base,0,0).current.profit)} de ganancia</small></div>
+    {plan&&(plan.reached?<p className="p-goalReached">Al ritmo de hoy ya llegás: proyectamos {money(plan.currentProfit)} de ganancia para el mes.</p>
+    :plan.requiredRevenue===null?<p className="p-sub p-warnLine">Con el margen de hoy, vender más no alcanza: cada venta no cubre sus costos y la publicidad. Primero hay que mejorar el margen (precios, costos o publicidad).</p>
+    :<ul className="p-weekList" style={{marginTop:12}}>
+      <li><span>Tenés que vender en el mes</span><small className="p-sub">hoy proyectás {money(plan.currentRevenue)}</small><b className="p-mono">{money(plan.requiredRevenue)}</b></li>
+      <li><span>Eso es</span><small className="p-sub">más que tu proyección</small><b className="p-mono">{plan.extraPercent!==null?`+${Math.round(plan.extraPercent)}%`:'—'}</b></li>
+      {plan.requiredOrders!==null&&<li><span>Órdenes necesarias</span><small className="p-sub">{plan.currentOrders?`hoy proyectás ${Math.round(plan.currentOrders)}`:''}</small><b className="p-mono">{plan.requiredOrders.toLocaleString('es-AR')}</b></li>}
+      <li><span>Por día</span><small className="p-sub">promedio</small><b className="p-mono">{money(plan.perDay||0)}</b></li>
+      {plan.marginGap!==null&&plan.requiredMargin!==null&&plan.requiredMargin<1&&<li><span>O vendiendo lo mismo</span><small className="p-sub">margen de {pct((plan.margin||0)*100)} a {pct(plan.requiredMargin*100)}</small><b className="p-mono">+{plan.marginGap.toFixed(1).replace('.',',')} pts</b></li>}
+    </ul>)}
+  </div>;
 }
 
 export default function Cashflow({data,error,rules,money,onNavigate}:{data:CashflowData|null;error:boolean;rules:ScheduleRule[];money:(value:number)=>string;onNavigate:(section:string)=>void}) {
@@ -132,6 +153,7 @@ export default function Cashflow({data,error,rules,money,onNavigate}:{data:Cashf
         </table></div>
         <p className="p-sub" style={{margin:'10px 0 0'}}>Ventas nuevas: el margen de lo que vendas al ritmo actual, suponiendo que reponés la mercadería que vendés. Los gastos sin día de pago se reparten parejo en el mes. El saldo de hoy queda guardado solo en este navegador.</p>
       </div>
+      {view.simulation&&<GoalCard base={view.simulation} money={money} monthName={monthName} days={view.result.totalDays}/>}
       <div className="p-grid p-g2" style={{marginBottom:16}}>
         <div className="p-card p-reveal"><div className="p-cardHead"><div><span className="p-eyebrowS">SIMULADOR</span><h3>¿Qué pasa si…?</h3><span className="p-sub">Probá cambios y mirá cómo cerraría {monthName}.</span></div></div>
           {simulation?<>

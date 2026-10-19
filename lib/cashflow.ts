@@ -109,7 +109,7 @@ const iso=(value:number)=>new Date(value).toISOString().slice(0,10);
 //   la publicidad extra suele rendir algo menos) y esas ventas tienen sus costos variables.
 // - Precios: mismas unidades a otro precio; productos y envíos no cambian, comisiones,
 //   impuestos y gastos porcentuales acompañan a la facturación.
-export type SimulationBase={revenue:number;productCost:number;shipping:number;commissions:number;taxes:number;refundLoss:number;ads:number;fixed:number;percentageRate:number;roas:number};
+export type SimulationBase={revenue:number;productCost:number;shipping:number;commissions:number;taxes:number;refundLoss:number;ads:number;fixed:number;percentageRate:number;roas:number;orders?:number};
 export function simulate(base:SimulationBase,adsChange:number,priceChange:number) {
   const outcome=(adsDelta:number,price:number)=>{
     const extraRevenue=base.ads*adsDelta*base.roas;
@@ -125,4 +125,29 @@ export function simulate(base:SimulationBase,adsChange:number,priceChange:number
   };
   const current=outcome(0,0),scenario=outcome(adsChange,priceChange);
   return {current,scenario,deltaProfit:scenario.profit-current.profit,deltaRevenue:scenario.revenue-current.revenue};
+}
+
+// Objetivo de ganancia del mes: cuánto hay que vender para llegar, con el margen de hoy
+// (después de publicidad y antes de gastos fijos). También, cuánto margen haría falta para
+// llegar vendiendo lo mismo.
+export function goalPlan(base:SimulationBase&{orders?:number},targetProfit:number,days=30) {
+  const current=simulate(base,0,0).current;
+  const variable=current.revenue-current.profit-base.fixed;
+  const margin=current.revenue>0?1-variable/current.revenue:null;
+  const needed=targetProfit+base.fixed;
+  const requiredRevenue=margin&&margin>0?needed/margin:null;
+  const ticket=base.orders&&base.orders>0?current.revenue/base.orders:null;
+  const requiredMargin=current.revenue>0?needed/current.revenue:null;
+  return {
+    target:targetProfit,currentProfit:current.profit,currentRevenue:current.revenue,margin,
+    reached:current.profit>=targetProfit,
+    requiredRevenue,
+    extraRevenue:requiredRevenue===null?null:requiredRevenue-current.revenue,
+    extraPercent:requiredRevenue===null||!current.revenue?null:(requiredRevenue/current.revenue-1)*100,
+    requiredOrders:requiredRevenue!==null&&ticket?Math.ceil(requiredRevenue/ticket):null,
+    currentOrders:base.orders??null,
+    perDay:requiredRevenue===null?null:requiredRevenue/days,
+    requiredMargin,
+    marginGap:requiredMargin!==null&&margin!==null?(requiredMargin-margin)*100:null,
+  };
 }
