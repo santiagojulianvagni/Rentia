@@ -108,9 +108,18 @@ export default function SalesEvents({money,canManage}:{money:(value:number)=>str
 
   const verdictTone=result?{good:'p-tone-g',warn:'p-warning',bad:'p-tone-r',neutral:''}[result.verdict.tone]:'';
   return <>
-    <div className="p-head"><div><div className="p-eyebrow">VENTAS · FECHAS ESPECIALES</div><h1>Eventos</h1><p>Hot Sale, Cyber Monday, un lanzamiento o tu propia promo: mirá si de verdad ganaste más que en días normales.</p></div>
+    <div className="p-head"><div><div className="p-eyebrow">VENTAS · FECHAS ESPECIALES</div><h1>Eventos</h1><p>¿El Hot Sale, el Cyber Monday o tu promo te dejaron más plata, o solo vendiste más con descuentos? Acá lo ves.</p></div>
       {canManage&&!creating&&<div className="p-actions"><button type="button" className="p-btn p-primary" onClick={()=>{setCreating(true);setMessage('');}}>Nuevo evento</button></div>}</div>
 
+    <details className="p-card p-reveal p-eventHow" open={!events||!events.length}>
+      <summary><b>Cómo funciona</b><span className="p-sub">Un ejemplo con números</span></summary>
+      <ol className="p-eventSteps">
+        <li><b>Cargás el evento y sus días.</b> Por ejemplo, "Cyber Monday", del lunes al miércoles: 3 días.</li>
+        <li><b>Rentia mira cuánto ganás en días normales.</b> Saca tu promedio por día de las 4 semanas anteriores (sin la semana justo antes, porque ahí la gente espera las ofertas) y lo lleva a 3 días. Por ejemplo: 3 días normales = $300.000 de ventas y $90.000 de ganancia.</li>
+        <li><b>Compara el evento contra eso.</b> Si en el Cyber vendiste $900.000 y, después de productos, envíos, comisiones y publicidad, te quedaron $240.000, el evento te dejó <b>$150.000 más</b> que 3 días normales. Si vendiste más pero te quedó menos, te avisa que los descuentos o la publicidad se comieron la diferencia.</li>
+        <li><b>Mira la semana siguiente.</b> Si después del evento vendiste mucho menos que lo normal, parte de esas ventas solo se adelantaron.</li>
+      </ol>
+    </details>
     {listError&&<div className="p-notice p-warning" role="alert"><div><b>No pudimos cargar tus eventos</b><p>Recargá la página para intentar de nuevo.</p></div></div>}
 
     {creating&&canManage&&<form className="p-card p-reveal p-eventForm" onSubmit={create}>
@@ -147,7 +156,7 @@ export default function SalesEvents({money,canManage}:{money:(value:number)=>str
           {result&&<>
             <div className={`p-card p-kpi p-reveal p-eventVerdict ${verdictTone}`}><small>{event.name} · {rangeLabel(event.start,event.end)}</small><b>{result.verdict.title}</b><span className="p-sub">{result.verdict.text}</span></div>
             <div className="p-tableWrap p-reveal" style={{marginTop:16}}><table>
-              <thead><tr><th>Métrica</th><th className="p-r">Evento</th><th className="p-r">{windows.event.days} {windows.event.days===1?'día normal':'días normales'}</th><th className="p-r">Diferencia</th></tr></thead>
+              <thead><tr><th>Métrica</th><th className="p-r">Evento</th><th className="p-r">{windows.event.days===1?'Un día normal':`${windows.event.days} días normales`}</th><th className="p-r">Diferencia</th></tr></thead>
               <tbody>{result.rows.map(row=><tr key={row.key}><td>{row.label}</td><td className="p-r p-mono">{value(row,money)}</td><td className="p-r p-mono">{normalValue(row,money)}</td><td className="p-r"><Change row={row}/></td></tr>)}</tbody>
             </table></div>
             {(result.after||result.notes.length>0)&&<div className="p-card p-reveal" style={{marginTop:16}}>

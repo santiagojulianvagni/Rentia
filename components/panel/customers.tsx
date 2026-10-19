@@ -20,7 +20,7 @@ function BarList({rows,money,empty}:{rows:Share[];money:(value:number)=>string;e
 function Heatmap({data}:{data:Insights}) {
   const max=Math.max(1,...data.heat.flat().map(cell=>cell.orders));
   return <div className="p-heatWrap"><div className="p-heat" role="table" aria-label="Órdenes por día y hora">
-    <span/>{HOURS.map(hour=><span key={hour} className="p-heatHour">{hour%3===0?`${hour}h`:''}</span>)}
+    <span/>{HOURS.map(hour=><span key={hour} className="p-heatHour">{hour}</span>)}
     {data.heat.map((hours,day)=><div className="p-heatRow" role="row" key={day}>
       <span className="p-heatDay" role="rowheader">{data.days[day].name.slice(0,3)}</span>
       {hours.map((cell,hour)=><i key={hour} role="cell" title={`${data.days[day].name} ${hour}:00 a ${hour}:59 · ${cell.orders} ${cell.orders===1?'orden':'órdenes'}`} style={{'--a':cell.orders?.12+cell.orders/max*.88:0} as CSSProperties}/>)}
