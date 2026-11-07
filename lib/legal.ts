@@ -7,6 +7,6 @@ export const LEGAL={
   email:process.env.NEXT_PUBLIC_RENTIA_CONTACT_EMAIL||'',
 };
 
-export const LEGAL_UPDATED='12 de octubre de 2026';
+export const LEGAL_UPDATED='7 de noviembre de 2026';
 // La política de privacidad se actualizó aparte: datos para Clientes y carritos abandonados.
 export const PRIVACY_UPDATED='19 de octubre de 2026';

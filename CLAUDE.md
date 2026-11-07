@@ -16,7 +16,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 - Next.js 16.4 (App Router), React 19, TypeScript. Clerk (organizaciones: una por tienda; hoy instancia de **desarrollo**). Postgres en Neon.
 - Dominio `rentiaapp.com` (comprado en Hostinger, DNS ahí): `www.rentiaapp.com` es el principal y `rentiaapp.com` redirige; `rentia-ruby.vercel.app` sigue andando. Mail de contacto `hola@rentiaapp.com` (Hostinger), cargado en Vercel como `NEXT_PUBLIC_RENTIA_CONTACT_EMAIL`.
 - Vercel, plan Hobby, proyecto `nexo-6cb9/rentia`. Las funciones corren en `gru1` (San Pablo), igual que la base. Se publica solo con cada push a `main`.
-- `vercel-build` corre las migraciones de `migrations/` (la próxima es `0015_…`) y después compila.
+- `vercel-build` corre las migraciones de `migrations/` (la próxima es `0016_…`) y después compila.
 
 ## Código
 
@@ -24,7 +24,7 @@ SaaS de rentabilidad real para e-commerce en Argentina: une Tiendanube, Mercado 
 - Sin controles genéricos del navegador: usar `RpSelect`, `RpDate`, `confirmDialog` y botones propios.
 - Cálculos puros en `lib/` con pruebas en `tests/*.test.mjs` (Node test runner y PGlite): `campaign-profit`, `alerts`, `achievements`, `records`, `cashflow`. La lógica nueva va en `lib/` y lleva su prueba.
 - Las rutas de API usan `route()` de `server/http/route.ts`: sesión, rol, origen, validación con zod y registro de errores en `error_reports`. Los archivos `route.ts` solo pueden exportar los métodos HTTP.
-- `tests/scaling.test.mjs` cuenta las tablas (hoy 38): actualizarlo al agregar una.
+- `tests/scaling.test.mjs` cuenta las tablas (hoy 39): actualizarlo al agregar una.
 - Ojo al editar con scripts de Node: en `String.replace` los patrones `$'` y `` $` `` son especiales.
 
 ## Cómo publicar

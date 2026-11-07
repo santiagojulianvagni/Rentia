@@ -28,7 +28,9 @@ test('the plan limit depends on trial, paid status and plan',()=>{
   assert.equal(monthlyOrderLimit({plan_id:'free',status:'trialing',trial_ends_at:'2026-10-20T00:00:00Z'},now),null);
   assert.equal(monthlyOrderLimit({plan_id:'free',status:'trialing',trial_ends_at:'2026-10-01T00:00:00Z'},now),50);
   assert.equal(monthlyOrderLimit({plan_id:'growth',status:'active',trial_ends_at:'2026-10-01T00:00:00Z'},now),1000);
-  assert.equal(monthlyOrderLimit({plan_id:'growth',status:'past_due',trial_ends_at:'2026-10-01T00:00:00Z'},now),50);
+  // Con un cobro rechazado el plan sigue durante la gracia; al vencer, la tarea diaria lo pasa a Gratis.
+  assert.equal(monthlyOrderLimit({plan_id:'growth',status:'past_due',trial_ends_at:'2026-10-01T00:00:00Z'},now),1000);
+  assert.equal(monthlyOrderLimit({plan_id:'growth',status:'free',trial_ends_at:'2026-10-01T00:00:00Z'},now),50);
   assert.equal(monthlyOrderLimit({plan_id:'enterprise',status:'active',trial_ends_at:'2026-10-01T00:00:00Z'},now),null);
 });
 

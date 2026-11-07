@@ -12,7 +12,7 @@ export function billingEnforced(env:Record<string,string|undefined>=process.env)
 export function monthlyOrderLimit(subscription:BillingSubscription|null,now=Date.now()):number|null {
   if(!subscription)return getPlan('free').orders;
   if(subscription.status==='trialing'&&new Date(subscription.trial_ends_at).getTime()>now)return null;
-  const plan=getPlan(subscription.status==='active'?subscription.plan_id:'free');
+  const plan=getPlan(['active','past_due'].includes(subscription.status)?subscription.plan_id:'free');
   return plan.orders;
 }
 

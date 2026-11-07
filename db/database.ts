@@ -15,7 +15,7 @@ export type SubscriptionRecord = {
   user_id:string; plan_id:string; requested_plan_id:string|null; status:string; billing_cycle:string;
   trial_ends_at:string; provider:string|null; provider_customer_id:string|null; provider_subscription_id:string|null;
   current_period_start:string|null; current_period_end:string|null; created_at:string; updated_at:string;
-  terms_version?:string|null; terms_accepted_at?:string|null; cancel_at_period_end?:boolean; canceled_at?:string|null; canceled_by?:string|null;
+  terms_version?:string|null; terms_accepted_at?:string|null; cancel_at_period_end?:boolean; canceled_at?:string|null; canceled_by?:string|null; past_due_since?:string|null; provider_amount?:number|null; provider_status?:string|null;
 };
 
 export type SyncedProduct = {
@@ -1087,4 +1087,62 @@ export async function getLifetimeOrders(userId:string) {
   const rows=await database().prepare("SELECT customer_key,source_created_at,total FROM orders WHERE user_id=? AND customer_key IS NOT NULL AND payment_status='paid' AND status!='cancelled' ORDER BY source_created_at LIMIT 300000")
     .bind(userId).all<{customer_key:string;source_created_at:string;total:number}>();
   return rows.results.map(row=>({customerKey:String(row.customer_key),createdAt:String(row.source_created_at),total:Number(row.total||0)}));
+}
+
+// --- Cobro de la suscripción con Mercado Pago ---
+// La persona eligió un plan y fue a Mercado Pago a cargar la tarjeta: queda pendiente.
+export async function savePendingCheckout(userId:string,input:{planId:string;cycle:string;preapprovalId:string;amount:number;termsVersion:string}) {
+  const now=new Date().toISOString();
+  await database().prepare("UPDATE subscriptions SET requested_plan_id=?,billing_cycle=?,provider='mercadopago',provider_subscription_id=?,provider_amount=?,provider_status='pending',terms_version=?,terms_accepted_at=?,cancel_at_period_end=FALSE,canceled_at=NULL,canceled_by=NULL,updated_at=? WHERE user_id=?")
+    .bind(input.planId,input.cycle,input.preapprovalId,input.amount,input.termsVersion,now,now,userId).run();
+}
+
+export async function findSubscriptionByPreapproval(preapprovalId:string) {
+  return database().prepare('SELECT * FROM subscriptions WHERE provider=? AND provider_subscription_id=?').bind('mercadopago',preapprovalId).first<SubscriptionRecord>();
+}
+
+// Aplica el estado que informa Mercado Pago. "authorized" activa el plan elegido; "paused"
+// (un cobro falló) deja el plan unos días con pago pendiente; "cancelled" termina el plan al
+// final del período pagado.
+export async function applyPreapprovalStatus(userId:string,input:{status:string;nextPaymentDate:string|null;amount?:number|null}) {
+  const now=new Date().toISOString();
+  if(input.status==='authorized') {
+    await database().prepare("UPDATE subscriptions SET status='active',plan_id=COALESCE(requested_plan_id,plan_id),requested_plan_id=NULL,provider_status='authorized',current_period_start=COALESCE(current_period_start,?),current_period_end=COALESCE(?,current_period_end),past_due_since=NULL,provider_amount=COALESCE(?,provider_amount),updated_at=? WHERE user_id=?")
+      .bind(now,input.nextPaymentDate,input.amount??null,now,userId).run();
+  } else if(input.status==='paused') {
+    await database().prepare("UPDATE subscriptions SET status=CASE WHEN status='active' THEN 'past_due' ELSE status END,provider_status='paused',past_due_since=COALESCE(past_due_since,?),updated_at=? WHERE user_id=?").bind(now,now,userId).run();
+  } else if(input.status==='cancelled') {
+    await database().prepare("UPDATE subscriptions SET provider_status='cancelled',cancel_at_period_end=CASE WHEN status IN ('active','past_due') THEN TRUE ELSE cancel_at_period_end END,requested_plan_id=CASE WHEN status IN ('active','past_due') THEN requested_plan_id ELSE NULL END,canceled_at=COALESCE(canceled_at,?),updated_at=? WHERE user_id=?").bind(now,now,userId).run();
+  } else {
+    await database().prepare('UPDATE subscriptions SET provider_status=?,updated_at=? WHERE user_id=?').bind(input.status,now,userId).run();
+  }
+  return database().prepare('SELECT * FROM subscriptions WHERE user_id=?').bind(userId).first<SubscriptionRecord>();
+}
+
+export async function recordSubscriptionPayment(userId:string,payment:{id:string;preapprovalId:string;amount:number;currency:string;status:string;date:string}) {
+  await database().prepare('INSERT INTO subscription_payments (user_id,provider,provider_payment_id,preapproval_id,amount,currency,status,paid_at,created_at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(provider,provider_payment_id) DO UPDATE SET status=excluded.status,amount=excluded.amount,paid_at=excluded.paid_at')
+    .bind(userId,'mercadopago',payment.id,payment.preapprovalId,payment.amount,payment.currency,payment.status,payment.date,new Date().toISOString()).run();
+}
+
+export async function listSubscriptionPayments(userId:string) {
+  const rows=await database().prepare('SELECT provider_payment_id,amount,currency,status,paid_at FROM subscription_payments WHERE user_id=? ORDER BY paid_at DESC LIMIT 24').bind(userId).all<{provider_payment_id:string;amount:number;currency:string;status:string;paid_at:string}>();
+  return rows.results.map(row=>({id:row.provider_payment_id,amount:Number(row.amount),currency:row.currency,status:row.status,paidAt:row.paid_at}));
+}
+
+// Suscripciones vigentes en Mercado Pago, para actualizar el monto en pesos con el dólar del día.
+export async function subscriptionsToReprice() {
+  const rows=await database().prepare("SELECT user_id,plan_id,requested_plan_id,billing_cycle,provider_subscription_id,provider_amount FROM subscriptions WHERE provider='mercadopago' AND provider_subscription_id IS NOT NULL AND provider_status IN ('authorized','paused')").all<{user_id:string;plan_id:string;requested_plan_id:string|null;billing_cycle:string;provider_subscription_id:string;provider_amount:number|null}>();
+  return rows.results;
+}
+
+export async function saveProviderAmount(userId:string,amount:number) {
+  await database().prepare('UPDATE subscriptions SET provider_amount=?,updated_at=? WHERE user_id=?').bind(amount,new Date().toISOString(),userId).run();
+}
+
+// Fin de la gracia o del período pagado: pasa a Gratis sin borrar datos.
+export async function expireLapsedSubscriptions(graceDays:number,now=new Date()) {
+  const iso=now.toISOString(),graceStart=new Date(now.getTime()-graceDays*24*60*60*1000).toISOString();
+  const result=await database().prepare("UPDATE subscriptions SET status='free',plan_id='free',cancel_at_period_end=FALSE,past_due_since=NULL,updated_at=? WHERE (status='past_due' AND past_due_since<?) OR (status IN ('active','past_due') AND cancel_at_period_end=TRUE AND current_period_end IS NOT NULL AND current_period_end<?) RETURNING user_id")
+    .bind(iso,graceStart,iso).all<{user_id:string}>();
+  return result.results.map(row=>row.user_id);
 }

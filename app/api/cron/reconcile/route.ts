@@ -6,6 +6,7 @@ import {meliUsersForReconciliation} from '../../../../db/mercadolibre';
 import {mercadoLibreConfigured} from '../../../../lib/mercadolibre';
 import {reconcileMercadoLibre} from '../../../../lib/mercadolibre-sync';
 import {meliAdsUsersForReconciliation,syncMeliAds} from '../../../../lib/meli-ads';
+import {dailyBillingMaintenance} from '../../../../lib/billing-checkout';
 
 function secureEqual(left:string,right:string) {
   if (left.length!==right.length) return false;
@@ -39,7 +40,9 @@ export async function POST(request:Request) {
   }
   const mercadolibre=await meliWork;
   const productAds=mercadoLibreConfigured()?await Promise.all((await meliAdsUsersForReconciliation()).map(async userId=>({userId,...await syncMeliAds(userId)}))):[];
-  return NextResponse.json({ok:true,processed:results.length+mercadolibre.length+productAds.length,results,mercadolibre,productAds});
+  // Cobro de Rentia: monto en pesos al dólar del día y fin de gracias o períodos vencidos.
+  const billing=await dailyBillingMaintenance().catch(error=>({error:error instanceof Error?error.message:'billing_failed'}));
+  return NextResponse.json({ok:true,processed:results.length+mercadolibre.length+productAds.length,results,mercadolibre,productAds,billing});
 }
 
 // Vercel Cron Jobs call the path with GET.

@@ -115,7 +115,7 @@ type MetaAdsData={accounts:MetaAccount[];selected:MetaAccount|null;sync:SyncStat
 type Dashboard={meliAds?:ProductAdsData;metrics:{refundLoss?:number;meliAdSpend?:number;totalAdSpend?:number;meliAdsComparable?:boolean;revenue:number;externalRevenue:number;totalRevenue:number;profitBeforeAds:number;profit:number;margin:number;orders:number;externalOrders:number;totalOrders:number;aov:number;totalAov:number;netRevenue:number;productCost:number;shipping:number;commissions:number;taxes:number;additional:number;fixedCosts?:number;marginBeforeFixed?:number;adSpend:number;metaReportedRevenue:number;metaPurchases:number;reportedRoas:number;blendedRoas:number;cpa:number;adSpendComparable:boolean;metaCurrency:string};ads:{connected:boolean;selected:MetaAccount|null;sync:SyncState};integrations?:{tiendanube?:{paymentAccess:boolean}};orders:OrderRow[];paymentMethods?:string[];products:ProductRow[];metaTimeline?:TimelinePoint[];timeline:TimelinePoint[];channelTimelines?:Record<string,TimelinePoint[]>;channels:ChannelRow[];exchangeRate:ExchangeRate|null;sync:SyncState;quality:DataQuality};
 type CostRule={due_day?:number|null;id:number;category:'commission'|'additional';name:string;match_value:string|null;calculation:'hybrid'|'fixed_monthly'|'percentage_revenue';amount:number;percentage:number;starts_at:string|null;ends_at:string|null;enabled:number};
 type SubscriptionPlan=RentiaPlan;
-type SubscriptionData={subscription:{planId:string;requestedPlanId:string|null;status:string;billingCycle:string;trialEndsAt:string;trialDaysRemaining:number;currentPeriodEnd?:string|null;cancelAtPeriodEnd?:boolean;canceledAt?:string|null;termsAcceptedAt?:string|null};usage:{orders:number;limit:number|null;percent:number};currentPlan:SubscriptionPlan;recommendation:SubscriptionPlan;plans:SubscriptionPlan[];billingEnabled:boolean;canManage:boolean;message?:string;quota?:OrderQuota};
+type SubscriptionData={checkoutEnabled?:boolean;testMode?:boolean;payerEmail?:string;payments?:Array<{id:string;amount:number;currency:string;status:string;paidAt:string}>;subscription:{planId:string;requestedPlanId:string|null;status:string;billingCycle:string;trialEndsAt:string;trialDaysRemaining:number;currentPeriodEnd?:string|null;cancelAtPeriodEnd?:boolean;canceledAt?:string|null;termsAcceptedAt?:string|null;providerStatus?:string|null;pastDueSince?:string|null;providerAmount?:number|null};usage:{orders:number;limit:number|null;percent:number};currentPlan:SubscriptionPlan;recommendation:SubscriptionPlan;plans:SubscriptionPlan[];billingEnabled:boolean;canManage:boolean;message?:string;quota?:OrderQuota};
 type OrderQuota={enforced:boolean;month:string;limit:number|null;used:number;skippedThisMonth:number;skippedTotal:number};
 
 type DisplayCurrency='ARS'|'USD'|'EUR';
@@ -930,10 +930,36 @@ function SubscriptionSection() {
       setData(next);setAnnual(next.subscription.billingCycle==='annual');
     } catch {setMessage('No pudimos cargar el plan. Revisá tu conexión e intentá nuevamente.');}
   }
-  useEffect(()=>{void Promise.resolve().then(loadSubscription);},[]);
+  useEffect(()=>{
+    // Al volver de Mercado Pago se confirma el estado real del pago.
+    const params=new URLSearchParams(window.location.search);
+    if(params.get('mp')==='volver'){
+      const preapprovalId=params.get('preapproval_id');
+      window.history.replaceState(null,'','/panel?section=plan');
+      setMessage('Confirmando el pago con Mercado Pago…');
+      fetch('/api/subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'sync',preapprovalId})}).then(async response=>{
+        const result=await response.json().catch(()=>({})) as SubscriptionData&{error?:string};
+        if(response.ok){setData(result);setMessage(result.message||'');}else{setMessage('No pudimos confirmar el pago todavía. Si lo completaste, el plan se activa solo en unos minutos.');void loadSubscription();}
+      }).catch(()=>void loadSubscription());
+      return;
+    }
+    void Promise.resolve().then(loadSubscription);
+  },[]);
 
-  async function choosePlan(planId:string) {
+  async function goToCheckout(planId:string,payerEmail?:string) {
+    setSaving(planId);setMessage('');
+    try {
+      const response=await fetch('/api/subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'checkout',planId,billingCycle:annual?'annual':'monthly',acceptTerms:true,payerEmail})});
+      const result=await response.json().catch(()=>({})) as {initPoint?:string;error?:string};
+      if(response.ok&&result.initPoint){window.location.assign(result.initPoint);return;}
+      setMessage(result.error==='exchange_rate_unavailable'?'No pudimos obtener el dólar oficial de hoy. Probá de nuevo en unos minutos.':result.error==='already_subscribed'?'Ya tenés una suscripción activa.':'No pudimos abrir Mercado Pago. Probá de nuevo en unos minutos.');
+    } catch {setMessage('No pudimos abrir Mercado Pago. Revisá tu conexión e intentá nuevamente.');}
+    setSaving(null);
+  }
+
+  async function choosePlan(planId:string,payerEmail?:string) {
     if (!data?.canManage) return;
+    if (data.checkoutEnabled) {await goToCheckout(planId,payerEmail);return;}
     setSaving(planId);setMessage('');
     try {
       const response=await fetch('/api/subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({planId,billingCycle:annual?'annual':'monthly',acceptTerms:true})});
@@ -956,9 +982,12 @@ function SubscriptionSection() {
     <div className="p-grid p-g3" style={{marginBottom:16}}>
       <div className="p-card p-planCard p-reveal"><span className="p-eyebrowS"><Sparkles size={14} aria-hidden="true"/> {trial?'PRUEBA ACTIVA':'PLAN ACTUAL'}</span><h2 style={{margin:'6px 0 2px',fontSize:28}}>{currentLabel}</h2><span className="p-sub">{trial?`${data.subscription.trialDaysRemaining} días restantes con acceso completo`:'Tu información y tu historial siguen disponibles'}</span></div>
       <div className="p-card p-reveal" style={{'--i':1} as React.CSSProperties}><b>{number(data.usage.orders)} órdenes</b> <span className="p-sub">{usageLimit?`de ${number(usageLimit)} en los últimos 30 días`:'en los últimos 30 días'}</span><div className="p-meter" aria-label={`${data.usage.percent}% del límite utilizado`}><i style={{width:`${data.usage.percent}%`}}/></div><span className="p-sub">Por tu volumen, te corresponde <b style={{color:'var(--text)'}}>{data.recommendation.name}</b></span></div>
-      <div className="p-card p-reveal" style={{'--i':2} as React.CSSProperties}><span className="p-eyebrowS"><CreditCard size={14} aria-hidden="true"/> FACTURACIÓN</span><h3 style={{margin:'6px 0 2px'}}>{data.billingEnabled?'Cobro automático':'Sin medio de pago'}</h3><span className="p-sub">{data.billingEnabled?'Administrá la renovación desde Rentia.':'Podés elegir ahora: todavía no se realizará ningún cobro.'}</span></div>
+      <div className="p-card p-reveal" style={{'--i':2} as React.CSSProperties}><span className="p-eyebrowS"><CreditCard size={14} aria-hidden="true"/> FACTURACIÓN</span><h3 style={{margin:'6px 0 2px'}}>{data.subscription.providerStatus==='authorized'?'Mercado Pago':data.checkoutEnabled?'Pagá con Mercado Pago':'Sin medio de pago'}</h3><span className="p-sub">{data.subscription.providerStatus==='authorized'?`Débito automático${data.subscription.providerAmount?` de ARS ${new Intl.NumberFormat('es-AR').format(data.subscription.providerAmount)}`:''} ${data.subscription.billingCycle==='annual'?'por año':'por mes'}. Se ajusta al dólar oficial.`:data.checkoutEnabled?'Elegí tu plan y cargás la tarjeta en Mercado Pago.':'Podés elegir ahora: todavía no se realizará ningún cobro.'}</span></div>
     </div>
     {message&&<div className="p-note">{message}</div>}
+    {data.testMode&&data.checkoutEnabled&&<div className="p-notice p-warning" style={{marginBottom:16}}><div><b>Cobros en modo prueba</b><p>Mercado Pago está conectado con claves de prueba: no se cobra plata real. Solo vos ves esta opción.</p></div></div>}
+    {data.subscription.status==='past_due'&&<div className="p-notice p-warning" role="alert" style={{marginBottom:16}}><div><b>No pudimos cobrar tu plan</b><p>Mercado Pago rechazó el último cobro. Revisá la tarjeta en Mercado Pago: tu plan sigue activo unos días{data.subscription.pastDueSince?` (hasta el ${new Intl.DateTimeFormat('es-AR',{dateStyle:'long'}).format(new Date(new Date(data.subscription.pastDueSince).getTime()+7*86400000))})`:''} y después pasa a Gratis, sin perder datos.</p></div></div>}
+    {(data.payments?.length||0)>0&&<div className="p-card p-reveal" style={{marginBottom:16}}><div className="p-cardHead"><div><span className="p-eyebrowS">PAGOS</span><h3>Historial de cobros</h3><span className="p-sub">Los cobros de tu suscripción en Mercado Pago.</span></div></div><ul className="p-weekList">{data.payments!.map(payment=><li key={payment.id}><span>{new Intl.DateTimeFormat('es-AR',{dateStyle:'long'}).format(new Date(payment.paidAt))}</span><span className={`p-chip ${payment.status==='approved'?'p-g':payment.status==='rejected'?'p-r':'p-n'}`}>{payment.status==='approved'?'Aprobado':payment.status==='rejected'?'Rechazado':'En proceso'}</span><b className="p-mono">ARS {new Intl.NumberFormat('es-AR').format(payment.amount)}</b></li>)}</ul></div>}
     {(()=>{const sub=data.subscription;const paid=sub.status==='active';const chosen=data.plans.find(plan=>plan.id===(paid?sub.planId:requested));if(!paid&&!chosen)return null;const until=sub.currentPeriodEnd?new Intl.DateTimeFormat('es-AR',{dateStyle:'long'}).format(new Date(sub.currentPeriodEnd)):null;return <div className="p-card p-reveal p-mySub" style={{marginBottom:16}}>
       <div className="p-cardHead"><div><span className="p-eyebrowS">TU SUSCRIPCIÓN</span><h3 style={{margin:'4px 0 2px'}}>{chosen?.name||data.currentPlan.name} · {sub.billingCycle==='annual'?'anual':'mensual'}</h3><span className="p-sub">{paid?(sub.cancelAtPeriodEnd?`Baja confirmada: no se te va a cobrar más. Tenés acceso hasta el ${until||'final del período pagado'}.`:`Se renueva automáticamente${until?` el ${until}`:''}. Podés darte de baja cuando quieras.`):'Elegiste este plan. Todavía no hay cobros activos: lo vas a confirmar antes del primer cobro.'}</span></div>
         {data.canManage&&!(paid&&sub.cancelAtPeriodEnd)&&<button type="button" className="p-btn p-dangerGhost" onClick={()=>setCancelOpen(true)}>{paid?'Dar de baja':'Quitar mi elección'}</button>}</div>
@@ -967,7 +996,7 @@ function SubscriptionSection() {
     <PlanConfigurator plans={data.plans} initialPlanId={requested||data.recommendation.id} recommendedPlanId={data.recommendation.id} usageOrders={data.usage.orders} annual={annual} onAnnualChange={setAnnual} onChoose={planId=>setPendingPlan(planId)} currentPlanId={trial?undefined:data.subscription.planId} requestedPlanId={requested} requestedBillingCycle={data.subscription.billingCycle} savingPlanId={saving} canManage={data.canManage} officialRate={officialRate}/>
     <div className="p-grid p-g3" style={{marginBottom:16}}>{([[ShieldCheck,'14 días de prueba','Acceso completo, sin tarjeta.'],[CalendarDays,'Renovación transparente','Vas a ver el monto antes de pagar.'],[Coins,'Sin costos escondidos','El precio depende del volumen.']] as const).map(([Icon,title,detail],index)=><div className="p-card p-reveal p-roleCard" style={{'--i':index} as React.CSSProperties} key={title}><Icon className="p-i" aria-hidden="true"/><div><b>{title}</b><p className="p-sub">{detail}</p></div></div>)}</div>
     <div className="p-card p-reveal" aria-labelledby="billing-roadmap-title"><div className="p-grid p-g2"><div><span className="p-eyebrowS">PRÓXIMO PASO</span><h3 id="billing-roadmap-title" style={{margin:'4px 0 6px'}}>Cobros simples dentro de Rentia</h3><p className="p-sub">La opción recomendada para comenzar en Argentina es integrar pagos recurrentes. Hasta que esté conectada, esta pantalla solo guarda tu preferencia y no solicita una tarjeta.</p><div className="p-note" style={{margin:0}}><CreditCard className="p-i" aria-hidden="true"/> <b>Integración de cobro pendiente</b> · Ningún plan genera cargos hoy</div></div><div>{([['Elegís el plan','Según el volumen real de tu tienda.'],['Confirmás el pago','En un checkout seguro y fuera de Rentia.'],['Rentia se actualiza','Plan, vencimiento y estado quedan sincronizados.']] as const).map(([title,detail],index)=><div className="p-stepRow" key={title}><span>{index+1}</span><div><b>{title}</b><small>{detail}</small></div></div>)}</div></div></div>
-    {pendingPlan&&(()=>{const plan=data.plans.find(item=>item.id===pendingPlan);return plan?<ConfirmPlanDialog plan={plan} annual={annual} saving={saving===plan.id} officialRate={officialRate} onConfirm={()=>void choosePlan(plan.id)} onClose={()=>setPendingPlan(null)}/>:null;})()}
+    {pendingPlan&&(()=>{const plan=data.plans.find(item=>item.id===pendingPlan);return plan?<ConfirmPlanDialog plan={plan} annual={annual} saving={saving===plan.id} officialRate={officialRate} checkout={data.checkoutEnabled?{payerEmail:data.payerEmail||'',testMode:Boolean(data.testMode)}:null} onConfirm={payerEmail=>void choosePlan(plan.id,payerEmail)} onClose={()=>setPendingPlan(null)}/>:null;})()}
     {cancelOpen&&<CancelSubscriptionDialog planName={(data.plans.find(plan=>plan.id===(data.subscription.status==='active'?data.subscription.planId:requested))||data.currentPlan).name} paid={data.subscription.status==='active'} periodEnd={data.subscription.currentPeriodEnd??null} onClose={()=>setCancelOpen(false)} onDone={result=>{setCancelOpen(false);if(result.subscription)setData(result as SubscriptionData);setMessage(result.message||'Baja confirmada.');}}/>}
   </section>;
 }

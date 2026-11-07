@@ -35,7 +35,7 @@ export function teamEntitlement(subscription:{plan_id:string;status:string;trial
   if(subscription.status==='trialing'&&new Date(subscription.trial_ends_at).getTime()>now) {
     return {limit:TRIAL_TEAM_SIZE,planName:'Prueba de 14 días'};
   }
-  const plan=getPlan(subscription.status==='active'?subscription.plan_id:'free');
+  const plan=getPlan(['active','past_due'].includes(subscription.status)?subscription.plan_id:'free');
   return {limit:plan.users,planName:plan.name};
 }
 
