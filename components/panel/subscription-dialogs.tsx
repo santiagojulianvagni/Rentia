@@ -12,20 +12,26 @@ const usd=(value:number)=>new Intl.NumberFormat('es-AR',{maximumFractionDigits:2
 const longDate=(value:string|null|undefined)=>value?new Intl.DateTimeFormat('es-AR',{dateStyle:'long'}).format(new Date(value)):null;
 
 // Paso previo a elegir un plan: resumen de cómo se cobra y aceptación de los términos.
-export function ConfirmPlanDialog({plan,annual,saving,officialRate=null,onConfirm,onClose}:{plan:Plan;annual:boolean;saving:boolean;officialRate?:OfficialRate|null;onConfirm:()=>void;onClose:()=>void}) {
+// Con el cobro habilitado (checkout), confirmar lleva a Mercado Pago a cargar la tarjeta.
+export function ConfirmPlanDialog({plan,annual,saving,officialRate=null,checkout=null,onConfirm,onClose}:{plan:Plan;annual:boolean;saving:boolean;officialRate?:OfficialRate|null;checkout?:{payerEmail:string;testMode:boolean}|null;onConfirm:(payerEmail?:string)=>void;onClose:()=>void}) {
   const [accepted,setAccepted]=useState(false);
+  const [payerEmail,setPayerEmail]=useState(checkout?.payerEmail||'');
   const price=plan.monthlyPrice===null?null:annual?plan.monthlyPrice*10:plan.monthlyPrice;
   return <><button type="button" className="p-scrim p-open" onClick={onClose} aria-label="Cerrar"/>
     <div className="p-modal p-open" role="dialog" aria-modal="true" aria-labelledby="confirm-plan-title">
       <div className="p-drawerHead"><div><span className="p-eyebrowS">CONFIRMAR PLAN</span><h3 id="confirm-plan-title">{plan.name} · {annual?'anual':'mensual'}</h3><span className="p-sub">{price===null?'Precio a medida':`USD ${usd(price)} ${annual?'por año':'por mes'}, cobrado en pesos al dólar oficial del día`}</span></div><button type="button" className="p-iconBtn" onClick={onClose} aria-label="Cerrar"><X className="p-i" aria-hidden="true"/></button></div>
       <div className="p-drawerBody">
-        {price!==null&&officialRate&&<div className="p-arsCalc"><span>Referencia de hoy</span><b className="p-mono">USD {usd(price)} × ${formatArs(officialRate.sell)} = ARS {formatArs(price*officialRate.sell)}</b><small>Dólar oficial, venta{rateDate(officialRate.updatedAt)?`, del ${rateDate(officialRate.updatedAt)}`:''}. Cada cobro usa la cotización de ese día, así que el monto en pesos puede variar.</small></div>}
+        {price!==null&&officialRate&&<div className="p-arsCalc"><span>Referencia de hoy</span><b className="p-mono">USD {usd(price)} × ${formatArs(officialRate.sell)} = ARS {formatArs(price*officialRate.sell)}</b><small>Dólar oficial, venta{rateDate(officialRate.updatedAt)?`, del ${rateDate(officialRate.updatedAt)}`:''}. Cada cobro usa la cotización del día anterior, así que el monto en pesos puede variar.</small></div>}
         <b style={{display:'block',marginBottom:8}}>Antes de confirmar</b>
         <ul className="p-incl">{SUBSCRIPTION_SUMMARY.map(item=><li key={item}><ShieldCheck aria-hidden="true"/>{item}</li>)}</ul>
         <label className="p-check"><input type="checkbox" checked={accepted} onChange={event=>setAccepted(event.target.checked)}/> <span>Leí y acepto los <a href="/terminos" target="_blank" rel="noopener noreferrer" style={{color:'var(--cyan)'}}>Términos y condiciones</a> y la <a href="/privacidad" target="_blank" rel="noopener noreferrer" style={{color:'var(--cyan)'}}>Política de privacidad</a>.</span></label>
-        <p className="p-note" style={{margin:'12px 0 0'}}>Todavía no hay cobros activos en Rentia: hoy se guarda tu elección y no se te cobra nada. Antes del primer cobro te vamos a pedir confirmarlo.</p>
+        {checkout?<>
+          <label className="p-field" style={{marginTop:14}}><span className="p-fieldLabel">Email de tu cuenta de Mercado Pago</span><span className="p-input"><input type="email" value={payerEmail} onChange={event=>setPayerEmail(event.target.value)} autoComplete="email" style={{flex:1,border:0,outline:0,background:'none',color:'var(--text)',font:'inherit'}}/></span><small className="p-sub">Con ese email vas a entrar a Mercado Pago para cargar la tarjeta.</small></label>
+          <p className="p-note" style={{margin:'12px 0 0'}}>Te llevamos a Mercado Pago para cargar la tarjeta. El plan se activa cuando Mercado Pago confirma el pago, y después se renueva solo {annual?'cada año':'cada mes'}. Podés darte de baja cuando quieras desde acá.</p>
+          {checkout.testMode&&<p className="p-note p-warn" style={{margin:'10px 0 0'}}><b>Modo prueba:</b> usá la cuenta compradora de prueba y una tarjeta de prueba. No se cobra plata real.</p>}
+        </>:<p className="p-note" style={{margin:'12px 0 0'}}>Todavía no hay cobros activos en Rentia: hoy se guarda tu elección y no se te cobra nada. Antes del primer cobro te vamos a pedir confirmarlo.</p>}
       </div>
-      <div className="p-drawerFoot"><button type="button" className="p-btn p-ghost" onClick={onClose}>Cancelar</button><button type="button" className="p-btn p-primary" disabled={!accepted||saving} onClick={onConfirm}>{saving?'Guardando…':`Elegir ${plan.name}`}</button></div>
+      <div className="p-drawerFoot"><button type="button" className="p-btn p-ghost" onClick={onClose}>Cancelar</button><button type="button" className="p-btn p-primary" disabled={!accepted||saving||(Boolean(checkout)&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payerEmail.trim()))} onClick={()=>onConfirm(checkout?payerEmail.trim():undefined)}>{saving?(checkout?'Abriendo Mercado Pago…':'Guardando…'):checkout?'Ir a Mercado Pago':`Elegir ${plan.name}`}</button></div>
     </div></>;
 }
 
