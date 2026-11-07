@@ -2,16 +2,23 @@ import { applyPreapprovalStatus, expireLapsedSubscriptions, findSubscriptionByPr
 import { getLiveRates } from './exchange-rate-provider';
 import { GRACE_DAYS, arsAmount, getAuthorizedPayment, getPreapproval, mercadoPagoToken, planUsd, updatePreapprovalAmount, type BillingCycle } from './mercadopago';
 import { getPlan } from './plans';
+import { createHash } from 'node:crypto';
 
 type Env=Record<string,string|undefined>;
+
+// Dueños de Rentia que siempre pueden probar el cobro. Se guarda la huella del email, no el
+// email: el repositorio es público.
+const OWNER_HASHES=new Set(['d54d7d22fdd808660cfaa39fcbe81e05c1dd4e3975e98abecb40ed22f59200de','5f30737650ee791d884f4cfd7ec6c0f42e8ccfaac8c661799288c83cb23ac771']);
+const ownerHash=(email:string)=>createHash('sha256').update(`rentia-tester:${email.trim().toLowerCase()}`).digest('hex');
 
 // Quién puede pagar: mientras se prueba, solo los emails de RENTIA_BILLING_TESTERS; con
 // RENTIA_BILLING_OPEN=1, todas las tiendas. Sin credenciales de Mercado Pago, nadie.
 export function checkoutEnabledFor(email:string|null|undefined,env:Env=process.env) {
   if(!mercadoPagoToken(env))return false;
   if(env.RENTIA_BILLING_OPEN==='1')return true;
+  if(!email)return false;
   const testers=(env.RENTIA_BILLING_TESTERS||'').split(',').map(item=>item.trim().toLowerCase()).filter(Boolean);
-  return Boolean(email&&testers.includes(email.toLowerCase()));
+  return testers.includes(email.toLowerCase())||OWNER_HASHES.has(ownerHash(email));
 }
 export const billingTestMode=(env:Env=process.env)=>env.MERCADOPAGO_TEST==='1';
 
