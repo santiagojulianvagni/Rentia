@@ -950,9 +950,9 @@ function SubscriptionSection() {
     setSaving(planId);setMessage('');
     try {
       const response=await fetch('/api/subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'checkout',planId,billingCycle:annual?'annual':'monthly',acceptTerms:true,payerEmail})});
-      const result=await response.json().catch(()=>({})) as {initPoint?:string;error?:string};
+      const result=await response.json().catch(()=>({})) as {initPoint?:string;error?:string;detail?:string};
       if(response.ok&&result.initPoint){window.location.assign(result.initPoint);return;}
-      setMessage(result.error==='exchange_rate_unavailable'?'No pudimos obtener el dólar oficial de hoy. Probá de nuevo en unos minutos.':result.error==='already_subscribed'?'Ya tenés una suscripción activa.':'No pudimos abrir Mercado Pago. Probá de nuevo en unos minutos.');
+      setMessage(result.error==='exchange_rate_unavailable'?'No pudimos obtener el dólar oficial de hoy. Probá de nuevo en unos minutos.':result.error==='already_subscribed'?'Ya tenés una suscripción activa.':`No pudimos abrir Mercado Pago. Probá de nuevo en unos minutos.${result.detail?` (Mercado Pago: ${result.detail})`:''}`);setPendingPlan(null);
     } catch {setMessage('No pudimos abrir Mercado Pago. Revisá tu conexión e intentá nuevamente.');}
     setSaving(null);
   }

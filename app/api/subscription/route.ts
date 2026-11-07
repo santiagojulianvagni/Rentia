@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cancelSubscription, getOrderQuota, getOrderUsageLast30Days, getOrCreateSubscription, listSubscriptionPayments, savePendingCheckout, saveRequestedPlan } from '../../../db/database';
+import { cancelSubscription, getOrderQuota, getOrderUsageLast30Days, getOrCreateSubscription, listSubscriptionPayments, recordError, savePendingCheckout, saveRequestedPlan } from '../../../db/database';
 import { billingTestMode, checkoutEnabledFor, planAmountArs, syncPreapproval } from '../../../lib/billing-checkout';
 import { createPreapproval, mercadoPagoToken } from '../../../lib/mercadopago';
 import { publicOrigin } from '../../../lib/public-origin';
@@ -81,7 +81,10 @@ export const POST=route({access:'manager',body:PlanBody,invalidBody:'invalid_pla
       return {ok:true,initPoint:preapproval.initPoint,amount:price.amount,rate:price.rate};
     } catch (error) {
       if (error instanceof HttpError) throw error;
-      throw new HttpError(502,'checkout_failed');
+      const detail=error instanceof Error?error.message:String(error);
+      await recordError({source:'server',path:'/api/subscription checkout',message:detail}).catch(()=>undefined);
+      // En modo prueba se muestra el motivo de Mercado Pago para poder corregirlo.
+      throw new HttpError(502,'checkout_failed',billingTestMode()?{detail}:undefined);
     }
   }
   if (body.action==='sync') {
