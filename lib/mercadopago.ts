@@ -71,7 +71,11 @@ async function request(path:string,init:RequestInit&{token:string}) {
   const {token,...rest}=init;
   const response=await fetch(`${API}${path}`,{...rest,headers:{authorization:`Bearer ${token}`,'content-type':'application/json',...(rest.headers||{})},signal:AbortSignal.timeout(15000)});
   const body=await response.json().catch(()=>({})) as Record<string,unknown>;
-  if(!response.ok)throw new Error(`mercadopago_${response.status}_${String(body.message||body.error||'error').slice(0,120)}`);
+  if(!response.ok) {
+    // El detalle (cause) dice qué dato rechazó Mercado Pago; se guarda en el registro de errores.
+    const cause=Array.isArray(body.cause)?body.cause.map(item=>{const entry=item as Record<string,unknown>;return [entry.code,entry.description].filter(Boolean).join(' ');}).join('; '):'';
+    throw new Error(`mercadopago_${response.status}_${String(body.message||body.error||'error').slice(0,120)}${cause?` (${cause.slice(0,200)})`:''}`);
+  }
   return body;
 }
 
