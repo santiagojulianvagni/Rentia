@@ -20,13 +20,13 @@
     "@clerk/localizations": "^4.17.1",
     "@clerk/nextjs": "^7.9.4",
     "lucide-react": "0.468.0",
-    "next": "^16.4.0",
+    "next": "^16.4.5",
     "pg": "^8.23.1",
     "qrcode": "^1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "read-excel-file": "^5.8.8",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.16",
@@ -37,7 +37,7 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "eslint": "9.39.4",
-    "eslint-config-next": "^16.4.0",
+    "eslint-config-next": "^16.4.5",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3"
   },
