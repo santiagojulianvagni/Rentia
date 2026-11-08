@@ -1,6 +1,8 @@
 import { env } from './env';
 import { customerKey } from './order-customer';
 import { decryptToken } from './token-crypto';
+import { notify, storeName } from './notifications';
+import { customerDataRequestEmail } from './email/templates';
 import { clearCartContacts, countCustomerData, findStoreOwner, listCartContacts, recordPrivacyRequest, redactCustomerOrders, redactStoreCustomerData } from '../db/database';
 
 // Avisos de privacidad obligatorios de Tiendanube (LGPD). Cada uno tiene su propia dirección,
@@ -63,7 +65,10 @@ export async function handleTiendanubePrivacy(topic:PrivacyTopic,payload:unknown
       // Todo lo que Rentia tiene del comprador sale de Tiendanube, que ya se lo entrega a la tienda.
       // Rentia solo agrega un código anónimo, la ciudad de envío y el contacto de carritos abandonados.
       externalId=text(record(body.data_request).id)||null;
-      result={...await countCustomerData(owner.user_id,'tiendanube',keys,ids(body.orders_requested),ids(body.checkouts_requested)),cartContacts:carts.length};
+      const counts=await countCustomerData(owner.user_id,'tiendanube',keys,ids(body.orders_requested),ids(body.checkouts_requested));
+      result={...counts,cartContacts:carts.length};
+      // La tienda es quien le responde al comprador: se le avisa por mail con lo que tiene Rentia.
+      await notify(owner.user_id,'customer_data_request',externalId||new Date().toISOString(),account=>customerDataRequestEmail({ownerName:account.owner_name,storeName:storeName(account),requestId:externalId,orders:counts.orders,carts:counts.carts,cartContacts:carts.length}));
     }
   }
   await recordPrivacyRequest({provider:'tiendanube',storeId,userId:owner.user_id,kind,externalId,result});

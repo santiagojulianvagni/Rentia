@@ -7,6 +7,7 @@ import {mercadoLibreConfigured} from '../../../../lib/mercadolibre';
 import {reconcileMercadoLibre} from '../../../../lib/mercadolibre-sync';
 import {meliAdsUsersForReconciliation,syncMeliAds} from '../../../../lib/meli-ads';
 import {dailyBillingMaintenance} from '../../../../lib/billing-checkout';
+import {dailyTrialNotifications} from '../../../../lib/notifications';
 
 function secureEqual(left:string,right:string) {
   if (left.length!==right.length) return false;
@@ -42,7 +43,9 @@ export async function POST(request:Request) {
   const productAds=mercadoLibreConfigured()?await Promise.all((await meliAdsUsersForReconciliation()).map(async userId=>({userId,...await syncMeliAds(userId)}))):[];
   // Cobro de Rentia: monto en pesos al dólar del día y fin de gracias o períodos vencidos.
   const billing=await dailyBillingMaintenance().catch(error=>({error:error instanceof Error?error.message:'billing_failed'}));
-  return NextResponse.json({ok:true,processed:results.length+mercadolibre.length+productAds.length,results,mercadolibre,productAds,billing});
+  // Avisos por mail de la prueba gratis (3 días antes, 1 día antes y al terminar).
+  const trials=await dailyTrialNotifications().catch(()=>({error:'trial_notifications_failed'}));
+  return NextResponse.json({ok:true,processed:results.length+mercadolibre.length+productAds.length,results,mercadolibre,productAds,billing,trials});
 }
 
 // Vercel Cron Jobs call the path with GET.

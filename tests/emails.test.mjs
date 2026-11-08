@@ -1,0 +1,76 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {registerHooks} from 'node:module';
+import {createTestDatabase} from './helpers/postgres.mjs';
+
+// Mails: plantillas con el mismo diseño, texto escapado, y cada aviso una sola vez.
+registerHooks({resolve(specifier,context,next){
+  try{return next(specifier,context);}catch(error){
+    if(error.code==='ERR_MODULE_NOT_FOUND'&&specifier.startsWith('.')&&!/\.[a-z]+$/i.test(specifier))return next(`${specifier}.ts`,context);
+    throw error;
+  }
+}});
+const {setDatabase}=await import('../db/client.ts');
+const templates=await import('../lib/email/templates.ts');
+const {sendEmail}=await import('../lib/email/send.ts');
+const {notify,dailyTrialNotifications}=await import('../lib/notifications.ts');
+
+test('every template has a subject, the brand layout, a button and a plain-text version',()=>{
+  const all=[
+    templates.trialEndingEmail({ownerName:'Ana Pérez',storeName:'Casa <Norte>',daysLeft:3,trialEndsAt:'2026-11-20T12:00:00Z'}),
+    templates.trialEndingEmail({ownerName:null,storeName:'Casa',daysLeft:1,trialEndsAt:'2026-11-20T12:00:00Z'}),
+    templates.trialEndedEmail({ownerName:'Ana',storeName:'Casa'}),
+    templates.subscriptionActiveEmail({ownerName:'Ana',storeName:'Casa',planName:'Growth',amount:61230,cycle:'monthly',nextPaymentDate:'2026-12-08T12:00:00Z'}),
+    templates.paymentFailedEmail({ownerName:'Ana',storeName:'Casa',planName:'Growth',graceUntil:'2026-11-15T12:00:00Z'}),
+    templates.subscriptionCanceledEmail({ownerName:'Ana',storeName:'Casa',planName:'Growth',until:'2026-12-08T12:00:00Z'}),
+    templates.planExpiredEmail({ownerName:'Ana',storeName:'Casa'}),
+    templates.customerDataRequestEmail({ownerName:'Ana',storeName:'Casa',requestId:'456',orders:2,carts:1,cartContacts:1}),
+  ];
+  for (const email of all) {
+    assert.ok(email.subject.length>8&&email.subject.length<70,email.subject);
+    assert.match(email.html,/apple-icon\.png/);
+    assert.match(email.html,/hola@rentiaapp\.com/);
+    assert.match(email.html,/<a href="https:\/\/[^"]+" style="display:inline-block/);
+    assert.ok(email.text.includes('https://'),'the plain text has the link');
+  }
+  assert.match(all[0].html,/¡Hola, Ana!/);
+  assert.ok(all[0].html.includes('Casa &lt;Norte&gt;')&&!all[0].html.includes('Casa <Norte>'),'store names are escaped');
+  assert.match(all[0].subject,/3 días/);assert.match(all[1].subject,/mañana/);assert.match(all[1].html,/¡Hola!/);
+  assert.match(all[3].html,/\$ 61\.230/);
+});
+
+test('without an API key nothing is sent, and a bad recipient is skipped',async()=>{
+  const email=templates.trialEndedEmail({ownerName:'Ana',storeName:'Casa'});
+  assert.deepEqual(await sendEmail('a@b.com',email,{idempotencyKey:'k',apiKey:''}),{sent:false,reason:'not_configured'});
+  assert.deepEqual(await sendEmail('pending+tiendanube-1@rentia.invalid',email,{idempotencyKey:'k',apiKey:'re_x'}),{sent:false,reason:'invalid_recipient'});
+  let request;
+  const fetcher=async(url,init)=>{request={url,init};return new Response(JSON.stringify({id:'em_1'}),{status:200});};
+  assert.deepEqual(await sendEmail('a@b.com',email,{idempotencyKey:'u:trial_ended:1',apiKey:'re_x',fetcher}),{sent:true,id:'em_1'});
+  assert.equal(request.url,'https://api.resend.com/emails');
+  assert.equal(request.init.headers['idempotency-key'],'u:trial_ended:1');
+  assert.equal(JSON.parse(request.init.body).from,'Rentia <hola@rentiaapp.com>');
+});
+
+test('each notice is sent once; a passing failure is retried and the trial reminders follow the days left',async()=>{
+  const {pg,driver}=await createTestDatabase();setDatabase(driver);
+  await pg.query("INSERT INTO accounts (user_id,email,owner_name,store_name,trial_started_at,created_at,updated_at) VALUES ('s','dueno@tienda.com','Ana','Casa Norte','2026-11-01','2026-11-01','2026-11-01')");
+  const sent=[];
+  const ok=async(to,email)=>{sent.push([to,email.subject]);return {sent:true,id:`em_${sent.length}`};};
+  const build=()=>templates.trialEndedEmail({ownerName:'Ana',storeName:'Casa'});
+  assert.equal((await notify('s','trial_ended','x',build,ok)).sent,true);
+  assert.equal((await notify('s','trial_ended','x',build,ok)).reason,'already_sent');
+  assert.equal((await notify('s','trial_ended','y',build,async()=>({sent:false,reason:'network'}))).sent,false);
+  assert.equal((await notify('s','trial_ended','y',build,ok)).sent,true,'a network failure is retried later');
+  assert.equal(sent.length,2);
+
+  await pg.query("INSERT INTO subscriptions (user_id,plan_id,status,billing_cycle,trial_ends_at,created_at,updated_at) VALUES ('s','free','trialing','monthly','2026-11-15T12:00:00.000Z','2026-11-01','2026-11-01')");
+  sent.length=0;
+  await dailyTrialNotifications(new Date('2026-11-12T13:00:00Z'),ok);
+  await dailyTrialNotifications(new Date('2026-11-12T20:00:00Z'),ok);
+  assert.deepEqual(sent.map(item=>item[1]),['Tu prueba de Rentia termina en 3 días'],'once for the 3-day notice');
+  await dailyTrialNotifications(new Date('2026-11-14T13:00:00Z'),ok);
+  assert.equal(sent.at(-1)[1],'Tu prueba de Rentia termina mañana');
+  await dailyTrialNotifications(new Date('2026-11-15T13:00:00Z'),ok);
+  assert.equal(sent.at(-1)[1],'Terminó tu prueba de Rentia');
+  assert.equal(sent.length,3);
+});

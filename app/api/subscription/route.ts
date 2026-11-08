@@ -5,6 +5,8 @@ import { createPreapproval, mercadoPagoToken } from '../../../lib/mercadopago';
 import { publicOrigin } from '../../../lib/public-origin';
 import { billingEnforced } from '../../../lib/billing';
 import { cancelProviderSubscription } from '../../../lib/payments';
+import { notify, storeName } from '../../../lib/notifications';
+import { subscriptionCanceledEmail } from '../../../lib/email/templates';
 import { getPlan, recommendedPlan, RENTIA_PLANS } from '../../../lib/plans';
 import { requireRecentVerification } from '../../../lib/reverification';
 import { canManageRentia } from '../../../lib/session';
@@ -117,6 +119,9 @@ export const POST=route({access:'manager',body:PlanBody,invalidBody:'invalid_pla
     }
     const subscription=await cancelSubscription(user.id,user.clerkUserId||user.email);
     if (!subscription) throw new HttpError(404,'account_not_found');
+    if (current.status==='active'||current.status==='past_due') {
+      await notify(user.id,'subscription_canceled',subscription.canceled_at||new Date().toISOString(),account=>subscriptionCanceledEmail({ownerName:account.owner_name,storeName:storeName(account),planName:getPlan(current.plan_id).name,until:subscription.current_period_end??null}));
+    }
     const orders=await getOrderUsageLast30Days(user.id);
     const message=current.status==='active'||current.status==='past_due'
       ?`Listo, te diste de baja. No se te va a cobrar más y seguís con ${getPlan(current.plan_id).name} hasta el final del período pagado.`

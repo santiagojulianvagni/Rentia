@@ -399,7 +399,9 @@ function PanelApp() {
   const [paletteQuery,setPaletteQuery]=useState('');
   const [paletteIndex,setPaletteIndex]=useState(0);
   const [quota,setQuota]=useState<OrderQuota|null>(null);
-  useEffect(()=>{let cancelled=false;fetch('/api/subscription',{cache:'no-store'}).then(response=>response.ok?response.json():null).then((data:SubscriptionData|null)=>{if(!cancelled&&data?.quota)setQuota(data.quota);}).catch(()=>{});return()=>{cancelled=true;};},[active]);
+  // Prueba gratis por terminar: se avisa arriba del panel en los últimos 3 días.
+  const [trialEnding,setTrialEnding]=useState<{days:number;endsAt:string}|null>(null);
+  useEffect(()=>{let cancelled=false;fetch('/api/subscription',{cache:'no-store'}).then(response=>response.ok?response.json():null).then((data:SubscriptionData|null)=>{if(cancelled)return;if(data?.quota)setQuota(data.quota);const sub=data?.subscription;if(sub?.status==='trialing'&&sub.trialDaysRemaining<=3)setTrialEnding({days:Math.max(1,sub.trialDaysRemaining),endsAt:sub.trialEndsAt});}).catch(()=>{});return()=>{cancelled=true;};},[active]);
   useEffect(()=>{
     const invalid=(event:Event)=>{
       const field=event.target as HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement;
@@ -863,6 +865,7 @@ function PanelApp() {
       {accessRole==='member'&&<div className="p-readOnly"><ShieldCheck className="p-i" aria-hidden="true"/><span><b>Acceso de consulta</b> Podés ver datos y exportar informes. Los cambios los realiza el propietario o un administrador.</span></div>}
       <main className="p-content appPage">
       {quota?.enforced&&quota.limit!==null&&active!=='plan'&&(quota.skippedTotal>0||quota.used>=quota.limit)&&<div className="p-notice p-warning" role="status"><TriangleAlert className="p-i" aria-hidden="true"/><div><b>{quota.skippedTotal>0?`Hay ${quota.skippedTotal.toLocaleString('es-AR')} ${quota.skippedTotal===1?'orden':'órdenes'} sin importar por el límite de tu plan`:'Tu tienda llegó al límite de órdenes de su plan este mes'}</b><p>Tu plan importa hasta {quota.limit.toLocaleString('es-AR')} órdenes por mes. Tus datos no se pierden: al elegir un plan mayor, las recuperamos automáticamente.</p></div><button type="button" className="p-btn p-small p-primary" onClick={()=>selectSection('plan')}>Ver planes</button></div>}
+      {trialEnding&&active!=='plan'&&<div className="p-notice p-warning" role="status"><Sparkles className="p-i" aria-hidden="true"/><div><b>{trialEnding.days<=1?'Tu prueba gratis termina mañana':`Tu prueba gratis termina en ${trialEnding.days} días`}</b><p>El {new Intl.DateTimeFormat('es-AR',{day:'numeric',month:'long'}).format(new Date(trialEnding.endsAt))} pasás al plan Gratis (50 órdenes por mes y 12 meses de historial) si no elegís un plan. No perdés ningún dato.</p></div><button type="button" className="p-btn p-small p-primary" onClick={()=>selectSection('plan')}>Elegir plan</button></div>}
       <fieldset className="managementFields" disabled={!canManage&&['costos','configuracion','moneda','integraciones'].includes(active)}>
       {active==='equipo'?<TeamSection onPlans={()=>selectSection('plan')}/>:active==='resumen'?<>
         {integrationsLoaded&&!hasSalesConnection&&<div className="p-notice p-import"><PlugZap className="p-i" aria-hidden="true"/><div><b>{t('Conectá tu tienda para empezar')}</b><p>Enlazar el canal es independiente de cargar envío, comisiones e impuestos.</p></div><button type="button" className="p-btn p-small p-primary" onClick={()=>selectSection('integraciones')}>Ver conexiones</button></div>}

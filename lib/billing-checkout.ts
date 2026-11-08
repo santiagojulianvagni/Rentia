@@ -2,6 +2,8 @@ import { applyPreapprovalStatus, expireLapsedSubscriptions, findSubscriptionByPr
 import { getLiveRates } from './exchange-rate-provider';
 import { GRACE_DAYS, arsAmount, getAuthorizedPayment, getPreapproval, mercadoPagoToken, planUsd, updatePreapprovalAmount, type BillingCycle } from './mercadopago';
 import { getPlan } from './plans';
+import { notify, storeName } from './notifications';
+import { paymentFailedEmail, planExpiredEmail, subscriptionActiveEmail } from './email/templates';
 import { createHash } from 'node:crypto';
 
 type Env=Record<string,string|undefined>;
@@ -46,7 +48,16 @@ export async function syncPreapproval(preapprovalId:string,expectedUserId?:strin
   const userId=stored?.user_id||preapproval.externalReference;
   if(!userId||(expectedUserId&&userId!==expectedUserId))throw new Error('preapproval_not_owned');
   if(!stored)return null;
-  return applyPreapprovalStatus(userId,{status:preapproval.status,nextPaymentDate:preapproval.nextPaymentDate,amount:preapproval.amount});
+  const updated=await applyPreapprovalStatus(userId,{status:preapproval.status,nextPaymentDate:preapproval.nextPaymentDate,amount:preapproval.amount});
+  // Avisos por mail: plan activado (una vez por suscripción) y cobro rechazado (una vez por atraso).
+  if(updated?.status==='active'&&updated.provider_status==='authorized'&&stored.provider_status!=='authorized') {
+    await notify(userId,'subscription_active',preapproval.id,account=>subscriptionActiveEmail({ownerName:account.owner_name,storeName:storeName(account),planName:getPlan(updated.plan_id).name,amount:updated.provider_amount??preapproval.amount??null,cycle:updated.billing_cycle,nextPaymentDate:preapproval.nextPaymentDate}));
+  }
+  if(updated?.status==='past_due'&&updated.past_due_since) {
+    const graceUntil=new Date(Date.parse(updated.past_due_since)+GRACE_DAYS*86400000).toISOString();
+    await notify(userId,'payment_failed',updated.past_due_since,account=>paymentFailedEmail({ownerName:account.owner_name,storeName:storeName(account),planName:getPlan(updated.plan_id).name,graceUntil}));
+  }
+  return updated;
 }
 
 // Aviso de un cobro: se guarda en el historial y se vuelve a leer la suscripción, que trae
@@ -77,6 +88,9 @@ export async function dailyBillingMaintenance() {
       catch {result.failed++;}
     }
   }
-  result.expired=(await expireLapsedSubscriptions(GRACE_DAYS)).length;
+  const expired=await expireLapsedSubscriptions(GRACE_DAYS);
+  result.expired=expired.length;
+  const today=new Date().toISOString().slice(0,10);
+  for(const userId of expired) await notify(userId,'plan_expired',today,account=>planExpiredEmail({ownerName:account.owner_name,storeName:storeName(account)}));
   return result;
 }

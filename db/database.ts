@@ -1252,3 +1252,42 @@ export async function grantComplimentaryPlan(userId:string,planId:string) {
     .bind(planId,now,now,userId).run();
   return database().prepare('SELECT * FROM subscriptions WHERE user_id=?').bind(userId).first<SubscriptionRecord>();
 }
+
+// --- Mails: registro para no mandar dos veces el mismo aviso ---
+export async function claimEmail(userId:string,kind:string,ref:string) {
+  await ensureSchema();
+  const row=await database().prepare('INSERT INTO email_log (user_id,kind,ref,created_at) VALUES (?,?,?,?) ON CONFLICT(user_id,kind,ref) DO NOTHING RETURNING id')
+    .bind(userId,kind,ref,new Date().toISOString()).first<{id:number|string}>();
+  return row?Number(row.id):null;
+}
+
+export async function finishEmail(id:number,result:{status:'sent'|'skipped'|'failed';providerId?:string|null;error?:string|null}) {
+  await database().prepare('UPDATE email_log SET status=?,provider_id=?,error=?,sent_at=? WHERE id=?')
+    .bind(result.status,result.providerId??null,result.error??null,result.status==='sent'?new Date().toISOString():null,id).run();
+}
+
+// Si el envío falló por algo pasajero (sin clave, red), se libera para reintentar en otra pasada.
+export async function releaseEmail(id:number) {
+  await database().prepare("DELETE FROM email_log WHERE id=? AND status='pending'").bind(id).run();
+}
+
+export async function trialsEndingSoon(now=new Date(),days=3) {
+  await ensureSchema();
+  const rows=await database().prepare("SELECT user_id,trial_ends_at FROM subscriptions WHERE status='trialing' AND trial_ends_at>? AND trial_ends_at<=?")
+    .bind(now.toISOString(),new Date(now.getTime()+days*86400000).toISOString()).all<{user_id:string;trial_ends_at:string}>();
+  return rows.results;
+}
+
+// Pruebas que terminaron hace poco sin haber pagado nunca (la cuenta pasa sola a Gratis).
+export async function trialsRecentlyEnded(now=new Date(),days=3) {
+  await ensureSchema();
+  const rows=await database().prepare("SELECT user_id,trial_ends_at FROM subscriptions WHERE status IN ('trialing','free') AND current_period_end IS NULL AND (provider IS NULL OR provider<>'complimentary') AND trial_ends_at<=? AND trial_ends_at>?")
+    .bind(now.toISOString(),new Date(now.getTime()-days*86400000).toISOString()).all<{user_id:string;trial_ends_at:string}>();
+  return rows.results;
+}
+
+export async function listEmailLog(userId:string) {
+  await ensureSchema();
+  const rows=await database().prepare('SELECT kind,ref,status,error,created_at,sent_at FROM email_log WHERE user_id=? ORDER BY created_at DESC LIMIT 50').bind(userId).all<{kind:string;ref:string;status:string;error:string|null;created_at:string;sent_at:string|null}>();
+  return rows.results;
+}
