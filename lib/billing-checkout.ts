@@ -20,7 +20,9 @@ export function checkoutEnabledFor(email:string|null|undefined,env:Env=process.e
   const testers=(env.RENTIA_BILLING_TESTERS||'').split(',').map(item=>item.trim().toLowerCase()).filter(Boolean);
   return testers.includes(email.toLowerCase())||OWNER_HASHES.has(ownerHash(email));
 }
-export const billingTestMode=(env:Env=process.env)=>env.MERCADOPAGO_TEST==='1';
+// MERCADOPAGO_LIVE=1 gana sobre MERCADOPAGO_TEST: en Vercel editar una variable existente pide passkey,
+// agregar una nueva no.
+export const billingTestMode=(env:Env=process.env)=>env.MERCADOPAGO_TEST==='1'&&env.MERCADOPAGO_LIVE!=='1';
 
 export async function officialDollar() {
   const rates=await getLiveRates(null);

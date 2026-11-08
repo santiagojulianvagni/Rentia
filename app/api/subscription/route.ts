@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cancelSubscription, getOrderQuota, getOrderUsageLast30Days, getOrCreateSubscription, listSubscriptionPayments, recordError, savePendingCheckout, saveRequestedPlan } from '../../../db/database';
+import { applyPreapprovalStatus, cancelSubscription, getOrderQuota, getOrderUsageLast30Days, getOrCreateSubscription, listSubscriptionPayments, recordError, savePendingCheckout, saveRequestedPlan } from '../../../db/database';
 import { billingTestMode, checkoutEnabledFor, planAmountArs, syncPreapproval } from '../../../lib/billing-checkout';
 import { createPreapproval, mercadoPagoToken } from '../../../lib/mercadopago';
 import { publicOrigin } from '../../../lib/public-origin';
@@ -34,6 +34,7 @@ function serialize(userId:string,subscription:NonNullable<Awaited<ReturnType<typ
       providerStatus:subscription.provider_status??null,
       pastDueSince:subscription.past_due_since??null,
       providerAmount:subscription.provider_amount??null,
+      complimentary:subscription.provider==='complimentary',
     },
     usage:{orders,limit,percent:limit?Math.min(100,Math.round(orders/limit*100)):0},
     currentPlan,
@@ -70,6 +71,7 @@ export const POST=route({access:'manager',body:PlanBody,invalidBody:'invalid_pla
     const payerEmail=typeof body.payerEmail==='string'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.payerEmail.trim())?body.payerEmail.trim().toLowerCase():user.email;
     const current=await getOrCreateSubscription(user.id);
     if (!current) throw new HttpError(404,'account_not_found');
+    if (current.provider==='complimentary') throw new HttpError(409,'complimentary_plan');
     if (current.status==='active'&&current.provider_status==='authorized') throw new HttpError(409,'already_subscribed');
     const price=await planAmountArs(plan.id,cycle);
     if (!price) throw new HttpError(503,'exchange_rate_unavailable');
@@ -105,14 +107,18 @@ export const POST=route({access:'manager',body:PlanBody,invalidBody:'invalid_pla
     if (reverify) return reverify;
     const current=await getOrCreateSubscription(user.id);
     if (!current) throw new HttpError(404,'account_not_found');
-    if (current.status==='active') {
-      try { await cancelProviderSubscription(current); }
+    if (current.provider==='complimentary') throw new HttpError(409,'complimentary_plan');
+    if (current.status==='active'||current.status==='past_due') {
+      let cancelled=false;
+      try { cancelled=(await cancelProviderSubscription(current)).cancelled; }
       catch { throw new HttpError(502,'provider_cancel_failed'); }
+      // Mercado Pago ya canceló: se anota enseguida, sin esperar su aviso, así no se le vuelve a ajustar el precio.
+      if (cancelled) await applyPreapprovalStatus(user.id,{status:'cancelled',nextPaymentDate:null});
     }
     const subscription=await cancelSubscription(user.id,user.clerkUserId||user.email);
     if (!subscription) throw new HttpError(404,'account_not_found');
     const orders=await getOrderUsageLast30Days(user.id);
-    const message=current.status==='active'
+    const message=current.status==='active'||current.status==='past_due'
       ?`Listo, te diste de baja. No se te va a cobrar más y seguís con ${getPlan(current.plan_id).name} hasta el final del período pagado.`
       :'Listo, quitamos el plan que habías elegido. No se realizó ni se realizará ningún cobro.';
     return {...serialize(user.id,subscription,orders,true,await getOrderQuota(user.id)),message};

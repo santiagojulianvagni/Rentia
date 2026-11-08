@@ -1242,3 +1242,13 @@ export async function takePendingInstall(tokenHash:string) {
   return database().prepare('DELETE FROM pending_installs WHERE token_hash=? AND expires_at>? RETURNING token_hash,provider,store_id,store_name,encrypted_access_token,token_iv,scopes,expires_at')
     .bind(tokenHash,new Date().toISOString()).first<PendingInstall>();
 }
+
+// Plan sin cargo para una tienda (propia o regalada): no pasa por Mercado Pago ni vence.
+// Se usa a mano desde el servidor; no hay pantalla para darlo.
+export async function grantComplimentaryPlan(userId:string,planId:string) {
+  await ensureSchema();
+  const now=new Date().toISOString();
+  await database().prepare("UPDATE subscriptions SET provider='complimentary',provider_status='complimentary',provider_subscription_id=NULL,provider_amount=NULL,plan_id=?,requested_plan_id=NULL,status='active',cancel_at_period_end=FALSE,canceled_at=NULL,canceled_by=NULL,past_due_since=NULL,current_period_end=NULL,current_period_start=COALESCE(current_period_start,?),updated_at=? WHERE user_id=?")
+    .bind(planId,now,now,userId).run();
+  return database().prepare('SELECT * FROM subscriptions WHERE user_id=?').bind(userId).first<SubscriptionRecord>();
+}
