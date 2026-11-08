@@ -76,7 +76,7 @@ export default function PlanConfigurator({plans,initialPlanId='growth',recommend
             <div aria-live="polite" aria-atomic="true">{quote.monthlyEquivalent===null?<b className="p-mono" style={{fontSize:32}}>A medida</b>:<><b className="p-mono" style={{fontSize:32}}>USD {formatNumber(quote.monthlyEquivalent)}</b><span className="p-sub"> / mes{annual?' · equivalente anual':''}</span></>}</div>
             <p className="p-sub" style={{margin:'2px 0 0'}}>{quote.monthlyEquivalent===null?'Una propuesta pensada para tu operación.':quote.total===0?'Sin costo. Sin tarjeta.':annual?<>USD {formatNumber(quote.total!)} facturados al año · <b style={{color:'var(--green)'}}>Ahorrás USD {formatNumber(quote.savings)}</b></>:'Facturación mensual. Precio expresado en USD.'}</p>
             {officialRate&&quote.total?<p className="p-arsRef">Hoy serían <b>ARS {formatArs(quote.total*officialRate.sell)}</b> {annual?'por año':'por mes'} · dólar oficial ${formatArs(officialRate.sell)}{rateDate(officialRate.updatedAt)?` del ${rateDate(officialRate.updatedAt)}`:''}. Se cobra a la cotización del día anterior a cada cobro.</p>:null}
-            <div className="p-kv" style={{marginTop:12}}><span>Órdenes por mes</span><b>{plan.orders===null?'+10.000':formatNumber(plan.orders)}</b></div><div className="p-kv"><span>Usuarios</span><b>{plan.users===null?'A medida':plan.users}</b></div><div className="p-kv"><span>Historial inicial</span><b>{plan.history}</b></div>
+            <div className="p-kv" style={{marginTop:12}}><span>Órdenes por mes</span><b>{plan.orders===null?'+10.000':formatNumber(plan.orders)}</b></div><div className="p-kv"><span>Usuarios</span><b>{plan.users===null?'A medida':plan.users}</b></div><div className="p-kv"><span>Historial visible</span><b>{plan.history}</b></div>
           </div>
           <small className="p-sub" style={{display:'block',margin:'8px 0'}}>El cupo incluye al propietario. Cada invitación pendiente reserva un lugar hasta que se acepta, vence o se cancela.</small>
           <b style={{fontSize:13}}>Todo claro, desde el primer día.</b>
@@ -92,7 +92,7 @@ export default function PlanConfigurator({plans,initialPlanId='growth',recommend
         <tr><th scope="row">Precio mensual {annual&&<small>equivalente anual</small>}</th>{plans.map(item=>{const price=planQuote(item,annual).monthlyEquivalent;return <td key={item.id} className={item.id===plan.id?'p-sel':''}>{price===null?'A medida':`USD ${formatNumber(price)}`}</td>;})}</tr>
         <tr><th scope="row">Órdenes / mes</th>{plans.map(item=><td key={item.id} className={item.id===plan.id?'p-sel':''}>{item.orders===null?'+10.000':formatNumber(item.orders)}</td>)}</tr>
         <tr><th scope="row">Usuarios</th>{plans.map(item=><td key={item.id} className={item.id===plan.id?'p-sel':''}>{item.users??'A medida'}</td>)}</tr>
-        <tr><th scope="row">Historial inicial</th>{plans.map(item=><td key={item.id} className={item.id===plan.id?'p-sel':''}>{item.history}</td>)}</tr>
+        <tr><th scope="row">Historial visible</th>{plans.map(item=><td key={item.id} className={item.id===plan.id?'p-sel':''}>{item.history}</td>)}</tr>
         <tr><th scope="row">Soporte</th>{plans.map(item=><td key={item.id} className={item.id===plan.id?'p-sel':''}>{item.support}</td>)}</tr>
       </tbody></table></div>
       <p className="p-sub" style={{fontSize:12,margin:'10px 0 0'}}>El importe anual se muestra completo en la tarjeta del plan. La barra es una simulación: no cambia tu cuenta ni genera cargos.</p>

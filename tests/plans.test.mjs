@@ -9,8 +9,8 @@ registerHooks({resolve(specifier,context,next){
 }});
 const { RENTIA_PLANS, annualPrice, getPlan, planQuote, recommendedPlan }=await import('../lib/plans.ts');
 
-test('all plans include the same twelve-month initial history without changing team sizes',()=>{
-  assert.deepEqual(RENTIA_PLANS.map(plan=>plan.history),Array(6).fill('Hasta 12 meses'));
+test('each plan shows its visible history without changing team sizes',()=>{
+  assert.deepEqual(RENTIA_PLANS.map(plan=>plan.history),['Últimos 12 meses','Últimos 12 meses','Últimos 24 meses','Últimos 36 meses','Últimos 36 meses','Todo el historial']);
   assert.deepEqual(RENTIA_PLANS.map(plan=>plan.users),[1,2,5,10,20,null]);
 });
 

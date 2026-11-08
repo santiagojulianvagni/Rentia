@@ -1,13 +1,13 @@
 import {z} from 'zod';
 import {HttpError,route,validate} from '../../../../server/http/route';
-import {analyticsRangeFromUrl} from '../../../../lib/analytics-range';
+import {planAnalyticsRange} from '../../../../server/analytics-window';
 import {getMeliAds,selectMeliAds,syncMeliAds} from '../../../../lib/meli-ads';
 
 const headers={'cache-control':'no-store'};
 const SyncBody=z.object({advertiserId:z.unknown().optional(),force:z.unknown().optional()});
 
 export const GET=route({},async({user,url})=>{
-  const {days,range}=analyticsRangeFromUrl(url);
+  const {days,range}=await planAnalyticsRange(user.id,url);
   return Response.json(await getMeliAds(user.id,days,0,range),{headers});
 });
 

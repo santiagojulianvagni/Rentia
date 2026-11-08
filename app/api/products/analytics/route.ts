@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { analyticsWindow, getProductAnalyticsData } from '../../../../db/database';
 import { calculateVariableAdditionalCosts, calculateOrderCosts, type CostRule } from '../../../../lib/cost-engine';
-import { analyticsRangeFromUrl } from '../../../../lib/analytics-range';
+import {planAnalyticsRange} from '../../../../server/analytics-window';
 import { route } from '../../../../server/http/route';
 
 type CatalogRow={product_id:number;rentia_archived:number;variant_id:number;provider:string;external_product_id:string;external_variant_id:string;sku:string|null;price:number;effective_cost:number;stock:number|null;product_name:string;image_url:string|null;cost_source:string};
 type SaleRow={provider:string;order_cursor:number;order_gross:number;variant_id:number|null;external_order_id:string;quantity:number;unit_price:number;unit_cost:number;order_total:number;currency:string;payment_method:string|null;payment_type:string|null;payment_installments:number|null;source_shipping_cost:number|null;source_commission_cost:number|null;manual_commission_cost:number|null;source_created_at:string};
 
 export const GET=route({},async({user,request})=>{
-  const {days,range}=analyticsRangeFromUrl(new URL(request.url));
+  const {days,range}=await planAnalyticsRange(user.id,new URL(request.url));
   const data=await getProductAnalyticsData(user.id,days,range);
   const catalog=data.catalog as unknown as CatalogRow[];
   const settings={shipping_cost_ars:Number(data.settings?.shipping_cost_ars||0),shipping_mode:data.settings?.shipping_mode||'average',commission_percent:Number(data.settings?.commission_percent||0),tax_percent:Number(data.settings?.tax_percent||0),tiendanube_plan_name:data.settings?.tiendanube_plan_name||null,pago_nube_plan_override:data.settings?.pago_nube_plan_override||null,pago_nube_payout_days:data.settings?.pago_nube_payout_days||null};

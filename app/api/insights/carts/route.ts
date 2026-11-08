@@ -1,5 +1,5 @@
 import { abandonedCartsSyncedAt, analyticsWindow, getAbandonedCarts, getAccount } from '../../../../db/database';
-import { analyticsRangeFromUrl } from '../../../../lib/analytics-range';
+import {planAnalyticsRange} from '../../../../server/analytics-window';
 import { cartSummary, type AbandonedCart, type CartContact } from '../../../../lib/abandoned-carts';
 import { canManageRentia } from '../../../../lib/session';
 import { decryptToken } from '../../../../lib/token-crypto';
@@ -11,7 +11,7 @@ type StoredCart=AbandonedCart&{contactEncrypted:string|null;contactIv:string|nul
 // Carritos abandonados del período. El contacto del comprador se descifra solo para el
 // propietario o un administrador, y solo de los carritos recientes que se muestran.
 export const GET=route({},async({user,url})=>{
-  const {days,range}=analyticsRangeFromUrl(url);
+  const {days,range}=await planAnalyticsRange(user.id,url);
   const {since,until}=analyticsWindow(days,0,range);
   const [{carts,paidOrders},syncedAt,account]=await Promise.all([getAbandonedCarts(user.id,since,until),abandonedCartsSyncedAt(user.id),getAccount(user.id)]);
   const summary=cartSummary(carts as StoredCart[],paidOrders);

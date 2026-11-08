@@ -1,12 +1,12 @@
 import {NextResponse} from 'next/server';
 import {analyticsWindow,getOrdersPage,getSettings,getCostRules,getPaidOrderTotals} from '../../../db/database';
-import {analyticsRangeFromUrl} from '../../../lib/analytics-range';
+import {planAnalyticsRange} from '../../../server/analytics-window';
 import { route } from '../../../server/http/route';
 import {allocateOrderCosts,costSettings,orderCosts} from '../../../lib/order-calculations';
 import {calculateVariableAdditionalCosts,type CostRule} from '../../../lib/cost-engine';
 
 export const GET=route({},async({user,request})=>{
-  const url=new URL(request.url),{days,range}=analyticsRangeFromUrl(url);
+  const url=new URL(request.url),{days,range}=await planAnalyticsRange(user.id,url);
   const requested=Number(url.searchParams.get('page')||1);
   if(!Number.isSafeInteger(requested)||requested<1)return NextResponse.json({error:'invalid_page'},{status:400});
   const query=(url.searchParams.get('q')||'').trim().slice(0,256);
