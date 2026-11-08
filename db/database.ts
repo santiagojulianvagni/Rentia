@@ -1320,3 +1320,20 @@ export async function weeklyEmailUsers() {
   const rows=await database().prepare('SELECT user_id FROM alert_settings WHERE weekly_email=TRUE').all<{user_id:string}>();
   return rows.results.map(row=>row.user_id);
 }
+
+// --- Administración (solo dueños de Rentia) ---
+export async function listAccountsForAdmin(search:string) {
+  await ensureSchema();
+  const like=`%${search.trim().toLowerCase()}%`;
+  const rows=await database().prepare("SELECT a.user_id,a.email,a.owner_name,a.store_name,a.created_at,s.plan_id,s.status,s.provider,s.trial_ends_at,s.current_period_end FROM accounts a LEFT JOIN subscriptions s ON s.user_id=a.user_id WHERE a.email NOT LIKE '%.invalid' AND (?='%%' OR lower(a.email) LIKE ? OR lower(a.store_name) LIKE ? OR lower(COALESCE(a.owner_name,'')) LIKE ?) ORDER BY a.created_at DESC LIMIT 200")
+    .bind(like,like,like,like).all<{user_id:string;email:string;owner_name:string|null;store_name:string|null;created_at:string;plan_id:string|null;status:string|null;provider:string|null;trial_ends_at:string|null;current_period_end:string|null}>();
+  return rows.results;
+}
+
+// Quita un plan sin cargo: la tienda pasa a Gratis (sus datos se conservan).
+export async function revokeComplimentaryPlan(userId:string) {
+  await ensureSchema();
+  const now=new Date().toISOString();
+  await database().prepare("UPDATE subscriptions SET provider=NULL,provider_status=NULL,plan_id='free',status='free',requested_plan_id=NULL,updated_at=? WHERE user_id=? AND provider='complimentary'").bind(now,userId).run();
+  return database().prepare('SELECT * FROM subscriptions WHERE user_id=?').bind(userId).first<SubscriptionRecord>();
+}
