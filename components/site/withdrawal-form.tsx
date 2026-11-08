@@ -25,10 +25,10 @@ export default function WithdrawalForm() {
   return <form className="legalCallout withdrawalForm" onSubmit={submit} noValidate={false}>
     <b>Pedí la revocación de tu contratación</b>
     <p>No hace falta tener la sesión abierta ni una cuenta. Usá el email con el que contrataste.</p>
-    <label>Nombre y apellido<input name="name" required minLength={2} maxLength={120} autoComplete="name"/></label>
-    <label>Email<input name="email" type="email" required maxLength={200} autoComplete="email"/></label>
-    <label>Nombre de la tienda <small>(opcional)</small><input name="store" maxLength={120}/></label>
-    <label>Comentario <small>(opcional)</small><textarea name="reason" maxLength={1000} rows={3}/></label>
+    <label><span>Nombre y apellido</span><input name="name" required minLength={2} maxLength={120} autoComplete="name"/></label>
+    <label><span>Email</span><input name="email" type="email" required maxLength={200} autoComplete="email"/></label>
+    <label><span>Nombre de la tienda <small>(opcional)</small></span><input name="store" maxLength={120}/></label>
+    <label><span>Comentario <small>(opcional)</small></span><textarea name="reason" maxLength={1000} rows={3}/></label>
     <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{position:'absolute',left:'-9999px',width:1,height:1}}/>
     {state.status==='error'&&<p role="alert" style={{color:'#ffb4a8'}}>{state.message}</p>}
     <button className="button small" type="submit" disabled={state.status==='sending'}>{state.status==='sending'?'Enviando…':'Enviar pedido de arrepentimiento'}</button>

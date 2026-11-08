@@ -431,8 +431,10 @@ html{scroll-behavior:smooth}
 
 /* Footer */
 .rl footer{padding:36px 0 48px;border-top:1px solid var(--line);color:var(--dim);font-size:14px}
-.rl .footIn{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
-.rl footer nav{display:flex;flex-wrap:wrap;gap:12px 24px}
+.rl .footIn{display:flex;justify-content:space-between;align-items:flex-start;gap:24px 48px;flex-wrap:wrap}
+.rl .footBrand{display:grid;gap:10px;max-width:360px}
+.rl .footBrand span{font-size:13px;line-height:1.5;color:var(--dim)}
+.rl footer nav{display:flex;flex-wrap:wrap;gap:10px 24px;justify-content:flex-end}
 .rl footer a:hover{color:var(--text)}
 
 
@@ -554,11 +556,12 @@ html{scroll-behavior:smooth}
 .rl .heroCenter .heroActions{justify-content:center}
 
 /* Páginas legales */
-.rl .legalHero{padding:120px 0 24px;max-width:860px}
+.rl .legalHero{padding:120px 0 28px}
+.rl .legalHero h1,.rl .legalHero .lede{max-width:760px}
 .rl .legalHero h1{margin:14px 0 12px;font-size:clamp(34px,5vw,54px);line-height:1.05;letter-spacing:-.04em}
 .rl .legalHero .lede{max-width:680px}
 .rl .legalHero small{display:block;margin-top:14px;color:var(--dim);font-size:13px}
-.rl .legalHighlight{margin-bottom:28px}
+.rl .legalHighlight{margin-bottom:36px}
 .rl .legalCallout{display:grid;gap:10px;max-width:860px;padding:22px 24px;border:1px solid rgba(33,212,194,.4);border-radius:20px;background:linear-gradient(160deg,rgba(33,212,194,.09),rgba(12,23,38,.6))}
 .rl .legalCallout b{font-size:16px}
 .rl .legalCallout ul{display:grid;gap:8px;margin:0;padding-left:20px;color:#c8d6e2}
@@ -675,4 +678,9 @@ html{scroll-behavior:smooth}
 .rl .langMenu a[aria-current]{color:var(--cyan)}
 .rl .heroCopy p.availability{display:flex;gap:8px;align-items:flex-start;max-width:520px;margin:18px 0 0;color:var(--dim);font-size:13.5px;line-height:1.5}
 @media (max-width:560px){.rl .navActions{gap:10px}.rl .langPick summary{padding:6px 8px}}
-.rl .withdrawalForm{position:relative}.rl .withdrawalForm label{display:grid;gap:6px;font-size:14px;color:#dbe6ef}.rl .withdrawalForm label small{color:#8ea6b8;font-weight:400}.rl .withdrawalForm input,.rl .withdrawalForm textarea{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #294357;border-radius:10px;background:#08131f;color:#f4f8fb;font:inherit}.rl .withdrawalForm input:focus,.rl .withdrawalForm textarea:focus{outline:2px solid rgba(33,212,194,.6);outline-offset:1px}.rl .footLegal{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:center;padding:14px 16px 4px;font-size:13px}.rl .footLegal a{color:#9bb0c3;text-decoration:underline;text-underline-offset:2px}
+.rl .withdrawalForm{position:relative}.rl .withdrawalForm label{display:grid;gap:6px;font-size:14px;color:#dbe6ef}.rl .withdrawalForm label small{color:#8ea6b8;font-weight:400}.rl .withdrawalForm input,.rl .withdrawalForm textarea{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #294357;border-radius:10px;background:#08131f;color:#f4f8fb;font:inherit}.rl .withdrawalForm input:focus,.rl .withdrawalForm textarea:focus{outline:2px solid rgba(33,212,194,.6);outline-offset:1px}
+.rl .footLegal{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px 28px;margin-top:28px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--dim)}
+.rl .footLegal nav{justify-content:flex-start;gap:8px 20px}
+.rl .footLegal a{color:var(--muted)}
+.rl .footLegal a:hover{color:var(--text)}
+@media (max-width:760px){.rl footer nav{justify-content:flex-start}.rl .footLegal{flex-direction:column;align-items:flex-start}}
