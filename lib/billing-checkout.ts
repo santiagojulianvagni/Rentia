@@ -1,9 +1,9 @@
-import { applyPreapprovalStatus, expireLapsedSubscriptions, findSubscriptionByPreapproval, recordSubscriptionPayment, saveProviderAmount, subscriptionsToReprice } from '../db/database';
+import { applyPreapprovalStatus, expireLapsedSubscriptions, findSubscriptionByPreapproval, lastApprovedPayment, recordSubscriptionPayment, saveProviderAmount, subscriptionsToReprice } from '../db/database';
 import { getLiveRates } from './exchange-rate-provider';
 import { GRACE_DAYS, arsAmount, getAuthorizedPayment, getPreapproval, mercadoPagoToken, planUsd, updatePreapprovalAmount, type BillingCycle } from './mercadopago';
 import { getPlan } from './plans';
 import { notify, storeName } from './notifications';
-import { paymentFailedEmail, planExpiredEmail, subscriptionActiveEmail } from './email/templates';
+import { paymentFailedEmail, planExpiredEmail, priceIncreaseEmail, subscriptionActiveEmail } from './email/templates';
 import { createHash } from 'node:crypto';
 
 type Env=Record<string,string|undefined>;
@@ -85,7 +85,10 @@ export async function dailyBillingMaintenance() {
       const amount=usd===null?null:arsAmount(usd,rate);
       if(!amount||amount===Number(subscription.provider_amount))continue;
       try {await updatePreapprovalAmount(token,subscription.provider_subscription_id,amount);await saveProviderAmount(subscription.user_id,amount);result.repriced++;}
-      catch {result.failed++;}
+      catch {result.failed++;continue;}
+      // Si el próximo débito supera en más de un 10 % al último cobro, se avisa (una vez por cobro).
+      const last=await lastApprovedPayment(subscription.user_id,subscription.provider_subscription_id);
+      if(last&&amount>last.amount*1.1) await notify(subscription.user_id,'price_increase',`${subscription.provider_subscription_id}:${last.id}`,account=>priceIncreaseEmail({ownerName:account.owner_name,storeName:storeName(account),planName:getPlan(subscription.plan_id).name,previous:last.amount,next:amount,rate}));
     }
   }
   const expired=await expireLapsedSubscriptions(GRACE_DAYS);

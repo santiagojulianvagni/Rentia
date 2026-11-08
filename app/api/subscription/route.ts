@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { applyPreapprovalStatus, cancelSubscription, getOrderQuota, getOrderUsageLast30Days, getOrCreateSubscription, listSubscriptionPayments, recordError, savePendingCheckout, saveRequestedPlan } from '../../../db/database';
+import { applyPreapprovalStatus, cancelSubscription, listEmailLog, getOrderQuota, getOrderUsageLast30Days, getOrCreateSubscription, listSubscriptionPayments, recordError, savePendingCheckout, saveRequestedPlan } from '../../../db/database';
 import { billingTestMode, checkoutEnabledFor, planAmountArs, syncPreapproval } from '../../../lib/billing-checkout';
 import { createPreapproval, mercadoPagoToken } from '../../../lib/mercadopago';
 import { publicOrigin } from '../../../lib/public-origin';
@@ -59,7 +59,8 @@ const PlanBody=z.object({action:z.unknown().optional(),planId:z.unknown().option
 export const GET=route({},async({user})=>{
   const [subscription,orders]=await Promise.all([getOrCreateSubscription(user.id),getOrderUsageLast30Days(user.id)]);
   if (!subscription) throw new HttpError(404,'account_not_found');
-  return serialize(user.id,subscription,orders,canManageRentia(user),await getOrderQuota(user.id),await checkoutInfo(user));
+  const emails=canManageRentia(user)?(await listEmailLog(user.id)).filter(email=>email.status==='sent').map(email=>({kind:email.kind,sentAt:email.sent_at||email.created_at})):[];
+  return {...serialize(user.id,subscription,orders,canManageRentia(user),await getOrderQuota(user.id),await checkoutInfo(user)),emails};
 });
 
 export const POST=route({access:'manager',body:PlanBody,invalidBody:'invalid_plan'},async({user,body})=>{

@@ -8,6 +8,7 @@ import {reconcileMercadoLibre} from '../../../../lib/mercadolibre-sync';
 import {meliAdsUsersForReconciliation,syncMeliAds} from '../../../../lib/meli-ads';
 import {dailyBillingMaintenance} from '../../../../lib/billing-checkout';
 import {dailyTrialNotifications} from '../../../../lib/notifications';
+import {weeklySummaryEmails} from '../../../../server/weekly-email';
 
 function secureEqual(left:string,right:string) {
   if (left.length!==right.length) return false;
@@ -45,7 +46,9 @@ export async function POST(request:Request) {
   const billing=await dailyBillingMaintenance().catch(error=>({error:error instanceof Error?error.message:'billing_failed'}));
   // Avisos por mail de la prueba gratis (3 días antes, 1 día antes y al terminar).
   const trials=await dailyTrialNotifications().catch(()=>({error:'trial_notifications_failed'}));
-  return NextResponse.json({ok:true,processed:results.length+mercadolibre.length+productAds.length,results,mercadolibre,productAds,billing,trials});
+  // Resumen semanal por mail (solo los lunes, para quien lo activó en Alertas).
+  const weekly=await weeklySummaryEmails().catch(()=>({error:'weekly_summary_failed'}));
+  return NextResponse.json({ok:true,processed:results.length+mercadolibre.length+productAds.length,results,mercadolibre,productAds,billing,trials,weekly});
 }
 
 // Vercel Cron Jobs call the path with GET.

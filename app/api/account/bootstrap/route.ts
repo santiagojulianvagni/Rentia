@@ -1,6 +1,9 @@
 import { auth, clerkClient, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { getAccount, getAccountByEmail, getSettings, getStoreIdentityByOrganization, getStoreIdentityByOwner, recordError, saveAccount, saveAccountContact, saveStoreIdentityLink } from '../../../../db/database';
+import { notify, storeName as storeName_ } from '../../../../lib/notifications';
+import { welcomeEmail } from '../../../../lib/email/templates';
+import { TRIAL_DAYS } from '../../../../lib/plans';
 
 async function bootstrap(request:Request) {
   // Pending sessions (no organization yet) are expected here: this creates it.
@@ -68,6 +71,8 @@ async function bootstrap(request:Request) {
   // Una tienda que ya existía (por ejemplo, al pasar el inicio de sesión a otra instancia de
   // Clerk) se reconecta por email con todos sus datos y no repite la elección de canales.
   const needsChannels=legacyAccount?!await getSettings(storeUserId):true;
+  // Mail de bienvenida solo para tiendas nuevas (una vez por cuenta).
+  if (!legacyAccount) await notify(storeUserId,'welcome','account',account=>welcomeEmail({ownerName:account.owner_name,storeName:storeName_(account),trialDays:TRIAL_DAYS}));
   return NextResponse.json({ok:true,organizationId:organization.id,account:await getAccount(storeUserId),migrated:Boolean(legacyAccount),needsChannels});
 }
 

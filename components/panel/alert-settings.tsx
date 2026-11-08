@@ -35,7 +35,7 @@ export default function AlertSettingsCard({settings,canManage,onSaved}:{settings
     <div className="p-alertEmails">
       <label className="p-check"><input type="checkbox" checked={draft.alertEmail} disabled={!canManage} onChange={event=>setDraft(current=>({...current,alertEmail:event.target.checked}))}/><span><b>Recibir las alertas urgentes por email</b></span></label>
       <label className="p-check"><input type="checkbox" checked={draft.weeklyEmail} disabled={!canManage} onChange={event=>setDraft(current=>({...current,weeklyEmail:event.target.checked}))}/><span><b>Recibir el resumen semanal cada lunes</b></span></label>
-      <p className="p-sub" style={{margin:0}}>Los envíos por email se activan próximamente: guardamos tu preferencia y podés desactivarlos cuando quieras desde acá o desde cada email.</p>
+      <p className="p-sub" style={{margin:0}}>El resumen semanal llega los lunes al email del propietario. Las alertas urgentes por email llegan próximamente: guardamos tu preferencia. Podés desactivarlos cuando quieras desde acá.</p>
     </div>
     <div style={{display:'flex',alignItems:'center',gap:12,marginTop:12}}>{canManage&&<button type="submit" className="p-btn p-primary" disabled={saving}>{saving?'Guardando…':'Guardar alertas'}</button>}{message&&<span className="p-sub" role="status">{message}</span>}{!canManage&&<span className="p-sub">Solo el propietario o un administrador pueden cambiar las alertas.</span>}</div>
   </form>;

@@ -52,6 +52,7 @@ export default function PricingCalculator({ lang = 'es' }: { lang?: Lang }) {
       <p className="planDesc">{t.planDescriptions[plan.id] || plan.description}</p>
       <div className="planPrice"><b className="mono">{price}</b><span>{plan.monthlyPrice ? t.perMonth : ''}</span></div>
       <p className="planBilled">{billed}</p>
+      {plan.monthlyPrice ? <p className="planBilled" style={{ fontSize: 12, opacity: .8 }}>{t.usdNote}</p> : null}
       <ul className="planFeats">{features.map(feature => <li key={feature}><Check aria-hidden="true"/>{feature}</li>)}</ul>
       <Link className="button" href="/registro">{plan.monthlyPrice === 0 ? t.startFree : t.startTrial} <ArrowRight aria-hidden="true"/></Link>
     </div>

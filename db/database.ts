@@ -1291,3 +1291,32 @@ export async function listEmailLog(userId:string) {
   const rows=await database().prepare('SELECT kind,ref,status,error,created_at,sent_at FROM email_log WHERE user_id=? ORDER BY created_at DESC LIMIT 50').bind(userId).all<{kind:string;ref:string;status:string;error:string|null;created_at:string;sent_at:string|null}>();
   return rows.results;
 }
+
+// --- Botón de arrepentimiento ---
+export async function countRecentWithdrawals(ipHash:string,sinceIso:string) {
+  await ensureSchema();
+  const row=await database().prepare('SELECT COUNT(*) AS total FROM withdrawal_requests WHERE ip_hash=? AND created_at>=?').bind(ipHash,sinceIso).first<{total:number|string}>();
+  return Number(row?.total||0);
+}
+
+export async function createWithdrawalRequest(input:{code:string;name:string;email:string;store:string|null;reason:string|null;ipHash:string|null}) {
+  await ensureSchema();
+  // Si el email es el de una cuenta, queda asociado para encontrar la suscripción enseguida.
+  const account=await database().prepare('SELECT user_id FROM accounts WHERE lower(email)=lower(?) LIMIT 1').bind(input.email).first<{user_id:string}>();
+  await database().prepare('INSERT INTO withdrawal_requests (code,name,email,store,reason,user_id,ip_hash,created_at) VALUES (?,?,?,?,?,?,?,?)')
+    .bind(input.code,input.name,input.email,input.store,input.reason,account?.user_id??null,input.ipHash,new Date().toISOString()).run();
+  return {userId:account?.user_id??null};
+}
+
+// Último cobro aprobado de una suscripción, para comparar el próximo débito.
+export async function lastApprovedPayment(userId:string,preapprovalId:string) {
+  const row=await database().prepare("SELECT provider_payment_id,amount FROM subscription_payments WHERE user_id=? AND preapproval_id=? AND status='approved' ORDER BY paid_at DESC LIMIT 1").bind(userId,preapprovalId).first<{provider_payment_id:string;amount:number|string}>();
+  return row?{id:row.provider_payment_id,amount:Number(row.amount)}:null;
+}
+
+// Tiendas que pidieron el resumen semanal por mail.
+export async function weeklyEmailUsers() {
+  await ensureSchema();
+  const rows=await database().prepare('SELECT user_id FROM alert_settings WHERE weekly_email=TRUE').all<{user_id:string}>();
+  return rows.results.map(row=>row.user_id);
+}
