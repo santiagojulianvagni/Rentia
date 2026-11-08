@@ -16,6 +16,14 @@ export default function AdminPage() {
   const [error,setError]=useState('');
   const [busy,setBusy]=useState<string|null>(null);
   const [choice,setChoice]=useState<Record<string,string>>({});
+  const [testKind,setTestKind]=useState('trial_ending');
+  const [testState,setTestState]=useState('');
+  async function sendTest() {
+    setTestState('Enviando…');
+    const response=await fetch('/api/admin/test-email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:testKind})});
+    const data=await response.json().catch(()=>({})) as {sent?:boolean;reason?:string};
+    setTestState(data.sent?'Listo: revisá tu bandeja de entrada.':`No se pudo mandar (${data.reason||response.status}).`);
+  }
 
   const load=useCallback(async(q:string)=>{
     const response=await fetch(`/api/admin/accounts?q=${encodeURIComponent(q)}`,{cache:'no-store'});
@@ -39,6 +47,7 @@ export default function AdminPage() {
   return <main style={ui.page}><div style={ui.box}>
     <h1 style={{margin:'0 0 4px',fontSize:26}}>Administración de Rentia</h1>
     <p style={{margin:'0 0 20px',color:'#9bb0c3'}}>Cuentas y planes sin cargo. Un plan sin cargo no pasa por Mercado Pago y no vence.</p>
+    {!error&&<div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',margin:'0 0 20px',padding:14,border:'1px solid #1b3346',borderRadius:14,background:'#0b1826'}}><b style={{marginRight:6}}>Mail de prueba</b><select style={{...ui.input,padding:'7px 10px'}} value={testKind} onChange={event=>setTestKind(event.target.value)} aria-label="Plantilla">{[['welcome','Bienvenida'],['trial_ending','Prueba por terminar'],['trial_ended','Prueba terminada'],['subscription_active','Plan activado'],['payment_failed','Cobro rechazado'],['subscription_canceled','Baja confirmada'],['plan_expired','Pasó a Gratis'],['price_increase','Aumento por dólar'],['weekly_summary','Resumen semanal'],['customer_data_request','Pedido de datos'],['withdrawal','Arrepentimiento']].map(([id,label])=><option key={id} value={id}>{label}</option>)}</select><button style={{...ui.btn,...ui.primary}} onClick={()=>void sendTest()}>Mandarme un mail de prueba</button><span style={{color:'#9bb0c3',fontSize:13}}>{testState}</span></div>}
     <input style={{...ui.input,width:'100%',maxWidth:420,marginBottom:16}} placeholder="Buscar por tienda, nombre o email" value={query} onChange={event=>setQuery(event.target.value)} aria-label="Buscar cuentas"/>
     {error&&<p role="alert" style={{color:'#ffb4a8'}}>{error}</p>}
     {error&&rows?.length===0?null:rows===null?<p style={{color:'#9bb0c3'}}>Cargando…</p>:rows.length===0?<p style={{color:'#9bb0c3'}}>No hay cuentas para mostrar.</p>:
