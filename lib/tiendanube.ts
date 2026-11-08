@@ -264,6 +264,14 @@ export async function verifyTiendanubeWebhook(rawBody:string,signature:string|nu
   return difference===0;
 }
 
+// Nombre de la tienda, para completar el registro cuando instalan la app desde la tienda de apps.
+export async function tiendanubeStoreName(storeId:string,token:string) {
+  const store=record(await fetchResource(storeId,token,'store').catch(()=>({})));
+  const name=store.name;
+  const value=typeof name==='string'?name:text(record(name).es)||text(record(name).pt)||text(Object.values(record(name))[0]);
+  return value.trim().slice(0,80)||null;
+}
+
 export function tiendanubeWebhookUrl(requestUrl:string) {
   const origin=(runtime().RENTIA_PUBLIC_ORIGIN||new URL(requestUrl).origin).replace(/\/$/,'');
   return `${origin}/api/webhooks/tiendanube`;

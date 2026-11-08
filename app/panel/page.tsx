@@ -653,6 +653,7 @@ function PanelApp() {
       if (params.get('setup')==='mercadolibre_import') { setActive('integraciones'); setNotice('Mercado Libre autorizó el acceso. Importamos el historial por lotes y conservamos el avance. Los costos pendientes quedan identificados.'); }
       if (params.has('error')) {
         const meliErrors:Record<string,string>={
+          store_already_connected:'Esa tienda de Tiendanube ya está conectada a otra cuenta de Rentia. Ingresá con esa cuenta o escribinos a hola@rentiaapp.com.',
           mercadolibre_browser:'La validación de Mercado Libre venció o no llegó al volver. Iniciá la conexión nuevamente desde este navegador.',
           mercadolibre_session:'Tu sesión de Rentia cambió durante la autorización. Volvé a ingresar e iniciá la conexión nuevamente.',
           mercadolibre_state:'No pudimos validar el retorno de Mercado Libre. Iniciá una nueva conexión desde Rentia.',

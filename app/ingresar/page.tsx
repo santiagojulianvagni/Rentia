@@ -3,6 +3,7 @@
 import { SignIn } from '@clerk/nextjs';
 import Link from 'next/link';
 import SignedInRedirect from '../../components/signed-in-redirect';
+import InstallNotice from '../../components/install-notice';
 
 const clerkAppearance={
   variables:{colorPrimary:'#21d4c2',colorPrimaryForeground:'#031513',colorBackground:'#0b1826',colorForeground:'#f4f8fb',colorMuted:'#102232',colorMutedForeground:'#9bb0c3',colorNeutral:'#f4f8fb',colorInput:'#08131f',colorInputForeground:'#f4f8fb',colorRing:'#21d4c2',borderRadius:'0.8rem'},
@@ -15,7 +16,7 @@ export default function Ingresar() {
     <Link className="brand authBrand" href="/"><span className="brandMark"><img src="/favicon.svg" alt=""/></span>Rentia</Link>
     <section className="authSplit">
       <div className="authIntro"><span className="tag">BIENVENIDO DE NUEVO</span><h1>Tu rentabilidad,<br/><em>siempre actualizada.</em></h1><p>Ingresá con el mismo email o cuenta de Google que usaste al registrarte.</p><div className="authProof"><div><b>✓</b><span>Datos protegidos</span></div><div><b>✓</b><span>Acceso por tienda</span></div><div><b>✓</b><span>Equipo con permisos</span></div></div></div>
-      <div className="clerkCardWrap"><SignIn routing="hash" signUpUrl="/registro" forceRedirectUrl="/onboarding" appearance={clerkAppearance}/></div>
+      <div className="clerkCardWrap"><InstallNotice signIn/><SignIn routing="hash" signUpUrl="/registro" forceRedirectUrl="/onboarding" appearance={clerkAppearance}/></div>
     </section>
   </main>;
 }

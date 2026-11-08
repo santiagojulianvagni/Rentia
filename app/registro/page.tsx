@@ -3,6 +3,7 @@
 import { SignUp } from '@clerk/nextjs';
 import Link from 'next/link';
 import SignedInRedirect from '../../components/signed-in-redirect';
+import InstallNotice from '../../components/install-notice';
 
 const clerkAppearance={
   variables:{colorPrimary:'#21d4c2',colorPrimaryForeground:'#031513',colorBackground:'#0b1826',colorForeground:'#f4f8fb',colorMuted:'#102232',colorMutedForeground:'#9bb0c3',colorNeutral:'#f4f8fb',colorInput:'#08131f',colorInputForeground:'#f4f8fb',colorRing:'#21d4c2',borderRadius:'0.8rem'},
@@ -16,6 +17,7 @@ export default function Registro() {
     <section className="authSplit">
       <div className="authIntro"><span className="tag">14 DÍAS GRATIS</span><h1>Creá tu cuenta.<br/><em>Después conectás tu tienda.</em></h1><p>Registrate con Google o email. Confirmamos tu correo y recién después elegís qué canales querés integrar.</p><div className="authProof"><div><b>1</b><span>Email o Google</span></div><div><b>2</b><span>Correo verificado</span></div><div><b>3</b><span>Integraciones opcionales</span></div></div></div>
       <div className="clerkCardWrap">
+        <InstallNotice/>
         <SignUp routing="hash" signInUrl="/ingresar" forceRedirectUrl="/onboarding" appearance={clerkAppearance}/>
         <p className="authLegal">Al crear tu cuenta aceptás los <Link href="/terminos">Términos y condiciones</Link> y la <Link href="/privacidad">Política de privacidad</Link>. La prueba es gratis y no pide tarjeta.</p>
       </div>

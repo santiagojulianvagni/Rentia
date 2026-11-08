@@ -1217,3 +1217,28 @@ export async function listPrivacyRequests(userId:string) {
   const rows=await database().prepare('SELECT kind,external_id,result_json,received_at FROM privacy_requests WHERE user_id=? ORDER BY received_at DESC LIMIT 100').bind(userId).all<{kind:string;external_id:string|null;result_json:string;received_at:string}>();
   return rows.results;
 }
+
+// --- Instalaciones desde la tienda de apps de Tiendanube, en espera de una cuenta de Rentia ---
+export type PendingInstall={token_hash:string;provider:string;store_id:string;store_name:string|null;encrypted_access_token:string;token_iv:string;scopes:string|null;expires_at:string};
+
+export async function savePendingInstall(input:{tokenHash:string;provider:string;storeId:string;storeName:string|null;encryptedToken:string;iv:string;scopes:string;expiresAt:string}) {
+  await ensureSchema();
+  const now=new Date().toISOString();
+  // Una sola espera por tienda: la última instalación reemplaza a las anteriores.
+  await database().prepare('DELETE FROM pending_installs WHERE expires_at<? OR (provider=? AND store_id=?)').bind(now,input.provider,input.storeId).run();
+  await database().prepare('INSERT INTO pending_installs (token_hash,provider,store_id,store_name,encrypted_access_token,token_iv,scopes,expires_at,created_at) VALUES (?,?,?,?,?,?,?,?,?)')
+    .bind(input.tokenHash,input.provider,input.storeId,input.storeName,input.encryptedToken,input.iv,input.scopes,input.expiresAt,now).run();
+}
+
+export async function getPendingInstall(tokenHash:string) {
+  await ensureSchema();
+  return database().prepare('SELECT token_hash,provider,store_id,store_name,encrypted_access_token,token_iv,scopes,expires_at FROM pending_installs WHERE token_hash=? AND expires_at>?')
+    .bind(tokenHash,new Date().toISOString()).first<PendingInstall>();
+}
+
+// Se usa una sola vez: se borra al tomarla.
+export async function takePendingInstall(tokenHash:string) {
+  await ensureSchema();
+  return database().prepare('DELETE FROM pending_installs WHERE token_hash=? AND expires_at>? RETURNING token_hash,provider,store_id,store_name,encrypted_access_token,token_iv,scopes,expires_at')
+    .bind(tokenHash,new Date().toISOString()).first<PendingInstall>();
+}

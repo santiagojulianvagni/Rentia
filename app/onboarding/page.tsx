@@ -36,6 +36,27 @@ export default function Onboarding() {
     fetch('/api/sync/mercadolibre',{cache:'no-store'}).then(response=>response.ok?response.json() as Promise<{available?:boolean}>:null).then(data=>setMeliAvailable(Boolean(data?.available))).catch(()=>setMeliAvailable(false));
   },[step,channels]);
 
+  // Si instaló Rentia desde la tienda de apps de Tiendanube, el nombre de esa tienda completa el formulario.
+  const [installStore,setInstallStore]=useState<string|null>(null);
+  useEffect(()=>{
+    fetch('/api/integrations/tiendanube/claim',{cache:'no-store'}).then(response=>response.ok?response.json() as Promise<{pending?:boolean;storeName?:string|null}>:null)
+      .then(data=>{ if(data?.pending){ setInstallStore(data.storeName||''); if(data.storeName) setStore(current=>current||data.storeName||''); } }).catch(()=>undefined);
+  },[]);
+
+  // Conecta la tienda que quedó en espera. Devuelve true si ya redirigió.
+  async function finishInstall(needsChannels?:boolean) {
+    try {
+      const result=await onboardingRequest<{claimed:boolean;automatic?:boolean;reason?:string}>('/api/integrations/tiendanube/claim',{});
+      if (result.claimed) {
+        if (needsChannels) await onboardingRequest('/api/settings',{type:'channels',channels:['tiendanube']}).catch(()=>undefined);
+        window.location.assign(`/panel?section=integraciones&connected=tiendanube${result.automatic?'':'&automation=pending'}`);
+        return true;
+      }
+      if (result.reason==='store_already_connected') { window.location.assign('/panel?section=integraciones&error=store_already_connected'); return true; }
+    } catch { /* sin instalación en espera o sin permiso para conectar: sigue el onboarding normal */ }
+    return false;
+  }
+
   async function activateStore(data:BootstrapResult) {
     if (!data.organizationId) throw new Error('missing_organization');
     await setActive({organization:data.organizationId});
@@ -56,6 +77,7 @@ export default function Onboarding() {
       if (!data.organizationId) throw new Error('missing_organization');
       await setActive({organization:data.organizationId});
       if (cancelled) return;
+      if (await finishInstall(data.needsChannels)) return;
       if (data.needsChannels) {setStep('channels');return;}
       window.location.assign('/panel?section=resumen');
     }).catch(reason=>{
@@ -75,6 +97,7 @@ export default function Onboarding() {
       if (phoneDigits&&(phoneDigits.length<6||phoneDigits.length>13)) {setError('Revisá el celular: ingresá entre 6 y 13 números, sin el código +54.');return;}
       const data=await onboardingRequest<BootstrapResult>('/api/account/bootstrap',{name:name.trim(),store:store.trim(),phone:phoneDigits});
       await activateStore(data);
+      if (await finishInstall(data.needsChannels)) return;
       if (data.needsChannels) setStep('channels');
       else window.location.assign('/panel?section=resumen');
     } catch {setError('No pudimos crear o abrir la tienda. Revisá tu conexión y volvé a intentarlo.');}
@@ -125,7 +148,7 @@ export default function Onboarding() {
       <div className="onboardingSteps"><span className="done"><b>1</b>Cuenta</span><span className={progress>=2?'done':'active'} aria-current={step==='store'?'step':undefined}><b>2</b>Tu negocio</span><span className={progress>=3?'done':step==='channels'?'active':''} aria-current={step==='channels'?'step':undefined}><b>3</b>Canales</span></div>
       <div className="progress" aria-hidden="true"><i className="done"/><i className={progress>=2?'done':'active'}/><i className={progress>=3?'done':step==='channels'?'active':''}/></div>
       {step==='store'?<>
-        <span className="tag">TU ESPACIO DE TRABAJO</span><h1>Contanos sobre tu tienda</h1><p className="onboardingLead">Esta tienda será tu organización en Rentia. Vos quedás como propietario y administrador principal.</p>
+        <span className="tag">TU ESPACIO DE TRABAJO</span><h1>Contanos sobre tu tienda</h1><p className="onboardingLead">{installStore!==null?<>Instalaste Rentia en {installStore?<b>{installStore}</b>:'tu tienda'} desde Tiendanube. Completá estos datos y la conectamos sola.</>:'Esta tienda será tu organización en Rentia. Vos quedás como propietario y administrador principal.'}</p>
         <form className="storeSetupForm" onSubmit={createStore}><label>Tu nombre<input value={name} onChange={event=>setName(event.target.value)} placeholder="Ej. Martina García" required/></label><label>Nombre de la tienda<input value={store} onChange={event=>setStore(event.target.value)} placeholder="Ej. Casa Norte" required/></label><label>Celular de contacto <small>Opcional</small><div className="phoneField"><span>AR&nbsp;&nbsp;+54</span><input value={phone} inputMode="tel" onChange={event=>setPhone(event.target.value)} placeholder="11 5555 5555"/></div><em>No bloquea tu registro. La verificación por SMS se habilitará con un proveedor compatible en Argentina.</em></label>{error&&<p className="formError" role="alert">{error}</p>}<button className="button" disabled={saving}>{saving?'Creando tienda…':'Continuar →'}</button></form>
       </>:step==='channels'?<>
         <span className="tag">TUS CANALES</span><h1>¿Dónde vendés hoy?</h1><p className="onboardingLead">Elegí uno o ambos. Esto adapta Rentia a tu operación; conectar las cuentas sigue siendo opcional.</p>
