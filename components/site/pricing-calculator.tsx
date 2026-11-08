@@ -27,7 +27,7 @@ export default function PricingCalculator({ lang = 'es' }: { lang?: Lang }) {
   const features = [
     plan.orders === null ? t.moreThan : t.upTo(ordersLabel(plan.orders)),
     plan.users === null ? t.customUsers : t.users(plan.users),
-    t.history,
+    t.history(plan.historyMonths),
     t.support(t.supportLevels[plan.support] || plan.support),
     t.allFeatures,
   ];
