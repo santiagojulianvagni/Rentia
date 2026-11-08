@@ -937,11 +937,22 @@ function SubscriptionSection() {
       const preapprovalId=params.get('preapproval_id');
       window.history.replaceState(null,'','/panel?section=plan');
       setMessage('Confirmando el pago con Mercado Pago…');
-      fetch('/api/subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'sync',preapprovalId})}).then(async response=>{
-        const result=await response.json().catch(()=>({})) as SubscriptionData&{error?:string};
-        if(response.ok){setData(result);setMessage(result.message||'');}else{setMessage('No pudimos confirmar el pago todavía. Si lo completaste, el plan se activa solo en unos minutos.');void loadSubscription();}
-      }).catch(()=>void loadSubscription());
-      return;
+      // Mercado Pago confirma la suscripción unos segundos después de volver: se reintenta un rato.
+      let cancelled=false;
+      const attempt=async(left:number)=>{
+        try {
+          const response=await fetch('/api/subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'sync',preapprovalId})});
+          const result=await response.json().catch(()=>({})) as SubscriptionData&{error?:string};
+          if(cancelled)return;
+          if(response.ok&&result.subscription?.status==='active'){setData(result);setMessage(result.message||'');return;}
+          if(response.ok)setData(result);
+          if(left>0){window.setTimeout(()=>void attempt(left-1),4000);return;}
+          setMessage(response.ok?result.message||'':'No pudimos confirmar el pago todavía. Si lo completaste, el plan se activa solo en unos minutos.');
+          if(!response.ok)void loadSubscription();
+        } catch {if(!cancelled)void loadSubscription();}
+      };
+      void attempt(6);
+      return ()=>{cancelled=true;};
     }
     void Promise.resolve().then(loadSubscription);
   },[]);
@@ -993,7 +1004,7 @@ function SubscriptionSection() {
         {data.canManage&&!(paid&&sub.cancelAtPeriodEnd)&&<button type="button" className="p-btn p-dangerGhost" onClick={()=>setCancelOpen(true)}>{paid?'Dar de baja':'Quitar mi elección'}</button>}</div>
       <p className="p-sub" style={{margin:0,fontSize:12.5}}>Darte de baja es inmediato y sin penalidades: lo hacés vos desde acá, sin llamar ni escribir a nadie. Los detalles están en los <a href="/terminos" target="_blank" rel="noopener noreferrer" style={{color:'var(--cyan)'}}>Términos y condiciones</a>.</p>
     </div>;})()}
-    <PlanConfigurator plans={data.plans} initialPlanId={requested||data.recommendation.id} recommendedPlanId={data.recommendation.id} usageOrders={data.usage.orders} annual={annual} onAnnualChange={setAnnual} onChoose={planId=>setPendingPlan(planId)} currentPlanId={trial?undefined:data.subscription.planId} requestedPlanId={requested} requestedBillingCycle={data.subscription.billingCycle} savingPlanId={saving} canManage={data.canManage} officialRate={officialRate}/>
+    <PlanConfigurator plans={data.plans} initialPlanId={requested||data.recommendation.id} recommendedPlanId={data.recommendation.id} usageOrders={data.usage.orders} annual={annual} onAnnualChange={setAnnual} onChoose={planId=>setPendingPlan(planId)} checkoutEnabled={Boolean(data.checkoutEnabled)} currentPlanId={trial?undefined:data.subscription.planId} requestedPlanId={requested} requestedBillingCycle={data.subscription.billingCycle} savingPlanId={saving} canManage={data.canManage} officialRate={officialRate}/>
     <div className="p-grid p-g3" style={{marginBottom:16}}>{([[ShieldCheck,'14 días de prueba','Acceso completo, sin tarjeta.'],[CalendarDays,'Renovación transparente','Vas a ver el monto antes de pagar.'],[Coins,'Sin costos escondidos','El precio depende del volumen.']] as const).map(([Icon,title,detail],index)=><div className="p-card p-reveal p-roleCard" style={{'--i':index} as React.CSSProperties} key={title}><Icon className="p-i" aria-hidden="true"/><div><b>{title}</b><p className="p-sub">{detail}</p></div></div>)}</div>
     <div className="p-card p-reveal" aria-labelledby="billing-roadmap-title"><div className="p-grid p-g2"><div><span className="p-eyebrowS">PRÓXIMO PASO</span><h3 id="billing-roadmap-title" style={{margin:'4px 0 6px'}}>Cobros simples dentro de Rentia</h3><p className="p-sub">La opción recomendada para comenzar en Argentina es integrar pagos recurrentes. Hasta que esté conectada, esta pantalla solo guarda tu preferencia y no solicita una tarjeta.</p><div className="p-note" style={{margin:0}}><CreditCard className="p-i" aria-hidden="true"/> <b>Integración de cobro pendiente</b> · Ningún plan genera cargos hoy</div></div><div>{([['Elegís el plan','Según el volumen real de tu tienda.'],['Confirmás el pago','En un checkout seguro y fuera de Rentia.'],['Rentia se actualiza','Plan, vencimiento y estado quedan sincronizados.']] as const).map(([title,detail],index)=><div className="p-stepRow" key={title}><span>{index+1}</span><div><b>{title}</b><small>{detail}</small></div></div>)}</div></div></div>
     {pendingPlan&&(()=>{const plan=data.plans.find(item=>item.id===pendingPlan);return plan?<ConfirmPlanDialog plan={plan} annual={annual} saving={saving===plan.id} officialRate={officialRate} checkout={data.checkoutEnabled?{payerEmail:data.payerEmail||'',testMode:Boolean(data.testMode)}:null} onConfirm={payerEmail=>void choosePlan(plan.id,payerEmail)} onClose={()=>setPendingPlan(null)}/>:null;})()}

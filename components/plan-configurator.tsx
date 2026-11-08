@@ -19,6 +19,7 @@ type Props={
   canManage?:boolean;
   publicPricing?:boolean;
   officialRate?:OfficialRate|null;
+  checkoutEnabled?:boolean;
 };
 
 export type OfficialRate={sell:number;updatedAt:string|null};
@@ -28,7 +29,7 @@ export const rateDate=(value:string|null)=>value?new Intl.DateTimeFormat('es-AR'
 const formatNumber=(value:number)=>new Intl.NumberFormat('es-AR',{minimumFractionDigits:Number.isInteger(value)?0:2,maximumFractionDigits:2}).format(value);
 const capacity=(plan:RentiaPlan)=>plan.orders===null?'Más de 10.000':`Hasta ${formatNumber(plan.orders)}`;
 
-export default function PlanConfigurator({plans,initialPlanId='growth',recommendedPlanId,usageOrders,annual,onAnnualChange,onChoose,currentPlanId,requestedPlanId,requestedBillingCycle,savingPlanId,canManage=true,publicPricing=false,officialRate=null}:Props) {
+export default function PlanConfigurator({plans,initialPlanId='growth',recommendedPlanId,usageOrders,annual,onAnnualChange,onChoose,currentPlanId,requestedPlanId,requestedBillingCycle,savingPlanId,canManage=true,publicPricing=false,officialRate=null,checkoutEnabled=false}:Props) {
   const initialIndex=Math.max(0,plans.findIndex(plan=>plan.id===initialPlanId));
   const [sliderPosition,setSliderPosition]=useState(initialIndex);
   const [dragging,setDragging]=useState(false);
@@ -55,7 +56,7 @@ export default function PlanConfigurator({plans,initialPlanId='growth',recommend
   const current=currentPlanId===plan.id;
   const recommended=recommendedPlanId===plan.id;
   const locked=!canManage||Boolean(savingPlanId)||saved||current||plan.id==='free';
-  const actionLabel=savingPlanId===plan.id?'Guardando…':saved?'Preferencia guardada':current?'Tu plan actual':plan.id==='free'?'Disponible sin cargo':plan.id==='enterprise'?'Registrar interés':`Reservar ${plan.name}`;
+  const actionLabel=savingPlanId===plan.id?'Guardando…':saved?'Preferencia guardada':current?'Tu plan actual':plan.id==='free'?'Disponible sin cargo':plan.id==='enterprise'?'Registrar interés':checkoutEnabled?`Suscribirme a ${plan.name}`:`Reservar ${plan.name}`;
 
   return <div className="p-planBuilder">
     <div className="p-card p-reveal" style={{marginBottom:16}}>
