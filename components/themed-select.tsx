@@ -34,7 +34,7 @@ export default function ThemedSelect({label,value,options,disabled=false,onChang
     document.addEventListener('pointerdown',outside);window.addEventListener('scroll',scroll,true);window.addEventListener('resize',resize);
     return()=>{document.removeEventListener('pointerdown',outside);window.removeEventListener('scroll',scroll,true);window.removeEventListener('resize',resize);};
   },[open]);
-  useEffect(()=>{if(disabled)close();},[disabled]);
+  if(disabled&&open){setOpen(false);setPosition(null);}
   return <div className="themedSelect">
     <span className="themedSelectLabel" id={`${id}-label`}>{label}</span>
     <button className="themedSelectTrigger" ref={trigger} type="button" disabled={disabled} aria-labelledby={`${id}-label ${id}-value`} aria-haspopup="listbox" aria-expanded={open} aria-controls={open?id:undefined} onClick={()=>open?close():show()} onKeyDown={event=>{if(['ArrowDown','ArrowUp'].includes(event.key)){event.preventDefault();show();}}}>

@@ -68,7 +68,7 @@ export default function Onboarding() {
     // antes de dar por cerrada la sesión, y no redirigimos solos para no rebotar entre páginas.
     if (!isSignedIn) { const timer=window.setTimeout(()=>setSignedOut(true),3000); return ()=>window.clearTimeout(timer); }
     let cancelled=false;
-    setError('');
+    queueMicrotask(()=>{ if(!cancelled) setError(''); });
     // Reuse the first request across effect replays instead of creating a
     // second organization during registration or legacy-account migration.
     if (!bootstrap.current||bootstrap.current.attempt!==attempt) bootstrap.current={attempt,promise:onboardingRequest<BootstrapResult>('/api/account/bootstrap',{})};

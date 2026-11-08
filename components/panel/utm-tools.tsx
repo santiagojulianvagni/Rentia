@@ -54,7 +54,7 @@ export default function UtmTools({canManage,onConnect}:{canManage:boolean;onConn
     } catch {setAuditError(true);}
     finally {setLoading(false);}
   },[]);
-  useEffect(()=>{void load();},[load]);
+  useEffect(()=>{queueMicrotask(()=>void load());},[load]);
 
   async function saveRule(next:NamingRule|null) {
     if(!canManage)return;

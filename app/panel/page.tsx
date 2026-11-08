@@ -464,7 +464,7 @@ function PanelApp() {
   const mercadoLibreState=useMercadoLibreSync(canManage,()=>Promise.all([loadDashboard(periodDaysRef.current),loadProductCosts(),loadProductAnalytics(periodDaysRef.current)]));
   const [advertisingTab,setAdvertisingTab]=useState('ganancia');
   const productAdsState=useProductAds(canManage,analyticsQuery(periodOptions.find(option=>option.label===period)?.days||30,customRange),()=>loadDashboard(periodDaysRef.current));
-  useEffect(()=>{const ads=new URLSearchParams(window.location.search).get('ads');if(ads==='mercadolibre'||ads==='utm')setAdvertisingTab(ads);},[]);
+  useEffect(()=>{const ads=new URLSearchParams(window.location.search).get('ads');if(ads==='mercadolibre'||ads==='utm')queueMicrotask(()=>setAdvertisingTab(ads));},[]);
 
   async function loadDashboard(days=30,range=activeRangeRef.current) {
     const currentQuery=analyticsQuery(days,range);
@@ -944,7 +944,7 @@ function SubscriptionSection() {
     if(params.get('mp')==='volver'){
       const preapprovalId=params.get('preapproval_id');
       window.history.replaceState(null,'','/panel?section=plan');
-      setMessage('Confirmando el pago con Mercado Pago…');
+      queueMicrotask(()=>setMessage('Confirmando el pago con Mercado Pago…'));
       // Mercado Pago confirma la suscripción unos segundos después de volver: se reintenta un rato.
       let cancelled=false;
       const attempt=async(left:number)=>{
@@ -1057,7 +1057,7 @@ function TeamSection({onPlans}:{onPlans:()=>void}) {
       setData(await response.json());setLoadError(false);
     }catch{setLoadError(true);}
   }
-  useEffect(()=>{void loadTeam();},[]);
+  useEffect(()=>{queueMicrotask(()=>void loadTeam());},[]);
   async function mutate(method:string,body:Record<string,string>,success:string) {
     setWorking(true);setMessage('Procesando…');
     try {
@@ -1512,7 +1512,7 @@ function OrdersSection({orders:recentOrders,days,range,refreshKey,period,syncing
   const [page,setPage]=useState(1);
   const [orders,setOrders]=useState<OrderRow[]>([]);
   const scrolledToReview=useRef(false);
-  useEffect(()=>{const params=new URLSearchParams(window.location.search),id=params.get('order'),provider=params.get('provider');if(id){setQuery(id);if(provider==='tiendanube'||provider==='mercadolibre')setExpandedOrder(`${provider}:${id}`);}},[setExpandedOrder]);
+  useEffect(()=>{const params=new URLSearchParams(window.location.search),id=params.get('order'),provider=params.get('provider');if(id)queueMicrotask(()=>{setQuery(id);if(provider==='tiendanube'||provider==='mercadolibre')setExpandedOrder(`${provider}:${id}`);});},[setExpandedOrder]);
   const [total,setTotal]=useState(0);
   const [loading,setLoading]=useState(true);
   const [updating,setUpdating]=useState(false);
@@ -1555,7 +1555,9 @@ function OrdersSection({orders:recentOrders,days,range,refreshKey,period,syncing
     return()=>window.removeEventListener('keydown',close);
   },[expandedOrder,setExpandedOrder]);
   const tableStart=useRef<HTMLDivElement>(null);
-  useEffect(()=>{setPage(1);},[query,period]);
+  // Al cambiar la búsqueda o el período se vuelve a la primera página (ajuste durante el render).
+  const [pageFilter,setPageFilter]=useState(`${query}|${period}`);
+  if(pageFilter!==`${query}|${period}`){setPageFilter(`${query}|${period}`);setPage(1);}
   const [checkingOrder,setCheckingOrder]=useState<string|null>(null);
   const [commissionCheck,setCommissionCheck]=useState<{orderId:string;message:string}|null>(null);
   async function checkCommission(order:OrderRow) {

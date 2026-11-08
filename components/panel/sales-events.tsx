@@ -39,7 +39,7 @@ function Change({row}:{row:EventRow}) {
 
 // Eventos comerciales: cada uno se compara contra días normales y contra la semana siguiente.
 export default function SalesEvents({money,canManage}:{money:(value:number)=>string;canManage:boolean}) {
-  const today=useMemo(todayInArgentina,[]);
+  const [today]=useState(()=>todayInArgentina());
   const [events,setEvents]=useState<SalesEvent[]|null>(null);
   const [listError,setListError]=useState(false);
   const [selected,setSelected]=useState<number|null>(null);

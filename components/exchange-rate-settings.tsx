@@ -53,7 +53,10 @@ export default function ExchangeRateSettings({onChanged,onRatesChanged}:{onChang
     }catch{setMessage('No pudimos confirmar el guardado. Conservamos tus valores para que puedas reintentar.');}
     finally{setSaving(false);}
   }
-  const stale=live?.updatedAt?Date.now()-Date.parse(live.updatedAt)>48*60*60*1000:false;
+  // La hora actual se toma fuera del render (regla de pureza de React).
+  const [now,setNow]=useState(0);
+  useEffect(()=>{queueMicrotask(()=>setNow(Date.now()));},[live?.updatedAt]);
+  const stale=live?.updatedAt&&now?now-Date.parse(live.updatedAt)>48*60*60*1000:false;
   return <section className="p-quote">
     <div className="p-head"><div><div className="p-eyebrow">CONVERSIÓN DE MONEDA</div><h1>Cotización <em>del dólar</em></h1><p>La referencia que usa Rentia para mostrar tus importes en USD.</p></div><div className="p-actions"><button type="button" className={`p-btn ${refreshing?'p-spin':''}`} onClick={refresh} disabled={refreshing||loading||saving}><RefreshCw className="p-i" aria-hidden="true"/>{refreshing?'Actualizando…':'Actualizar cotización'}</button></div></div>
     <div className="p-grid p-g3" style={{marginBottom:16}}>

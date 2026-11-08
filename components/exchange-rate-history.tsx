@@ -19,7 +19,7 @@ export default function ExchangeRateHistory({rateType,quote,refreshKey}:{rateTyp
   const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Argentina/Buenos_Aires'}).format(new Date());
   useEffect(()=>{
     if(rateType==='manual')return;
-    let cancelled=false;const controller=new AbortController();setLoading(true);setError(false);setActive(null);
+    let cancelled=false;const controller=new AbortController();queueMicrotask(()=>{if(!cancelled){setLoading(true);setError(false);setActive(null);}});
     fetch(`/api/finance/exchange-history?type=${rateType}`,{signal:controller.signal,cache:'no-store'}).then(async response=>{if(!response.ok)throw new Error('history');return response.json() as Promise<{history:QuotePoint[];status:string}>;}).then(result=>{
       if(!cancelled)setData({type:rateType,points:result.history||[],cached:result.status==='cached'});
     }).catch(()=>{if(!cancelled)setError(true);}).finally(()=>{if(!cancelled)setLoading(false);});

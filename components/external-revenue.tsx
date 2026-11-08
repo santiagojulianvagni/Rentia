@@ -22,7 +22,7 @@ export default function ExternalRevenue({onChanged,canManage,money,storeId=null,
   const [state,setState]=useState('');
   useEffect(()=>{
     const controller=new AbortController();
-    setLoading(true);setLoadFailed(false);setState('');
+    queueMicrotask(()=>{if(!controller.signal.aborted){setLoading(true);setLoadFailed(false);setState('');}});
     fetch(`/api/finance/external-revenue?month=${month}${storeId?`&store=${storeId}`:''}`,{signal:controller.signal})
       .then(async response=>{if(!response.ok)throw new Error('load');return response.json() as Promise<{entries?:Entry[]}>;})
       .then(data=>{

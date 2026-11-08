@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect } from 'react';
 import { reportClientError } from '../lib/report-client-error';
 
@@ -13,7 +14,7 @@ export default function ErrorScreen({error,reset}:{error:Error&{digest?:string};
       <p style={{color:'#9bb0c1',lineHeight:1.5,margin:'0 0 20px'}}>Ya nos llegó el aviso. Tus datos están a salvo: probá de nuevo y, si se repite, volvé en unos minutos.</p>
       <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
         <button type="button" onClick={reset} style={{padding:'10px 18px',borderRadius:10,border:0,background:'#21d4c2',color:'#031513',fontWeight:600,cursor:'pointer'}}>Reintentar</button>
-        <a href="/" style={{padding:'10px 18px',borderRadius:10,border:'1px solid #264560',color:'#f2f7fb',textDecoration:'none'}}>Ir al inicio</a>
+        <Link href="/" style={{padding:'10px 18px',borderRadius:10,border:'1px solid #264560',color:'#f2f7fb',textDecoration:'none'}}>Ir al inicio</Link>
       </div>
     </div>
   </main>;

@@ -25,7 +25,7 @@ export default function MetaAccountPicker({accounts,value,disabled,onChange}:{ac
     document.addEventListener('pointerdown',outside);
     return ()=>document.removeEventListener('pointerdown',outside);
   },[open]);
-  useEffect(()=>{if(disabled)setOpen(false);},[disabled]);
+  if(disabled&&open)setOpen(false);
 
   function show() {setActive(selectedIndex);setOpen(true);}
   function choose(account:AdAccount) {

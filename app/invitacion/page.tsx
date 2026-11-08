@@ -17,7 +17,7 @@ export default function Invitacion() {
   const [error,setError]=useState('');
   const opening=useRef(false);
   const organizationId=params?.get('organization_id')||'';
-  useEffect(()=>{setParams(new URLSearchParams(window.location.search));},[]);
+  useEffect(()=>{queueMicrotask(()=>setParams(new URLSearchParams(window.location.search)));},[]);
 
   const openOrganization=useCallback(async (id:string)=>{
     if (opening.current) return;
@@ -34,8 +34,8 @@ export default function Invitacion() {
   useEffect(()=>{
     if (!params||!isLoaded||!isSignedIn||!user) return;
     let cancelled=false;
-    setChecking(true);setError('');
     async function check() {
+      setChecking(true);setError('');
       try {
         if (organizationId) {
           // This SDK method validates membership; the URL alone grants no access.

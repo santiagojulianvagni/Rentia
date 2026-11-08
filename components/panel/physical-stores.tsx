@@ -50,7 +50,7 @@ export default function PhysicalStores({money,canManage,onChanged}:{money:(value
     return data;
   },[]);
   useEffect(()=>{
-    load().then(data=>setSelected(current=>current??(data.stores[0]?.id??'new'))).catch(()=>setFailed(true));
+    queueMicrotask(()=>{load().then(data=>setSelected(current=>current??(data.stores[0]?.id??'new'))).catch(()=>setFailed(true));});
   },[load]);
 
   const legacy=counts.find(item=>item.storeId===null);
@@ -58,9 +58,8 @@ export default function PhysicalStores({money,canManage,onChanged}:{money:(value
   const daysOf=(id:number)=>counts.find(item=>item.storeId===id)?.days||0;
   // El formulario se rellena al cambiar de local, no cada vez que se recargan los datos.
   const storeKey=selected==='new'?'new':store?`${store.id}`:'';
-  useEffect(()=>{if(storeKey==='new')setDraft(toDraft());else if(storeKey)setDraft(toDraft(stores?.find(item=>String(item.id)===storeKey)));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[storeKey]);
+  const [draftKey,setDraftKey]=useState(storeKey);
+  if(draftKey!==storeKey){setDraftKey(storeKey);if(storeKey==='new')setDraft(toDraft());else if(storeKey)setDraft(toDraft(stores?.find(item=>String(item.id)===storeKey)));}
   const pick=(value:number|'legacy'|'new')=>{setSelected(value);setMessage('');};
 
   async function refresh(){await load().catch(()=>undefined);await onChanged().catch(()=>undefined);}
