@@ -30,9 +30,9 @@ function translated(value:unknown) {
 
 function runtime() { return env as unknown as TiendanubeRuntime; }
 
+// Tiendanube pide identificar la app con su nombre y el mail de contacto.
 function apiHeaders(token:string) {
-  const config=runtime();
-  return {authorization:`Bearer ${token}`,'user-agent':`Rentia (${config.TIENDANUBE_CLIENT_ID||'app'})`,'content-type':'application/json'};
+  return {authorization:`Bearer ${token}`,'user-agent':'Rentia (hola@rentiaapp.com)','content-type':'application/json'};
 }
 
 async function apiRequest(storeId:string,token:string,path:string,init:RequestInit={},notFoundValue?:unknown,version='v1') {
