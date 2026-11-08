@@ -1,0 +1,55 @@
+'use client';
+
+import RpSelect from '../../../components/panel/rp-select';
+import ReportDetails, { reportDetailRows } from '../../../components/report-details';
+import { salesChannelLabel } from '../../../lib/sales-channels';
+import { useState } from 'react';
+import { Printer, Download } from 'lucide-react';
+import RpChart from '../../../components/panel/rp-chart';
+import { periodOptions, ProductAnalyticsRow, MetaAdsData, Dashboard, useMoney, downloadCsv, timelineGranularity, aggregateTimeline } from '../shared';
+
+export function ReportsSection({dashboard,products,ads,period,days,onPeriodChange}:{dashboard:Dashboard|null;products:ProductAnalyticsRow[];ads:MetaAdsData|null;period:string;days:number;onPeriodChange:(days:number)=>void}) {
+  const money=useMoney();
+  const [channel,setChannel]=useState('combined');
+  const scoped=dashboard?.channels.find(row=>row.provider===channel);
+  const metrics=channel!=='combined'&&dashboard?{...dashboard.metrics,revenue:scoped?.revenue||0,totalRevenue:scoped?.revenue||0,orders:scoped?.orders||0,totalOrders:scoped?.orders||0,totalAov:scoped?.aov||0,profit:scoped?.profit||0,margin:scoped?.revenue?(scoped.profit||0)/scoped.revenue*100:0,productCost:scoped?.productCost||0,shipping:scoped?.shipping||0,commissions:scoped?.commissions||0,taxes:scoped?.taxes||0,additional:scoped?.additional||0,refundLoss:scoped?.refundLoss||0,totalAdSpend:scoped?.adSpend||0,adSpend:0,adSpendComparable:false}:dashboard?.metrics;
+  const profitAvailable=channel==='combined'||Boolean(scoped&&scoped.profit!==null);
+  const reportPoints=channel==='combined'?dashboard?.timeline||[]:dashboard?.channelTimelines?.[channel]||[];
+  const title=days===365?'Informe anual':days===90?'Informe trimestral':days===30?'Informe mensual':'Informe semanal';
+  const reportSeries=aggregateTimeline(reportPoints,days);
+  const topProducts=[...products].filter(row=>row.units_sold>0&&(channel==='combined'||row.provider===channel)).sort((a,b)=>b.profit-a.profit).slice(0,5);
+  const topCampaigns=[...(channel==='combined'?ads?.campaigns||[]:[])].filter(row=>row.spend>0).sort((a,b)=>b.reported_roas-a.reported_roas).slice(0,5);
+  const knownCosts=(metrics?.productCost||0)+(metrics?.shipping||0)+(metrics?.commissions||0)+(metrics?.taxes||0)+(metrics?.additional||0)+(metrics?.totalAdSpend??(metrics?.adSpendComparable?metrics.adSpend:0))+(metrics?.refundLoss||0);
+  const costParts=[['Productos',metrics?.productCost||0],['Envíos',metrics?.shipping||0],['Comisiones',metrics?.commissions||0],['Impuestos',metrics?.taxes||0],['Adicionales',metrics?.additional||0],['Publicidad confirmada',metrics?.totalAdSpend??(metrics?.adSpendComparable?metrics?.adSpend||0:0)],['Pérdidas por reembolsos',metrics?.refundLoss||0]] as const;
+  const missingCosts=channel==='combined'?dashboard?.quality.incompleteOrders.length||0:scoped?.pendingOrders||0;
+  const exportReport=()=>{
+    const rows:Array<Array<string|number>>=[
+      ['Resumen','Canal',channel==='combined'?'Todos los canales':salesChannelLabel(channel)],['Resumen','Período',period],['Resumen','Órdenes',metrics?.totalOrders||0],['Resumen','Facturación',metrics?.totalRevenue||0],['Resumen',channel==='combined'?'Ganancia provisoria':'Ganancia conocida del canal (revisar cobertura de Ads)',profitAvailable?metrics?.profit||0:'Pendiente'],['Resumen','Margen sobre facturación del canal',profitAvailable?`${(metrics?.margin||0).toFixed(2)}%`:'Pendiente'],['Resumen','Inversión publicitaria',metrics?.totalAdSpend||0],['Resumen','ROAS global',channel==='combined'&&!!metrics?.totalAdSpend?(metrics?.blendedRoas||0).toFixed(2):'No aplicable'],
+      ['Resumen','Rentabilidad',channel==='combined'?'Provisoria si faltan costos':`${scoped?.completeOrders||0} órdenes completas; ${scoped?.pendingOrders||0} pendientes. Publicidad y devoluciones según cobertura consultada.`],
+      ...costParts.map(([label,value])=>['Costos conocidos',label,value]),
+      ...reportSeries.map(row=>['Evolución',row.detail,`Facturación ${(row.storeRevenue+row.externalRevenue).toFixed(2)} · Ganancia ${profitAvailable?row.profit.toFixed(2):'Pendiente'}${channel==='combined'?' (provisoria si faltan costos)':' (órdenes completas, ajustes y publicidad conocida)'} · Publicidad ${row.adSpend.toFixed(2)} · Órdenes ${row.orders}`]),
+      ...topProducts.map(row=>['Productos',row.product_name,`Ganancia ${row.profit.toFixed(2)} · Margen ${row.margin.toFixed(2)}%`]),
+      ...topCampaigns.map(row=>['Meta Ads',row.name,`ROAS ${row.reported_roas.toFixed(2)} · Inversión ${row.spend.toFixed(2)}`]),
+      ...(dashboard?reportDetailRows(dashboard,products,channel):[]),
+    ];
+    downloadCsv(`rentia-informe-${channel}-${days}-dias.csv`,['Sección','Indicador','Valor'],rows);
+  };
+  const reportBuckets=reportSeries.map(point=>({...point,revenue:point.storeRevenue+point.externalRevenue}));
+  return <section className="p-reports">
+    <div className="p-head"><div><div className="p-eyebrow">ANÁLISIS EJECUTIVO</div><h1>{title}</h1><p>Una lectura completa de ventas, rentabilidad, costos, productos y publicidad usando exclusivamente la información conectada a Rentia.</p></div><div className="p-actions"><button type="button" className="p-btn" onClick={exportReport}><Download className="p-i" aria-hidden="true"/>Exportar CSV</button><button type="button" className="p-btn p-primary" onClick={()=>window.print()}><Printer className="p-i" aria-hidden="true"/>Imprimir / PDF</button></div></div>
+    <div className="p-toolbar"><div className="p-input" style={{height:40,width:210}}><RpSelect value={channel} onChange={event=>setChannel(event.target.value)} aria-label="Canal del análisis"><option value="combined">Todos los canales</option><option value="mercadolibre">Mercado Libre</option><option value="tiendanube">Tiendanube</option></RpSelect></div><div className="p-tabs">{periodOptions.map(option=><button type="button" key={option.days} className={days===option.days?'p-on':''} onClick={()=>onPeriodChange(option.days)}>{option.days===7?'Semana':option.days===30?'Mes':option.days===90?'Trimestre':'Año'}</button>)}</div><span className="p-sub" style={{flexBasis:'100%'}}>{channel==='combined'?'Ventas de todos los canales, publicidad conocida y ajustes por reembolsos.':channel==='mercadolibre'?'Ganancia conocida del canal, después de Product Ads consultados y pérdidas por reembolsos confirmadas.':'Datos exclusivos de Tiendanube. Meta no se reparte al canal sin atribución.'}</span></div>
+    <div className="p-card p-reveal p-repHero"><div><small className="p-sub">Ganancia conocida</small><b className={`p-mono ${metrics&&metrics.profit<0?'p-neg':'p-pos'}`}>{metrics&&profitAvailable?money(metrics.profit):'—'}</b><span className="p-sub">{channel!=='combined'?channel==='mercadolibre'?'Órdenes completas − ajustes y Product Ads conocidos':'Órdenes completas · antes de Meta Ads':metrics?`${metrics.margin.toFixed(1).replace('.',',')}% de margen sobre ventas de tienda`:'Cargando información'}</span></div>{([['Facturación total',metrics?money(metrics.totalRevenue):'—'],['Órdenes',metrics?metrics.totalOrders.toLocaleString('es-AR'):'—'],['Ticket promedio',metrics?money(metrics.totalAov):'—'],['ROAS global',(metrics?.totalAdSpend||0)>0&&channel==='combined'?`${(metrics?.blendedRoas||0).toFixed(2).replace('.',',')}x`:'—']] as const).map(([label,value])=><div key={label}><small className="p-sub">{label}</small><b className="p-mono">{value}</b></div>)}</div>
+    {missingCosts>0&&<div className="p-note p-warn p-reveal"><b>Informe con rentabilidad incompleta.</b> {channel==='combined'?'Hay ventas con datos pendientes. La ganancia combinada es provisoria mientras falten costos.':'Hay órdenes incompletas en este canal. La ganancia por canal incluye solo órdenes completas.'} Los reembolsos requieren conciliación aparte.</div>}
+    <div className="p-grid p-g3" style={{marginBottom:16}}>
+      <div className="p-card p-span2 p-reveal"><div className="p-cardHead"><div><span className="p-eyebrowS">EVOLUCIÓN POR {timelineGranularity(days).toUpperCase()}</span><h3>Facturación y ganancia</h3></div><span className="p-sub">Período {period}</span></div>{reportBuckets.length?<RpChart data={reportBuckets} valueKey="revenue" secondKey={channel==='combined'||!!scoped?.completeOrders?'profit':null} color="#3b8cff" secondColor="#21d4c2" format={value=>money(value)} name="Facturación"/>:<div className="p-empty">Todavía no hay actividad para este período.</div>}<div className="p-legend" style={{marginTop:8}}><span><i style={{background:'#3b8cff'}}/>Facturación</span>{(channel==='combined'||!!scoped?.completeOrders)&&<span><i style={{background:'#21d4c2'}}/>Ganancia {channel!=='combined'&&'conocida · según cobertura'}</span>}</div></div>
+      <div className="p-card p-reveal" style={{'--i':1} as React.CSSProperties}><span className="p-eyebrowS">ESTRUCTURA</span><h3 style={{margin:'4px 0 14px'}}>A dónde fue el dinero</h3><div className="p-fall">{costParts.map(([label,value],index)=><div className="p-fallRow" key={label}><span>{label}</span><div className="p-track"><i style={{'--i':index,left:0,width:`${knownCosts&&value?Math.max(2,value/knownCosts*100):0}%`,background:label==='Publicidad confirmada'?'#f5c451':'#ff6678'} as React.CSSProperties}/></div><span className="p-v p-mono">{money(value)}</span></div>)}<div className="p-fallRow p-total"><b>Costos conocidos</b><b className="p-v p-mono">{money(knownCosts)}</b></div></div></div>
+    </div>
+    <div className="p-grid p-g2" style={{marginBottom:16}}>
+      <div className="p-card p-reveal"><div className="p-cardHead"><div><span className="p-eyebrowS">PRODUCTOS</span><h3>Mayor aporte a la ganancia</h3></div></div>{topProducts.length?topProducts.map((row,index)=><div className="p-rank" key={row.variant_id}><span>{index+1}</span><div><b>{row.product_name}</b><small>{row.units_sold.toLocaleString('es-AR')} unidades · {row.margin.toFixed(1).replace('.',',')}% margen</small></div><b className={`p-mono ${row.profit<0?'p-neg':'p-pos'}`}>{money(row.profit,row.currency)}</b></div>):<div className="p-empty">Sin ventas de productos en este período.</div>}</div>
+      <div className="p-card p-reveal" style={{'--i':1} as React.CSSProperties}><div className="p-cardHead"><div><span className="p-eyebrowS">PUBLICIDAD</span><h3>Campañas por ROAS reportado</h3></div></div>{topCampaigns.length?topCampaigns.map((row,index)=><div className="p-rank" key={row.external_campaign_id}><span>{index+1}</span><div><b>{row.name}</b><small>{money(row.spend,ads?.selected?.currency||'ARS')} invertidos</small></div><b className="p-mono">{row.reported_roas.toFixed(2).replace('.',',')}x</b></div>):<div className="p-empty">{channel==='combined'?'Conectá o sincronizá Meta para completar este bloque.':'La inversión de Meta no se atribuye a un canal sin datos de atribución.'}</div>}</div>
+    </div>
+    <ReportDetails data={dashboard} products={products} channel={channel} money={money}/>
+    <div className="p-repFoot"><span>Rentia · {title}</span><span>Generado el {new Intl.DateTimeFormat('es-AR',{dateStyle:'long',timeStyle:'short'}).format(new Date())}</span></div>
+  </section>;
+}
+
