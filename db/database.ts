@@ -1146,3 +1146,74 @@ export async function expireLapsedSubscriptions(graceDays:number,now=new Date())
     .bind(iso,graceStart,iso).all<{user_id:string}>();
   return result.results.map(row=>row.user_id);
 }
+
+// --- Pedidos de privacidad de Tiendanube (LGPD) ---
+// La tienda puede haber desinstalado la app: se busca la conexión aunque esté desconectada.
+export async function findStoreOwner(provider:string,storeId:string) {
+  await ensureSchema();
+  return database().prepare('SELECT user_id,status FROM integrations WHERE provider=? AND external_store_id=? ORDER BY updated_at DESC LIMIT 1')
+    .bind(provider,storeId).first<{user_id:string;status:string}>();
+}
+
+const placeholders=(values:unknown[])=>values.map(()=>'?').join(',');
+
+// La tienda desinstaló la app: se borran las credenciales y los datos de sus compradores (código de
+// cliente, ciudad y contacto de carritos). Las ventas quedan: son de la tienda, que tiene cuenta en Rentia.
+export async function redactStoreCustomerData(userId:string,provider:string,storeId:string) {
+  await ensureSchema();
+  const orders=await database().prepare('UPDATE orders SET customer_key=NULL,ship_city=NULL WHERE user_id=? AND provider=? AND (customer_key IS NOT NULL OR ship_city IS NOT NULL)').bind(userId,provider).run();
+  const carts=await database().prepare('UPDATE abandoned_checkouts SET contact_encrypted=NULL,contact_iv=NULL WHERE user_id=? AND provider=? AND contact_encrypted IS NOT NULL').bind(userId,provider).run();
+  await database().prepare("DELETE FROM integrations WHERE user_id=? AND provider=? AND external_store_id=? AND status<>'connected'").bind(userId,provider,storeId).run();
+  return {orders:orders.meta.changes,carts:carts.meta.changes};
+}
+
+// Órdenes de un comprador: por su código anónimo o por los números de orden que manda Tiendanube.
+function customerOrdersWhere(keys:string[],orderIds:string[]) {
+  const parts:string[]=[],binds:string[]=[];
+  if(keys.length){parts.push(`customer_key IN (${placeholders(keys)})`);binds.push(...keys);}
+  if(orderIds.length){parts.push(`external_order_id IN (${placeholders(orderIds)})`);binds.push(...orderIds);}
+  return {sql:parts.join(' OR '),binds};
+}
+
+export async function redactCustomerOrders(userId:string,provider:string,keys:string[],orderIds:string[]) {
+  await ensureSchema();
+  const where=customerOrdersWhere(keys,orderIds);
+  if(!where.sql)return 0;
+  const result=await database().prepare(`UPDATE orders SET customer_key=NULL,ship_city=NULL WHERE user_id=? AND provider=? AND (${where.sql})`).bind(userId,provider,...where.binds).run();
+  return result.meta.changes;
+}
+
+export async function listCartContacts(userId:string,provider:string) {
+  await ensureSchema();
+  const rows=await database().prepare('SELECT external_id,contact_encrypted,contact_iv FROM abandoned_checkouts WHERE user_id=? AND provider=? AND contact_encrypted IS NOT NULL LIMIT 50000')
+    .bind(userId,provider).all<{external_id:string;contact_encrypted:string;contact_iv:string}>();
+  return rows.results;
+}
+
+export async function clearCartContacts(userId:string,provider:string,externalIds:string[]) {
+  await ensureSchema();
+  if(!externalIds.length)return 0;
+  const result=await database().prepare(`UPDATE abandoned_checkouts SET contact_encrypted=NULL,contact_iv=NULL WHERE user_id=? AND provider=? AND external_id IN (${placeholders(externalIds)})`).bind(userId,provider,...externalIds).run();
+  return result.meta.changes;
+}
+
+// Qué tiene Rentia de un comprador, para responder un pedido de datos.
+export async function countCustomerData(userId:string,provider:string,keys:string[],orderIds:string[],checkoutIds:string[]) {
+  await ensureSchema();
+  const where=customerOrdersWhere(keys,orderIds);
+  const orders=where.sql?await database().prepare(`SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND provider=? AND (${where.sql})`).bind(userId,provider,...where.binds).first<{total:number|string}>():null;
+  const carts=checkoutIds.length?await database().prepare(`SELECT COUNT(*) AS total FROM abandoned_checkouts WHERE user_id=? AND provider=? AND external_id IN (${placeholders(checkoutIds)})`).bind(userId,provider,...checkoutIds).first<{total:number|string}>():null;
+  return {orders:Number(orders?.total||0),carts:Number(carts?.total||0)};
+}
+
+export async function recordPrivacyRequest(request:{provider:string;storeId:string;userId:string|null;kind:string;externalId:string|null;result:Record<string,unknown>}) {
+  await ensureSchema();
+  await database().prepare('INSERT INTO privacy_requests (provider,store_id,user_id,kind,external_id,result_json,received_at) VALUES (?,?,?,?,?,?,?)')
+    .bind(request.provider,request.storeId,request.userId,request.kind,request.externalId,JSON.stringify(request.result),new Date().toISOString()).run();
+}
+
+export async function listPrivacyRequests(userId:string) {
+  await ensureSchema();
+  const rows=await database().prepare('SELECT kind,external_id,result_json,received_at FROM privacy_requests WHERE user_id=? ORDER BY received_at DESC LIMIT 100').bind(userId).all<{kind:string;external_id:string|null;result_json:string;received_at:string}>();
+  return rows.results;
+}
