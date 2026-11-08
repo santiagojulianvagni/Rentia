@@ -19,7 +19,9 @@ export async function GET(request:Request) {
   if (!runtime.TIENDANUBE_CLIENT_ID || !runtime.TIENDANUBE_CLIENT_SECRET || !runtime.TOKEN_ENCRYPTION_KEY) return NextResponse.redirect(new URL('/panel?section=integraciones&error=missing_credentials',request.url));
   const response = await fetch('https://www.tiendanube.com/apps/authorize/token',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({client_id:runtime.TIENDANUBE_CLIENT_ID,client_secret:runtime.TIENDANUBE_CLIENT_SECRET,grant_type:'authorization_code',code})});
   if (!response.ok) return NextResponse.redirect(new URL(stateUserId?'/panel?section=integraciones&error=token_exchange':'/ingresar?error=tiendanube_install',request.url));
-  const token = await response.json() as TokenResponse;
+  const token = await response.json().catch(()=>null) as TokenResponse|null;
+  // Tiendanube puede responder 200 con un error adentro (código vencido o inválido).
+  if (!token || typeof token.access_token!=='string' || !token.access_token || !/^\d+$/.test(String(token.user_id??''))) return NextResponse.redirect(new URL(stateUserId?'/panel?section=integraciones&error=token_exchange':'/ingresar?error=tiendanube_install',request.url));
   const storeId = String(token.user_id);
   const existingIntegration = await getIntegrationUser('tiendanube',storeId);
   const encrypted = await encryptToken(token.access_token,runtime.TOKEN_ENCRYPTION_KEY);
