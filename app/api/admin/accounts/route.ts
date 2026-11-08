@@ -9,8 +9,10 @@ import { RENTIA_PLANS } from '../../../../lib/plans';
 // identificados por la huella de su email (el mismo control que el cobro de prueba).
 async function owner() {
   const user=await currentUser();
-  const email=user?.emailAddresses.find(item=>item.id===user.primaryEmailAddressId)?.emailAddress;
-  return isRentiaOwnerEmail(email)?email!:null;
+  // Solo el email principal y verificado por Clerk cuenta como dueño.
+  const primary=user?.emailAddresses.find(item=>item.id===user.primaryEmailAddressId);
+  if (!primary||primary.verification?.status!=='verified') return null;
+  return isRentiaOwnerEmail(primary.emailAddress)?primary.emailAddress:null;
 }
 
 export async function GET(request:Request) {

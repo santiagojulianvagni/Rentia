@@ -19,7 +19,7 @@ export default function AdminPage() {
 
   const load=useCallback(async(q:string)=>{
     const response=await fetch(`/api/admin/accounts?q=${encodeURIComponent(q)}`,{cache:'no-store'});
-    if (response.status===403) { setError('No tenés acceso a esta página.'); setRows([]); return; }
+    if (response.status===403) { setError('No tenés acceso a esta página. Entrá a Rentia con el email de un dueño y volvé a abrirla.'); setRows([]); return; }
     const data=await response.json().catch(()=>({})) as {accounts?:Row[]};
     setRows(data.accounts||[]);
   },[]);
@@ -41,7 +41,7 @@ export default function AdminPage() {
     <p style={{margin:'0 0 20px',color:'#9bb0c3'}}>Cuentas y planes sin cargo. Un plan sin cargo no pasa por Mercado Pago y no vence.</p>
     <input style={{...ui.input,width:'100%',maxWidth:420,marginBottom:16}} placeholder="Buscar por tienda, nombre o email" value={query} onChange={event=>setQuery(event.target.value)} aria-label="Buscar cuentas"/>
     {error&&<p role="alert" style={{color:'#ffb4a8'}}>{error}</p>}
-    {rows===null?<p style={{color:'#9bb0c3'}}>Cargando…</p>:rows.length===0?<p style={{color:'#9bb0c3'}}>No hay cuentas para mostrar.</p>:
+    {error&&rows?.length===0?null:rows===null?<p style={{color:'#9bb0c3'}}>Cargando…</p>:rows.length===0?<p style={{color:'#9bb0c3'}}>No hay cuentas para mostrar.</p>:
     <div style={{overflowX:'auto',border:'1px solid #1b3346',borderRadius:14}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:14}}>
       <thead><tr style={{textAlign:'left',color:'#8ea6b8',background:'#0b1826'}}>{['Tienda','Email','Alta','Plan','Estado','Acción'].map(head=><th key={head} style={{padding:'10px 12px',fontWeight:600}}>{head}</th>)}</tr></thead>
       <tbody>{rows.map(row=>{const complimentary=row.provider==='complimentary';return <tr key={row.user_id} style={{borderTop:'1px solid #1b3346'}}>
