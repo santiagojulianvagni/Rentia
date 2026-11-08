@@ -1,0 +1,38 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Rentia - Diagrama de secuencia Tiendanube</title><style>@page{size:A4 portrait;margin:10mm}body{margin:0}svg{width:100%;height:auto}</style></head><body><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1130 1210" width="1130" height="1210">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#123"/></marker></defs>
+<style>.actor{fill:#0b1826}.an{fill:#fff;font:600 12.5px Arial}.life{stroke:#9fb3c4;stroke-dasharray:4 4}.line{stroke:#123;stroke-width:1.3;fill:none}.dash{stroke-dasharray:5 4}.lbl{fill:#123;font:11px Arial}.sec{fill:#0b5f57;font:700 12.5px Arial}.t{font:700 18px Arial;fill:#0b1826}.s{font:12px Arial;fill:#445}</style>
+<text x="20" y="26" class="t">Rentia × Tiendanube · Diagrama de secuencia</text><text x="20" y="42" class="s">App #46771 · rentiaapp.com · permisos: lectura de órdenes, productos, logística y fulfillment orders</text>
+<rect x="15" y="50" width="190" height="40" rx="8" class="actor"/><text x="110" y="75" text-anchor="middle" class="an">Comerciante (navegador)</text><line x1="110" y1="90" x2="110" y2="1190" class="life"/><rect x="235" y="50" width="190" height="40" rx="8" class="actor"/><text x="330" y="75" text-anchor="middle" class="an">Tiendanube</text><line x1="330" y1="90" x2="330" y2="1190" class="life"/><rect x="465" y="50" width="190" height="40" rx="8" class="actor"/><text x="560" y="75" text-anchor="middle" class="an">Rentia (servidor)</text><line x1="560" y1="90" x2="560" y2="1190" class="life"/><rect x="685" y="50" width="190" height="40" rx="8" class="actor"/><text x="780" y="75" text-anchor="middle" class="an">Base de datos Rentia</text><line x1="780" y1="90" x2="780" y2="1190" class="life"/><rect x="20" y="130" width="1090" height="24" rx="6" fill="#e9f8f6"/><text x="32" y="146" class="sec">1. Instalación desde la Tienda de Aplicaciones</text>
+<line x1="110" y1="172" x2="330" y2="172" class="line" marker-end="url(#a)"/><text x="118" y="166" class="lbl">Instala la app: /apps/46771/authorize y acepta los permisos (solo lectura)</text>
+<line x1="330" y1="202" x2="110" y2="202" class="line dash" marker-end="url(#a)"/><text x="118" y="196" class="lbl">Redirige a rentiaapp.com/api/integrations/tiendanube/callback?code=…</text>
+<line x1="110" y1="232" x2="560" y2="232" class="line" marker-end="url(#a)"/><text x="118" y="226" class="lbl">GET callback con el code</text>
+<line x1="560" y1="262" x2="330" y2="262" class="line" marker-end="url(#a)"/><text x="338" y="256" class="lbl">POST /apps/authorize/token (client_id, client_secret, code)</text>
+<line x1="330" y1="292" x2="560" y2="292" class="line dash" marker-end="url(#a)"/><text x="338" y="286" class="lbl">access_token + user_id (id de la tienda)</text>
+<path d="M560 314 h28 v14 h-28" class="line" marker-end="url(#a)"/><text x="596" y="325" class="lbl">Valida la respuesta y cifra el token (AES-256-GCM)</text>
+<line x1="560" y1="352" x2="780" y2="352" class="line" marker-end="url(#a)"/><text x="568" y="346" class="lbl">¿La tienda ya tiene cuenta en Rentia? Si sí: renueva la conexión → panel</text>
+<line x1="560" y1="382" x2="780" y2="382" class="line" marker-end="url(#a)"/><text x="568" y="376" class="lbl">Si no: guarda la conexión en espera (1 hora, solo el hash de la cookie)</text>
+<line x1="560" y1="412" x2="110" y2="412" class="line dash" marker-end="url(#a)"/><text x="118" y="406" class="lbl">Cookie HttpOnly + redirige a /registro?origen=tiendanube</text>
+<line x1="110" y1="442" x2="560" y2="442" class="line" marker-end="url(#a)"/><text x="118" y="436" class="lbl">Crea su cuenta o ingresa (Clerk) y completa el onboarding</text>
+<line x1="560" y1="472" x2="780" y2="472" class="line" marker-end="url(#a)"/><text x="568" y="466" class="lbl">Toma la conexión en espera (una sola vez) y la asocia a su cuenta</text>
+<line x1="560" y1="502" x2="330" y2="502" class="line" marker-end="url(#a)"/><text x="338" y="496" class="lbl">POST /webhooks: order/created, updated, paid, cancelled, edited, product/*, app/uninstalled</text>
+<line x1="560" y1="532" x2="110" y2="532" class="line dash" marker-end="url(#a)"/><text x="118" y="526" class="lbl">Panel → "Tiendanube se conectó correctamente"</text>
+<rect x="20" y="562" width="1090" height="24" rx="6" fill="#e9f8f6"/><text x="32" y="578" class="sec">2. Importación inicial (en segundo plano, por tandas)</text>
+<line x1="560" y1="604" x2="330" y2="604" class="line" marker-end="url(#a)"/><text x="338" y="598" class="lbl">GET /orders por ventanas de fechas y páginas (hasta 12 meses)</text>
+<line x1="560" y1="634" x2="330" y2="634" class="line" marker-end="url(#a)"/><text x="338" y="628" class="lbl">GET /products · GET /store (plan de la tienda) · GET /checkouts (carritos)</text>
+<line x1="560" y1="664" x2="330" y2="664" class="line" marker-end="url(#a)"/><text x="338" y="658" class="lbl">GET /orders/{id}?aggregates=transactions (comisiones de Pago Nube)</text>
+<line x1="560" y1="694" x2="780" y2="694" class="line" marker-end="url(#a)"/><text x="568" y="688" class="lbl">Guarda órdenes, productos y costos; guarda el avance para retomar si se corta</text>
+<rect x="20" y="724" width="1090" height="24" rx="6" fill="#e9f8f6"/><text x="32" y="740" class="sec">3. Tiempo real (sin consultas periódicas)</text>
+<line x1="330" y1="766" x2="560" y2="766" class="line" marker-end="url(#a)"/><text x="338" y="760" class="lbl">POST /api/webhooks/tiendanube (order/* o product/*)</text>
+<path d="M560 788 h28 v14 h-28" class="line" marker-end="url(#a)"/><text x="596" y="799" class="lbl">Verifica la firma x-linkedstore-hmac-sha256 y descarta avisos repetidos</text>
+<line x1="560" y1="826" x2="330" y2="826" class="line" marker-end="url(#a)"/><text x="338" y="820" class="lbl">GET /orders/{id}?aggregates=fulfillment_orders o GET /products/{id}</text>
+<line x1="560" y1="856" x2="780" y2="856" class="line" marker-end="url(#a)"/><text x="568" y="850" class="lbl">Actualiza la venta o el producto y recalcula la ganancia</text>
+<rect x="20" y="886" width="1090" height="24" rx="6" fill="#e9f8f6"/><text x="32" y="902" class="sec">4. Conciliación diaria</text>
+<path d="M560 920 h28 v14 h-28" class="line" marker-end="url(#a)"/><text x="596" y="931" class="lbl">Reintenta avisos que fallaron y revisa las últimas órdenes por si se perdió alguno</text>
+<line x1="560" y1="958" x2="330" y2="958" class="line" marker-end="url(#a)"/><text x="338" y="952" class="lbl">Respeta 429 / Retry-After · User-Agent: Rentia (hola@rentiaapp.com)</text>
+<rect x="20" y="988" width="1090" height="24" rx="6" fill="#e9f8f6"/><text x="32" y="1004" class="sec">5. Desinstalación y privacidad (LGPD)</text>
+<line x1="330" y1="1030" x2="560" y2="1030" class="line" marker-end="url(#a)"/><text x="338" y="1024" class="lbl">Webhook app/uninstalled → la conexión queda desconectada</text>
+<line x1="330" y1="1060" x2="560" y2="1060" class="line" marker-end="url(#a)"/><text x="338" y="1054" class="lbl">POST /api/webhooks/tiendanube/privacy/store-redact</text>
+<line x1="560" y1="1090" x2="780" y2="1090" class="line" marker-end="url(#a)"/><text x="568" y="1084" class="lbl">Borra credenciales y datos de compradores (código de cliente, ciudad, contactos)</text>
+<line x1="330" y1="1120" x2="560" y2="1120" class="line" marker-end="url(#a)"/><text x="338" y="1114" class="lbl">POST …/privacy/customers-redact · …/privacy/customers-data-request</text>
+<line x1="560" y1="1150" x2="780" y2="1150" class="line" marker-end="url(#a)"/><text x="568" y="1144" class="lbl">Borra o informa los datos de ese comprador; registra el pedido sin datos personales</text>
+</svg></body></html>
