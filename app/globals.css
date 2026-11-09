@@ -567,3 +567,7 @@
 
 /* Traducción de la interfaz: se oculta un instante mientras carga el diccionario del idioma elegido. */
 html.i18n-wait body{visibility:hidden}
+
+/* Aviso en las páginas legales traducidas: solo aparece cuando la página no está en español. */
+.legalLangNote{display:none;margin:10px 0 0;font-size:13px;opacity:.75}
+html:not([lang^="es"]) .legalLangNote{display:block}

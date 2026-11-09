@@ -72,12 +72,15 @@ export default function Panel() {
     const savedRates=window.localStorage.getItem('rentia-exchange-rates');
     if(savedCurrency&&['ARS','USD','EUR'].includes(savedCurrency))setCurrencyState(savedCurrency);
     if(savedLanguage&&['es','pt','en'].includes(savedLanguage))setLanguageState(savedLanguage);
+    try{if(savedLanguage!=='es'&&!window.sessionStorage.getItem('rentia-language-synced')){window.sessionStorage.setItem('rentia-language-synced','1');saveAccountLanguage(savedLanguage);}}catch{/* sin almacenamiento */}
     if(savedRates){try{setRates(JSON.parse(savedRates) as ExchangeRates);}catch{window.localStorage.removeItem('rentia-exchange-rates')}}
     void refreshRates().catch(()=>undefined);
   });},[]);
   useUiTranslation(language);
   const setCurrency=(value:DisplayCurrency)=>{flashContent();setCurrencyState(value);window.localStorage.setItem('rentia-display-currency',value)};
-  const setLanguage=(value:DisplayLanguage)=>{flashContent();setLanguageState(value);window.localStorage.setItem('rentia-display-language',value)};
+  // El idioma también se guarda en la cuenta, para mandar los mails en ese idioma (solo dueños y administradores).
+  const saveAccountLanguage=(value:DisplayLanguage)=>{void fetch('/api/account/language',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({language:value})}).catch(()=>undefined);};
+  const setLanguage=(value:DisplayLanguage)=>{flashContent();setLanguageState(value);window.localStorage.setItem('rentia-display-language',value);saveAccountLanguage(value);};
   const preferences={currency,language,rates,rateSource,setCurrency,setLanguage,refreshRates};
   return <PreferencesContext.Provider value={preferences}><PanelApp/></PreferencesContext.Provider>;
 }

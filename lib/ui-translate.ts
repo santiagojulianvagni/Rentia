@@ -8,7 +8,7 @@ type Template={needle:string;re:RegExp;out:string;weight:number};
 type Dictionary={exact:Map<string,string>;templates:Template[];lang:UiLanguage};
 
 const ATTRIBUTES=['title','aria-label','placeholder','alt'];
-const SKIP_SELECTOR='script,style,noscript,textarea,code,pre,[translate="no"],.notranslate,[contenteditable="true"]';
+const SKIP_SELECTOR='script,style,noscript,textarea,pre,[translate="no"],.notranslate,[contenteditable="true"]';
 const LETTER=/[A-Za-zÁÉÍÓÚáéíóúÑñ]/;
 
 const MONTHS_ES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -212,8 +212,33 @@ export function translateDocument(dictionary:Dictionary,root:Element=document.bo
   };
   const skip=(element:Element|null)=>!element||Boolean(element.closest(SKIP_SELECTOR));
 
+  // Títulos partidos palabra por palabra (para animarlos): se traducen como una sola frase.
+  const processGroup=(group:Element)=>{
+    const texts:Text[]=[];
+    const walker=document.createTreeWalker(group,NodeFilter.SHOW_TEXT);
+    let node=walker.nextNode();
+    while (node) { texts.push(node as Text); node=walker.nextNode(); }
+    if (!texts.length) return;
+    const sources=texts.map(sourceOf);
+    const translated=translateText(dictionary,sources.join(''),0,false);
+    if (translated===null) { texts.forEach(text=>{ if (applied.has(text)) { applied.delete(text); } }); return; }
+    // Una palabra traducida por cada palabra original (la última se lleva las que sobren), para que
+    // la animación y el corte de línea sigan funcionando.
+    const words=translated.trim().split(/\s+/);
+    const wordNodes=texts.filter((_,index)=>sources[index].trim()!=='');
+    const assigned=new Map<Text,string>();
+    wordNodes.forEach((node,index)=>assigned.set(node,index<wordNodes.length-1?(words[index]??''):words.slice(index).join(' ')));
+    let next=0;
+    texts.forEach((text,index)=>{
+      if (sources[index].trim()!=='') { write(text,assigned.get(text)??''); next++; return; }
+      const following=wordNodes[next];
+      write(text,following&&assigned.get(following)?sources[index]:'');
+    });
+  };
   const processElementText=(element:Element)=>{
     if (skip(element)) return;
+    const group=element.closest('[data-i18n-group]');
+    if (group) { processGroup(group); return; }
     const texts:Text[]=[];let onlyText=true;
     element.childNodes.forEach(child=>{ if (child.nodeType===3) texts.push(child as Text); else if (child.nodeType===1||child.nodeType===8) { if (child.nodeType===1) onlyText=false; } });
     if (!texts.length) return;

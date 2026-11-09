@@ -17,6 +17,7 @@ export default function LegalPage({eyebrow,title,intro,updated,sections,highligh
       <h1>{title}</h1>
       <p className="lede">{intro}</p>
       <small>Última actualización: {updated}</small>
+      <p className="legalLangNote">Esta traducción es orientativa. Si hay diferencias, vale la versión en español.</p>
     </section>
     {highlight&&<section className="shell legalHighlight">{highlight}</section>}
     <section className="shell legalBody">

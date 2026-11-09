@@ -75,6 +75,18 @@ export async function getAccount(userId: string) {
   return database().prepare('SELECT * FROM accounts WHERE user_id = ?').bind(userId).first<Account>();
 }
 
+// Idioma del dueño (es, en o pt): con él se mandan los mails de la cuenta.
+export async function setAccountLanguage(userId:string,language:'es'|'en'|'pt') {
+  await ensureSchema();
+  await database().prepare('UPDATE accounts SET language=? WHERE user_id=?').bind(language,userId).run();
+}
+
+export async function getAccountLanguageByEmail(email:string):Promise<'es'|'en'|'pt'> {
+  await ensureSchema();
+  const row=await database().prepare('SELECT language FROM accounts WHERE lower(email)=lower(?) LIMIT 1').bind(email).first<{language:string|null}>();
+  return row?.language==='en'||row?.language==='pt'?row.language:'es';
+}
+
 export async function getAccountByEmail(email:string) {
   await ensureSchema();
   return database().prepare('SELECT * FROM accounts WHERE lower(email) = lower(?) LIMIT 1').bind(email).first<Account>();

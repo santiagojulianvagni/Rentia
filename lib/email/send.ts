@@ -1,4 +1,6 @@
 import type { Email } from './templates';
+import { translateEmail } from './translate';
+import type { UiLanguage } from '../ui-translate';
 
 // Envío por Resend (https://resend.com) con su API HTTP, sin dependencias. Sin RESEND_API_KEY
 // no se manda nada: la app funciona igual y el aviso queda registrado como "sin configurar".
@@ -7,10 +9,12 @@ export const EMAIL_REPLY_TO='hola@rentiaapp.com';
 
 export type SendResult={sent:true;id:string}|{sent:false;reason:string};
 
-export async function sendEmail(to:string,email:Email,options:{idempotencyKey:string;apiKey?:string;fetcher?:typeof fetch}):Promise<SendResult> {
+export async function sendEmail(to:string,original:Email,options:{idempotencyKey:string;apiKey?:string;fetcher?:typeof fetch;lang?:UiLanguage}):Promise<SendResult> {
   const apiKey=options.apiKey??process.env.RESEND_API_KEY;
   if (!apiKey) return {sent:false,reason:'not_configured'};
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)||to.endsWith('.invalid')) return {sent:false,reason:'invalid_recipient'};
+  // Cada mail sale en el idioma que el dueño eligió en el panel (español si no eligió otro).
+  const email=translateEmail(original,options.lang??await recipientLanguage(to,Boolean(options.fetcher)));
   try {
     const response=await (options.fetcher||fetch)('https://api.resend.com/emails',{
       method:'POST',
@@ -24,4 +28,12 @@ export async function sendEmail(to:string,email:Email,options:{idempotencyKey:st
   } catch (error) {
     return {sent:false,reason:error instanceof Error&&error.name==='TimeoutError'?'timeout':'network'};
   }
+}
+
+async function recipientLanguage(to:string,testing:boolean):Promise<UiLanguage> {
+  if (testing) return 'es';
+  try {
+    const { getAccountLanguageByEmail }=await import('../../db/database');
+    return await getAccountLanguageByEmail(to);
+  } catch { return 'es'; }
 }
