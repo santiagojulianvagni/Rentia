@@ -1,15 +1,15 @@
 'use client';
 
-import RpSelect from '../../../components/panel/rp-select';
 import { salesChannelLabel } from '../../../lib/sales-channels';
-import { useContext, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { Share2, Trophy, ArrowRight, GripVertical, Plus, SlidersHorizontal, X } from 'lucide-react';
 import RpChart from '../../../components/panel/rp-chart';
+import HeroChart from './hero-chart';
 import type { ProductCostRow } from '../../../components/product-costs';
 import type { ShareContent } from '../../../components/panel/share-card';
 import { type AlertSettings, type BusinessAlert } from '../../../lib/alerts';
 import { type CampaignProfitRow } from '../../../lib/campaign-profit';
-import { AlertSettingsCard, ShareDialog, sections, ProductAnalyticsRow, TimelinePoint, Dashboard, DashboardMetricKey, DashboardChannel, DashboardLayoutSection, DashboardLayoutConfig, dashboardMetricKeys, dashboardPresets, AccessContext, useT, useMoney, date, TermHelp, ChartMetric, Granularity, timelineGranularity, aggregateTimeline, dashboardMetricLabels, dashboardMetricHelp, Sparkline, RpDelta, dailySeries, RpRing } from '../shared';
+import { AlertSettingsCard, ShareDialog, ProductAnalyticsRow, TimelinePoint, Dashboard, DashboardMetricKey, DashboardChannel, DashboardLayoutSection, DashboardLayoutConfig, dashboardMetricKeys, dashboardPresets, AccessContext, useT, useMoney, date, TermHelp, Granularity, timelineGranularity, aggregateTimeline, dashboardMetricLabels, dashboardMetricHelp, Sparkline, RpDelta, dailySeries } from '../shared';
 
 export function DashboardEditor({layout,saving,message,onClose,onSave,onPreview}:{layout:DashboardLayoutConfig;saving:boolean;message:string;onClose:()=>void;onSave:(layout:DashboardLayoutConfig)=>void;onPreview:(layout:DashboardLayoutConfig)=>void}) {
   const original=useRef<DashboardLayoutConfig>(structuredClone(layout));
@@ -51,14 +51,17 @@ export function DashboardEditor({layout,saving,message,onClose,onSave,onPreview}
   </div></>;
 }
 
-export function DashboardOverview({dashboard,previousDashboard,syncing,days,storeName,periodLabel,layout,savingLayout,onNavigate,onEdit,onLayoutReorder,onChartChange}:{dashboard:Dashboard|null;previousDashboard:Dashboard|null;syncing:boolean;days:number;storeName:string;periodLabel:string;layout:DashboardLayoutConfig;savingLayout:boolean;onNavigate:(section:string)=>void;onEdit:()=>void;onLayoutReorder:(layout:DashboardLayoutConfig)=>void;onChartChange:(chart:DashboardLayoutConfig['chart'])=>void}) {
+export function DashboardOverview({dashboard,previousDashboard,days,storeName,periodLabel,layout,savingLayout,onNavigate,onEdit,onLayoutReorder,onPeriodChange}:{dashboard:Dashboard|null;previousDashboard:Dashboard|null;syncing:boolean;days:number;storeName:string;periodLabel:string;layout:DashboardLayoutConfig;savingLayout:boolean;onNavigate:(section:string)=>void;onEdit:()=>void;onLayoutReorder:(layout:DashboardLayoutConfig)=>void;onChartChange:(chart:DashboardLayoutConfig['chart'])=>void;onPeriodChange?:(days:number)=>void}) {
   const canManage=useContext(AccessContext);
   const money=useMoney();
   const t=useT();
   const [arranging,setArranging]=useState(false);
+  // Saludo según la hora del navegador (zona horaria de quien mira).
+  const [greeting,setGreeting]=useState({text:'Hola',date:''});
+  useEffect(()=>{queueMicrotask(()=>{const now=new Date(),hour=now.getHours();setGreeting({text:hour>=5&&hour<12?'Buen día':hour>=12&&hour<20?'Buenas tardes':'Buenas noches',date:new Intl.DateTimeFormat('es-AR',{weekday:'long',day:'numeric',month:'long'}).format(now)});});},[]);
   const [draggedCard,setDraggedCard]=useState<{metric:DashboardMetricKey;sectionId:string;index:number}|null>(null);
   const [dropTarget,setDropTarget]=useState<{sectionId:string;index:number}|null>(null);
-  const [chartChannel,setChartChannel]=useState('combined');
+  const [chartChannel]=useState('combined');
   const metrics=dashboard?.metrics;
   const [share,setShare]=useState<ShareContent|null>(null);
   // Comparte los números del período elegido; sin montos salvo que la persona los active.
@@ -138,7 +141,7 @@ export function DashboardOverview({dashboard,previousDashboard,syncing,days,stor
     const partial=!!knownChannel&&!knownChannel.costCoverage;
     const target=partial||pending==='Rentabilidad pendiente'?'calidad':pending&&(key.startsWith('ml')||key.startsWith('tn'))?'integraciones':section;
     const label=t(partial?`Ganancia conocida ${knownChannel?.label}`:key==='profit'&&dashboard?.quality&&dashboard.quality.completeOrders<dashboard.quality.totalOrders?'Ganancia provisoria':dashboardMetricLabels[key]);
-    const sparkColor=channel==='meta'?'#3b8cff':channel==='mercadolibre'?'#f5c451':/profit|margin/i.test(key)?'#21d4c2':'#3b8cff';
+    const sparkColor=channel==='meta'?'#ff6fae':channel==='mercadolibre'?'#ffd23f':channel==='tiendanube'?'#4f8cff':/profit|margin/i.test(key)?'#21d4c2':'#4f8cff';
     const isTarget=dropTarget?.sectionId===sectionId&&dropTarget.index===index;
     return <button type="button" key={key} className={`p-card p-kpi p-metric p-reveal ${key==='profit'?'p-hero':''} ${pending?'p-pendingMetric':''} ${draggedCard?.metric===key?'p-dragging':''} ${isTarget?'p-dropT':''}`} style={{'--i':order} as React.CSSProperties} draggable={arranging}
       onDragStart={event=>{if(!arranging)return;event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',key);setDraggedCard({metric:key,sectionId,index});setDropTarget({sectionId,index});}}
@@ -147,24 +150,19 @@ export function DashboardOverview({dashboard,previousDashboard,syncing,days,stor
       onDragEnd={()=>{setDraggedCard(null);setDropTarget(null);}}
       onClick={()=>{if(!arranging)onNavigate(target);}}>
       {arranging&&<span className="p-grip"><GripVertical className="p-i" aria-hidden="true"/></span>}
-      <small>{channel!=='custom'&&logoFor(channel)&&<img className="p-mini" src={logoFor(channel)} alt=""/>}<span className="p-kpiLabel" title={label}>{label}</span>{dashboardMetricHelp[key]&&<TermHelp term={dashboardMetricHelp[key]}/>}</small>
+      <small>{channel!=='custom'&&logoFor(channel)&&<img className="p-mini" src={logoFor(channel)} alt=""/>}<span className="p-kpiLabel" title={label}>{channel==='tiendanube'||channel==='mercadolibre'?label.replace(/ (Tiendanube|Mercado Libre)$/,''):label}</span>{dashboardMetricHelp[key]&&<TermHelp term={dashboardMetricHelp[key]}/>}</small>
       <b className={`p-mono ${valueClass}`}>{value}</b>
       {partial&&knownChannel?<span className="p-sub p-partial">{knownChannel.completeOrders} de {knownChannel.orders} órdenes · {knownChannel.pendingOrders} por revisar · {key==='mlProfit'?'Product Ads según cobertura':'antes de Meta Ads'}</span>:metrics&&!pending?<RpDelta current={current} previous={previousValue} mode={mode} neutral={neutral}/>:<span className="p-sub p-partial">{pending||t('Cargando')}</span>}
       {!pending&&key!=='roas'&&<Sparkline values={sparkSeries(key)} color={sparkColor}/>}
       <i className="p-more">{arranging?'Arrastrar':pending?'Configurar →':'Ver detalle →'}</i>
     </button>;
   }
-  const chartTitle:Record<ChartMetric,string>={revenue:'Facturación vs. ganancia',profit:'Evolución de la ganancia',orders:'Evolución de órdenes',adSpend:'Evolución de la inversión'};
-  const chartMetricLabels:Record<ChartMetric,string>={revenue:'Facturación + ganancia',profit:'Ganancia',orders:'Órdenes',adSpend:'Inversión publicitaria'};
   const sectionDetail=(section:DashboardLayoutSection)=>{const channel=section.channel||'custom';if(channel==='combined')return 'Ventas de canales conectados + publicidad';if(channel==='tiendanube')return tiendanube?'Datos exclusivos del canal · ganancia antes de Ads':'Canal pendiente de conexión';if(channel==='meta')return dashboard?.ads.connected?'Datos publicitarios reales':'Cuenta pendiente de conexión';if(channel==='mercadolibre')return mercadoLibre?(mercadoLibre.adSpend===undefined?'Datos del canal · Product Ads sin consultar':`Ganancia después de Product Ads conocidos · ${mercadoLibre.adsCoverage?'período cubierto':'cobertura parcial'}`):'Canal pendiente de conexión';return 'Vista personalizada';};
   // Vista del gráfico: automática según el período, o la que elija la persona (día, semana o mes).
-  const [granularityChoice,setGranularityChoice]=useState<Granularity|null>(null);
+  const [granularityChoice]=useState<Granularity|null>(null);
   const granularity=granularityChoice||timelineGranularity(days);
   const buckets=aggregateTimeline(points,days,granularity).map(point=>({...point,revenue:point.storeRevenue+point.externalRevenue}));
   const metaBuckets=aggregateTimeline(dashboard?.metaTimeline||[],days);
-  const metric=layout.chart.metric;
-  const chartColor=metric==='adSpend'?'#f5c451':metric==='revenue'?'#3b8cff':metric==='orders'?'#a78bfa':'#21d4c2';
-  const showProfitLine=metric==='revenue'&&(chartChannel==='combined'||!!selectedChannel?.completeOrders);
   const revenue=metrics?.revenue||0;
   const stack:Array<{label:React.ReactNode;value:number;text:React.ReactNode;color?:string}>=metrics?[
     {label:t('Productos'),value:metrics.productCost,text:`− ${money(metrics.productCost)}`},
@@ -173,31 +171,27 @@ export function DashboardOverview({dashboard,previousDashboard,syncing,days,stor
     {label:t('Impuestos'),value:metrics.taxes,text:`− ${money(metrics.taxes)}`},
     {label:t('Costos adicionales'),value:metrics.additional,text:`− ${money(metrics.additional)}`},
     {label:'Gastos fijos',value:metrics.fixedCosts||0,text:`− ${money(metrics.fixedCosts||0)}`},
-    {label:'Meta Ads',value:dashboard?.ads.connected&&metrics.adSpendComparable?metrics.adSpend:0,text:dashboard?.ads.connected&&metrics.adSpendComparable?`− ${money(metrics.adSpend)}`:dashboard?.ads.connected?'Moneda diferente':'—',color:'#f5c451'},
+    {label:'Meta Ads',value:dashboard?.ads.connected&&metrics.adSpendComparable?metrics.adSpend:0,text:dashboard?.ads.connected&&metrics.adSpendComparable?`− ${money(metrics.adSpend)}`:dashboard?.ads.connected?'Moneda diferente':'—',color:'#ff6fae'},
     {label:'Product Ads',value:metrics.meliAdsComparable?metrics.meliAdSpend||0:0,text:metrics.meliAdsComparable?`− ${money(metrics.meliAdSpend||0)}`:'Pendiente de consulta',color:'#f5c451'},
     {label:'Pérdidas por reembolsos confirmadas',value:metrics.refundLoss||0,text:`− ${money(metrics.refundLoss||0)}`},
   ]:[];
   let used=0;
   let cardOrder=0;
   return <>
-    <div className="p-head"><div><div className="p-eyebrow">{t('MÉTRICAS PRINCIPALES')}</div><h1>Tu operación, <em>en un solo lugar</em></h1><p>{t('La ganancia es provisoria cuando faltan costos. Las ventas de otros canales sin costo cargado se muestran aparte.')}</p></div><div className="p-actions"><button type="button" className="p-btn" onClick={shareStats} disabled={!metrics}><Share2 className="p-i" aria-hidden="true"/>Compartir</button>{canManage&&<><button type="button" className={`p-btn ${arranging?'p-primary':''}`} onClick={()=>setArranging(value=>!value)}><SlidersHorizontal className="p-i" aria-hidden="true"/>{arranging?'Finalizar':'Personalizar'}</button><button type="button" className="p-btn" onClick={()=>onNavigate('facturacion')}><Plus className="p-i" aria-hidden="true"/>{t('Ventas de otros canales')}</button></>}</div></div>
+    <div className="p-head"><div><div className="p-eyebrow">{greeting.date||t('MÉTRICAS PRINCIPALES')}</div><h1>{greeting.text}, <em>{storeName}</em></h1><p>{metrics?<>{periodLabel}: <b>{metrics.totalOrders} órdenes</b> y <b className="p-pos">{money(metrics.profit)}</b> de ganancia real. </>:null}{t('La ganancia es provisoria cuando faltan costos. Las ventas de otros canales sin costo cargado se muestran aparte.')}</p></div><div className="p-actions"><button type="button" className="p-btn" onClick={shareStats} disabled={!metrics}><Share2 className="p-i" aria-hidden="true"/>Compartir</button>{canManage&&<><button type="button" className={`p-btn ${arranging?'p-primary':''}`} onClick={()=>setArranging(value=>!value)}><SlidersHorizontal className="p-i" aria-hidden="true"/>{arranging?'Finalizar':'Personalizar'}</button><button type="button" className="p-btn" onClick={()=>onNavigate('facturacion')}><Plus className="p-i" aria-hidden="true"/>{t('Ventas de otros canales')}</button></>}</div></div>
      {share&&<ShareDialog content={share} storeName={storeName} onClose={()=>setShare(null)}/>}
     {arranging&&<div className="p-arrangeBar p-reveal"><span><GripVertical className="p-i" aria-hidden="true"/><b>Ordená las tarjetas</b><small>Arrastrá una caja a la posición o sección que quieras.</small></span><span><em>{savingLayout?'Guardando…':'Los cambios se guardan automáticamente'}</em><button type="button" className="p-btn p-small" onClick={onEdit}>Editar secciones y métricas</button></span></div>}
-    {dashboard?.quality&&dashboard.quality.status!=='empty'&&<button type="button" className={`p-banner p-reveal ${dashboard.quality.completeOrders===dashboard.quality.totalOrders?'p-ready':''}`} onClick={()=>onNavigate('calidad')}><RpRing value={dashboard.quality.score} size={54} color={dashboard.quality.completeOrders===dashboard.quality.totalOrders?'#32d583':'#f5c451'}/><div><b>{dashboard.quality.score}% de calidad de datos</b><p>{dashboard.quality.completeOrders.toLocaleString('es-AR')} de {dashboard.quality.totalOrders.toLocaleString('es-AR')} órdenes tienen todos sus costos identificados.</p></div><span className="p-btn p-small">{dashboard.quality.completeOrders===dashboard.quality.totalOrders?'Costos identificados':'Revisar pendientes'} <ArrowRight className="p-i" aria-hidden="true"/></span></button>}
+    <div className="p-grid p-g3" style={{margin:'0 0 16px'}}>
+      <HeroChart dashboard={dashboard} previousDashboard={previousDashboard} days={days} periodLabel={periodLabel} onPeriodChange={onPeriodChange}/>
+      <TodayLive dashboard={dashboard} onNavigate={onNavigate}/>
+    </div>
     {layout.sections.map(section=>{const channel=section.channel||'custom';const logo=logoFor(channel);return <section className={`p-mSection ch-${channel} ${dropTarget?.sectionId===section.id&&dropTarget.index===section.metrics.length?'p-dropSection':''}`} key={section.id}
       onDragOver={event=>{if(!arranging||!draggedCard)return;event.preventDefault();setDropTarget({sectionId:section.id,index:section.metrics.length});}}
       onDrop={event=>{if(!arranging)return;event.preventDefault();moveDashboardCard(section.id,section.metrics.length);setDraggedCard(null);setDropTarget(null);}}>
       <div className="p-mHead"><div><span className="p-chIcon">{logo?<img src={logo} alt=""/>:'◇'}</span><span><h3>{section.title}</h3><small>{sectionDetail(section)}</small></span></div><span className="p-sub">{section.metrics.length} métricas</span></div>
-      <div className="p-grid p-g4">{section.metrics.map((metricKey,index)=>metricCard(metricKey,section.id,index,channel,cardOrder++))}{!section.metrics.length&&<div className="p-empty" style={{gridColumn:'1/-1'}}>Arrastrá o agregá métricas a esta sección.</div>}</div>
+      <div className={`p-grid p-g4 p-mGrid p-n${Math.min(section.metrics.length,9)}`}>{section.metrics.map((metricKey,index)=>metricCard(metricKey,section.id,index,channel,cardOrder++))}{!section.metrics.length&&<div className="p-empty" style={{gridColumn:'1/-1'}}>Arrastrá o agregá métricas a esta sección.</div>}</div>
     </section>;})}
-    <div className="p-grid p-g3" style={{margin:'6px 0 16px'}}>
-      <div className="p-card p-span2 p-reveal">
-        <div className="p-chanFilter"><div className="p-input" style={{height:38,width:210}}><RpSelect value={metric==='adSpend'?'combined':chartChannel} onChange={event=>{setChartChannel(event.target.value);if(metric==='adSpend'&&event.target.value!=='combined')onChartChange({...layout.chart,metric:'revenue'});}} aria-label="Canal del análisis"><option value="combined">Todos los canales</option><option value="mercadolibre">Mercado Libre</option><option value="tiendanube">Tiendanube</option></RpSelect></div><p>{chartChannel==='combined'?'Ventas de todos los canales, publicidad conocida y ajustes por reembolsos.':chartChannel==='mercadolibre'?'Ganancia conocida del canal, después de Product Ads consultados y pérdidas por reembolsos confirmadas. Revisá la cobertura publicitaria.':'Datos exclusivos de Tiendanube. Meta no se reparte al canal sin atribución; las devoluciones se revisan por separado.'}</p></div>
-        {chartChannel!=='combined'&&!!selectedChannel?.pendingOrders&&<p className="p-note">{selectedChannel.pendingOrders} órdenes con datos pendientes. La curva de ganancia incluye solo las {selectedChannel.completeOrders} órdenes completas; no representa el resultado final del canal.</p>}
-        <div className="p-cardHead"><div><span className="p-eyebrowS">EVOLUCIÓN POR {granularity.toUpperCase()}</span><h3>{t(chartTitle[metric])}</h3></div><div className="p-actions"><div className="p-input" style={{height:34}}><RpSelect value={metric} onChange={event=>onChartChange({...layout.chart,metric:event.target.value as ChartMetric})} aria-label="Métrica del gráfico">{(Object.entries(chartMetricLabels) as Array<[ChartMetric,string]>).filter(([value])=>chartChannel==='combined'||value!=='adSpend').map(([value,label])=><option key={value} value={value}>{label}</option>)}</RpSelect></div><div className="p-tabs" aria-label="Ver por día, semana o mes">{(['día','semana','mes'] as const).map(value=><button type="button" key={value} className={granularity===value?'p-on':''} aria-pressed={granularity===value} disabled={value==='día'&&days>400} onClick={()=>setGranularityChoice(value===timelineGranularity(days)?null:value)}>{value==='día'?'Día':value==='semana'?'Semana':'Mes'}</button>)}</div><div className="p-tabs" aria-label="Tipo de gráfico">{([['area','Área'],['line','Línea'],['bar','Barras']] as const).map(([type,label])=><button type="button" key={type} className={layout.chart.type===type?'p-on':''} onClick={()=>onChartChange({...layout.chart,type})}>{label}</button>)}</div></div></div>
-        {chartChannel!=='combined'&&metric==='profit'&&!selectedChannel?.completeOrders?<div className="p-empty">La ganancia del canal está pendiente hasta completar sus costos.</div>:buckets.length?<RpChart data={buckets} valueKey={metric==='revenue'?'revenue':metric} secondKey={showProfitLine?'profit':null} type={layout.chart.type} color={chartColor} secondColor="#21d4c2" format={value=>metric==='orders'?Math.round(value).toLocaleString('es-AR'):metric==='adSpend'?money(value,metrics?.metaCurrency||'ARS'):money(value)} axisFormat={value=>metric==='orders'?Math.round(value).toLocaleString('es-AR'):axisMoney(value)} name={metric==='revenue'?'Facturación':chartMetricLabels[metric]}/>:<div className="p-empty">{syncing?'Sincronizando…':t('Todavía no hay ventas en este período.')}</div>}
-        {showProfitLine&&!!buckets.length&&<div className="p-legend" style={{marginTop:8}}><span><i style={{background:'#3b8cff'}}/>Facturación</span><span><i style={{background:'#21d4c2'}}/>Ganancia</span></div>}
-      </div>
+    <div className="p-grid p-g2" style={{marginBottom:16}}>
       <div className="p-card p-reveal" style={{'--i':1} as React.CSSProperties}>
         <span className="p-eyebrowS">{t('CUENTA REAL')}</span><h3 style={{margin:'4px 0 14px'}}>{t('Desglose de rentabilidad')}</h3>
         <div className="p-fall">
@@ -207,18 +201,51 @@ export function DashboardOverview({dashboard,previousDashboard,syncing,days,stor
         </div>
         <button type="button" className="p-btn p-small" style={{marginTop:14,width:'100%'}} onClick={()=>onNavigate(dashboard?.ads.connected?'publicidad':'configuracion')}>{t(dashboard?.ads.connected?'Analizar publicidad':'Configurar costos')}</button>
       </div>
-    </div>
-    <div className="p-grid p-g2" style={{marginBottom:16}}>
+      <div className="p-stackCol">
       <div className="p-card p-reveal"><div className="p-cardHead"><div><span className="p-eyebrowS">{t('VOLUMEN DE VENTAS')}</span><h3>{t('Órdenes')}</h3></div><b className="p-mono p-big">{chartChannel==='combined'?(metrics?.totalOrders??'—'):(selectedChannel?.orders??0)}</b></div><p className="p-sub" style={{margin:'-8px 0 8px'}}>{metrics?`${money(chartChannel==='combined'?metrics.totalAov:selectedChannel?.aov||0)} ${t('de ticket promedio')}`:'Cargando datos'}</p>{buckets.length?<RpChart data={buckets} valueKey="orders" type="bar" color="#a78bfa" height={180} format={value=>Math.round(value).toLocaleString('es-AR')} name="Órdenes"/>:<div className="p-empty">{t('Todavía no hay ventas en este período.')}</div>}</div>
-      <div className="p-card p-reveal" style={{'--i':1} as React.CSSProperties}><div className="p-cardHead"><div><span className="p-eyebrowS">META ADS</span><h3>{t('Inversión publicitaria')}</h3></div><b className="p-mono p-big">{dashboard?.ads.connected?money(metrics?.adSpend||0,metrics?.metaCurrency||'ARS'):'—'}</b></div><p className="p-sub" style={{margin:'-8px 0 8px'}}>{dashboard?.ads.connected&&metrics?`${metrics.reportedRoas.toFixed(2).replace('.',',')}x ROAS reportado · ${metrics.blendedRoas.toFixed(2).replace('.',',')}x global`:t('Conectá Meta para completar este análisis')}</p>{dashboard?.ads.connected&&metaBuckets.length?<RpChart data={metaBuckets} valueKey="adSpend" color="#f5c451" height={180} format={value=>money(value,metrics?.metaCurrency||'ARS')} axisFormat={axisMoney} name="Inversión"/>:<div className="p-empty">{t('La inversión aparecerá al sincronizar Meta Ads.')}</div>}</div>
+      <div className="p-card p-reveal" style={{'--i':1} as React.CSSProperties}><div className="p-cardHead"><div><span className="p-eyebrowS">META ADS</span><h3>{t('Inversión publicitaria')}</h3></div><b className="p-mono p-big">{dashboard?.ads.connected?money(metrics?.adSpend||0,metrics?.metaCurrency||'ARS'):'—'}</b></div><p className="p-sub" style={{margin:'-8px 0 8px'}}>{dashboard?.ads.connected&&metrics?`${metrics.reportedRoas.toFixed(2).replace('.',',')}x ROAS reportado · ${metrics.blendedRoas.toFixed(2).replace('.',',')}x global`:t('Conectá Meta para completar este análisis')}</p>{dashboard?.ads.connected&&metaBuckets.length?<RpChart data={metaBuckets} valueKey="adSpend" color="#ff6fae" height={180} format={value=>money(value,metrics?.metaCurrency||'ARS')} axisFormat={axisMoney} name="Inversión"/>:<div className="p-empty">{t('La inversión aparecerá al sincronizar Meta Ads.')}</div>}</div>
+      </div>
     </div>
     <div className="p-card p-reveal" style={{marginBottom:16}}><div className="p-cardHead"><div><span className="p-eyebrowS">{t('CANALES DE VENTA')}</span><h3>{t('Rendimiento por origen')}</h3></div><button type="button" className="p-btn p-small" onClick={()=>onNavigate('integraciones')}>{t('Administrar conexiones')} <ArrowRight className="p-i" aria-hidden="true"/></button></div>
-      <div className="p-tableWrap"><table><thead><tr><th>{t('Canal')}</th><th className="p-r">{t('Órdenes')}</th><th className="p-r">{t('Facturación')}</th><th className="p-r">{t('Facturación neta')}</th><th className="p-r">{t('Ganancia')}</th><th className="p-r">{t('Ticket promedio')}</th></tr></thead><tbody>{(dashboard?.channels||[]).map(channel=><tr key={channel.provider}><td><span className="p-chan">{logoFor(channel.provider as DashboardChannel)&&<img src={logoFor(channel.provider as DashboardChannel)} alt=""/>}<span><b>{channel.label}</b><br/><small className="p-sub">{t(channel.costCoverage?'Costos aplicados · antes de Ads':`${channel.completeOrders}/${channel.orders} completas · ganancia conocida antes de Ads`)}</small></span></span></td><td className="p-r p-mono">{channel.orders.toLocaleString('es-AR')}</td><td className="p-r p-mono">{money(channel.revenue)}</td><td className="p-r p-mono">{money(channel.netRevenue)}</td><td className={`p-r p-mono ${channel.profit===null?'':channel.profit<0?'p-neg':'p-pos'}`}>{channel.profit===null?'—':money(channel.profit)}</td><td className="p-r p-mono">{money(channel.aov)}</td></tr>)}{!dashboard?.channels.length&&<tr><td colSpan={6} className="p-empty">{t('Todavía no hay canales con ventas.')}</td></tr>}</tbody></table></div>
+      <div className="p-tableWrap"><table><thead><tr><th>{t('Canal')}</th><th className="p-r">{t('Órdenes')}</th><th className="p-r">{t('Facturación')}</th><th className="p-r">{t('Facturación neta')}</th><th className="p-r">{t('Ganancia')}</th><th className="p-r">{t('Ticket promedio')}</th></tr></thead><tbody>{(dashboard?.channels||[]).filter(channel=>channel.provider!=='external'||channel.orders>0).map(channel=><tr key={channel.provider}><td><span className="p-chan">{logoFor(channel.provider as DashboardChannel)&&<img src={logoFor(channel.provider as DashboardChannel)} alt=""/>}<span><b>{channel.label}</b><br/><small className="p-sub">{t(channel.provider==='external'?'Cargadas a mano · sin costos detallados':channel.costCoverage?'Costos aplicados · antes de Ads':`${channel.completeOrders}/${channel.orders} completas · ganancia conocida antes de Ads`)}</small></span></span></td><td className="p-r p-mono">{channel.orders.toLocaleString('es-AR')}</td><td className="p-r p-mono">{money(channel.revenue)}</td><td className="p-r p-mono">{money(channel.netRevenue)}</td><td className={`p-r p-mono ${channel.profit===null?'':channel.profit<0?'p-neg':'p-pos'}`}>{channel.profit===null?'—':money(channel.profit)}</td><td className="p-r p-mono">{money(channel.aov)}</td></tr>)}{!dashboard?.channels.length&&<tr><td colSpan={6} className="p-empty">{t('Todavía no hay canales con ventas.')}</td></tr>}</tbody></table></div>
     </div>
     <div className="p-card p-reveal"><div className="p-cardHead"><div><span className="p-eyebrowS">{t('ACTIVIDAD RECIENTE')}</span><h3>{t('Últimas ventas')}</h3></div><button type="button" className="p-btn p-small" onClick={()=>onNavigate('ordenes')}>{t('Ver todas')} <ArrowRight className="p-i" aria-hidden="true"/></button></div>
       {dashboard?.orders.length?<div className="p-recent">{dashboard.orders.slice(0,6).map(order=><button type="button" key={`${order.provider}-${order.external_order_id}`} onClick={()=>onNavigate('ordenes')}><span><b>#{order.order_number||order.external_order_id}</b><small>{salesChannelLabel(order.provider)}</small></span><b className="p-mono">{money(order.total,order.currency)}</b><small>{date(order.source_created_at)}</small></button>)}</div>:<div className="p-empty">{t('Todavía no hay órdenes importadas.')}</div>}
     </div>
   </>;
+}
+
+// "Hoy · En vivo": lo que entró hoy (hora local), con su ganancia, la curva del día, el reparto
+// por canal y las últimas ventas. Se actualiza solo: el panel revisa cambios cada 30 segundos.
+const CHANNEL_COLORS:Record<string,string>={tiendanube:'#4f8cff',mercadolibre:'#ffd23f'};
+function TodayLive({dashboard,onNavigate}:{dashboard:Dashboard|null;onNavigate:(section:string)=>void}) {
+  const money=useMoney();
+  const [now,setNow]=useState<Date|null>(null);
+  useEffect(()=>{queueMicrotask(()=>setNow(new Date()));const timer=window.setInterval(()=>setNow(new Date()),60000);return ()=>window.clearInterval(timer);},[]);
+  const localDay=(value:Date)=>`${value.getFullYear()}-${value.getMonth()}-${value.getDate()}`;
+  const valid=(dashboard?.orders||[]).filter(order=>!['cancelled','canceled','voided'].includes(String(order.status).toLowerCase())&&!['voided','refunded'].includes(String(order.payment_status).toLowerCase()));
+  const today=now?valid.filter(order=>localDay(new Date(order.source_created_at))===localDay(now)):[];
+  const revenue=today.reduce((sum,order)=>sum+Number(order.total||0),0);
+  const profit=today.reduce((sum,order)=>sum+Number(order.profit||0),0);
+  const hours=now?now.getHours()+1:24;
+  const perHour=Array.from({length:hours},(_,hour)=>today.filter(order=>new Date(order.source_created_at).getHours()===hour).reduce((sum,order)=>sum+Number(order.total||0),0));
+  let running=0;const cumulative=perHour.map(value=>(running+=value));
+  const top=Math.max(1,...cumulative);
+  const spark=cumulative.length>1?cumulative.map((value,index)=>`${index?'L':'M'}${(index/(cumulative.length-1)*96).toFixed(1)} ${(34-value/top*30).toFixed(1)}`).join(' '):'M0 34 L96 34';
+  const byChannel=new Map<string,number>();
+  for(const order of today)byChannel.set(order.provider,(byChannel.get(order.provider)||0)+Number(order.total||0));
+  const mix=[...byChannel.entries()].sort((a,b)=>b[1]-a[1]).map(([provider,value])=>({provider,label:salesChannelLabel(provider),share:revenue?Math.round(value/revenue*100):0,color:CHANNEL_COLORS[provider]||'#8b6cff'}));
+  const latest=(today.length?today:valid).slice().sort((a,b)=>b.source_created_at.localeCompare(a.source_created_at)).slice(0,4);
+  const ago=(iso:string)=>{if(!now)return '';const minutes=Math.max(0,Math.round((now.getTime()-new Date(iso).getTime())/60000));return minutes<60?`hace ${minutes} min`:minutes<1440?`hace ${Math.round(minutes/60)} h`:new Intl.DateTimeFormat('es-AR',{day:'numeric',month:'short'}).format(new Date(iso));};
+  return <div className="p-card p-reveal p-todayLive" style={{'--i':1} as React.CSSProperties}>
+    <div className="p-cardHead"><div><h3 style={{margin:0}}>Hoy</h3><span className="p-sub">Se actualiza con cada venta</span></div><span className="p-liveChip tone-healthy" role="status"><span className="p-pulse"/>En vivo</span></div>
+    <div className="p-todayTop"><div><b className="p-mono p-todayValue">{money(revenue)}</b><span className="p-sub">facturados · ganancia <b className={profit<0?'p-neg':'p-pos'}>{money(profit)}</b> · {today.length} {today.length===1?'orden':'órdenes'}</span></div>
+      <svg width="96" height="38" viewBox="0 0 96 38" aria-hidden="true"><defs><linearGradient id="p-todayGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#21d4c2" stopOpacity=".45"/><stop offset="1" stopColor="#21d4c2" stopOpacity="0"/></linearGradient></defs><path d={`${spark} L96 38 L0 38 Z`} fill="url(#p-todayGrad)"/><path d={spark} fill="none" stroke="#3ee6d4" strokeWidth="2" strokeLinejoin="round"/></svg></div>
+    <div className="p-todayMix">{mix.length?mix.map(row=><div key={row.provider} className="p-todayRow"><span>{row.label}</span><span className="p-todayBar"><i style={{width:`${row.share}%`,background:row.color}}/></span><b className="p-mono">{row.share} %</b></div>):<p className="p-sub" style={{margin:0}}>Todavía no hay ventas hoy. Apenas entre una, aparece acá.</p>}</div>
+    <div className="p-todaySales"><span className="p-sub">{today.length?'Últimas ventas':'Últimas ventas del período'}</span>
+      {latest.map(order=><button type="button" key={`${order.provider}-${order.external_order_id}`} className="p-todaySale" onClick={()=>onNavigate('ordenes')}><i style={{background:CHANNEL_COLORS[order.provider]||'#8b6cff'}}/><span><b>#{order.order_number||order.external_order_id}</b><small>{order.items?.[0]?.name?`${order.items[0].name}${order.items.length>1?` +${order.items.length-1}`:''} · `:''}{salesChannelLabel(order.provider)} · {ago(order.source_created_at)}</small></span><span className="p-r"><b className="p-mono">{money(order.total)}</b><small className={`p-mono ${order.profit<0?'p-neg':'p-pos'}`}>{order.profit<0?'−':'+'} {money(Math.abs(order.profit))}</small></span></button>)}
+    </div>
+  </div>;
 }
 
 export function DecisionCenter({dashboard,products,costs,alerts,campaigns,alertSettings,canManage,onAlertSettings,onNavigate}:{dashboard:Dashboard|null;products:ProductAnalyticsRow[];costs:ProductCostRow[];alerts:BusinessAlert[];campaigns:CampaignProfitRow[];alertSettings:AlertSettings;canManage:boolean;onAlertSettings:(settings:AlertSettings)=>void;onNavigate:(section:string)=>void}) {

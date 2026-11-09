@@ -1,0 +1,329 @@
+/* Diseño glass del panel (rama diseno-glass): paneles translúcidos y esmerilados que flotan sobre
+   un fondo oscuro con luces de color. Es solo una capa visual sobre las clases p- de siempre:
+   no cambia ninguna función. Se activa con la clase p-glass en .p-root. */
+
+.p-root.p-glass{
+  --surface:rgba(24,44,68,.42);--surface2:rgba(12,26,44,.38);--raise:rgba(36,62,92,.5);
+  --line:rgba(255,255,255,.085);--line2:rgba(255,255,255,.14);
+  --bg:rgba(4,11,20,.5);--bg2:rgba(6,14,26,.5);
+  --glassFill:linear-gradient(160deg,rgba(255,255,255,.095),rgba(255,255,255,.035));
+  --glassEdge:inset 0 1px 0 rgba(255,255,255,.09);
+  --glassShadow:0 22px 56px rgba(0,0,0,.34);
+  min-height:100vh;
+  background:
+    radial-gradient(620px circle at 2% 0%,rgba(33,212,194,.48),transparent 60%),
+    radial-gradient(560px circle at 100% 12%,rgba(59,108,255,.46),transparent 60%),
+    radial-gradient(640px circle at 44% 115%,rgba(124,92,255,.44),transparent 60%),
+    radial-gradient(320px circle at 80% 85%,rgba(245,165,36,.16),transparent 65%),
+    radial-gradient(1200px 760px at 70% -12%,#0f2a42 0%,#050b14 62%);
+  background-attachment:fixed;
+}
+
+/* Vidrio: misma receta para todas las superficies. */
+.p-root.p-glass .p-card,
+.p-root.p-glass .p-top,
+.p-root.p-glass .p-side{
+  background:var(--glassFill);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:var(--glassEdge),var(--glassShadow);
+  backdrop-filter:blur(24px) saturate(160%);
+  -webkit-backdrop-filter:blur(24px) saturate(160%);
+}
+.p-root.p-glass .p-card .p-card{box-shadow:var(--glassEdge);backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(255,255,255,.035)}
+
+/* Menú lateral flotante. */
+.p-root.p-glass .p-side{top:14px;height:calc(100vh - 28px);margin:14px 0 14px 14px;border-radius:22px}
+.p-root.p-glass .p-navItem{border-radius:11px;transition:background .2s,color .2s}
+.p-root.p-glass .p-navItem:hover{background:rgba(255,255,255,.06)}
+.p-root.p-glass .p-navItem.p-on{background:linear-gradient(90deg,rgba(33,212,194,.24),rgba(33,212,194,.06));box-shadow:inset 0 0 0 1px rgba(33,212,194,.34);color:#fff}
+.p-root.p-glass .p-navItem.p-on:before{display:none}
+
+/* Barra superior en píldora. */
+.p-root.p-glass .p-top{top:14px;margin:14px 14px 0;border-radius:18px;padding:10px 16px}
+.p-root.p-glass .p-content{padding-top:22px}
+
+/* Tarjetas, botones y campos. */
+.p-root.p-glass .p-card{border-radius:20px}
+.p-root.p-glass .p-input,
+.p-root.p-glass input:not([type=checkbox]):not([type=radio]):not([type=range]),
+.p-root.p-glass select,
+.p-root.p-glass textarea{background-color:rgba(0,0,0,.24)}
+.p-root.p-glass .p-btn{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.p-root.p-glass .p-primary{box-shadow:0 10px 28px rgba(33,212,194,.32)}
+.p-root.p-glass table tr:hover td{background:rgba(255,255,255,.035)}
+
+/* Flotantes legibles: vidrio más opaco. */
+.p-root.p-glass .p-menu,
+.p-root.p-glass .p-tip,
+.p-root.p-glass .p-drawer,
+.p-root.p-glass .p-modal,
+.p-root.p-glass .p-palette,
+.p-root.p-glass dialog.p-dialog,
+.p-root.p-glass dialog.p-confirm{
+  background:linear-gradient(165deg,rgba(18,34,54,.9),rgba(10,22,38,.92));
+  border-color:rgba(255,255,255,.14);
+  backdrop-filter:blur(28px) saturate(150%);
+  -webkit-backdrop-filter:blur(28px) saturate(150%);
+}
+
+/* Al cambiar de sección, el contenido entra con un fundido suave. */
+.p-root.p-glass .p-content>*{animation:p-glassIn .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes p-glassIn{from{opacity:0;transform:translateY(10px);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+@media (prefers-reduced-motion:reduce){.p-root.p-glass .p-content>*{animation:none}}
+
+/* Celular: el menú pasa a cajón y la barra se pega arriba con menos margen. */
+@media (max-width:900px){
+  .p-root.p-glass .p-side{top:0;height:100vh;margin:0;border-radius:0 22px 22px 0;background:linear-gradient(165deg,#13243a,#0b1828)}
+  .p-root.p-glass .p-top{top:8px;margin:8px 8px 0;border-radius:16px;padding:8px 12px}
+  .p-root.p-glass .p-content{padding-top:16px}
+}
+
+@media (max-width:560px){
+  .p-root.p-glass .p-top{gap:6px;margin:6px 6px 0;padding:6px 8px;border-radius:14px}
+  .p-root.p-glass .p-top>*{min-width:0}
+  .p-root.p-glass .p-top>button,.p-root.p-glass .p-top>a{flex:none}
+  .p-root.p-glass .p-topRight{gap:6px;min-width:0;flex:1 1 auto;justify-content:flex-end}
+  .p-root.p-glass .p-topRight .p-ctrl{min-width:0}
+  .p-root.p-glass .p-topRight .p-ctrlBtn{padding-left:9px;padding-right:9px;gap:6px;min-width:0;max-width:100%;white-space:nowrap}
+  .p-root.p-glass .p-topRight .p-ctrlBtn:not(:has(.p-bellCount)){overflow:hidden;text-overflow:ellipsis}
+  .p-root.p-glass .p-content{padding-left:12px;padding-right:12px}
+}
+
+/* Computadoras con menos potencia o ahorro de datos: sin desenfoque, mismo look. */
+@media (prefers-reduced-transparency:reduce){
+  .p-root.p-glass .p-card,.p-root.p-glass .p-top,.p-root.p-glass .p-side{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(16,30,48,.92)}
+}
+
+/* Marca: Rentia + tienda y plan. */
+.p-root.p-glass .p-brandName{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.p-root.p-glass .p-brandName small{font-size:11.5px;font-weight:500;color:#8ea4b5;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+
+/* Barra superior como la muestra: buscador ancho, estado en vivo y controles con más contraste. */
+.p-root.p-glass .p-crumbs small:first-child{color:#8ea4b5}
+.p-root.p-glass .p-crumbs b{color:#fff}
+.p-root.p-glass .p-crumbs{flex:none}
+.p-root.p-glass .p-topRight{flex:1 1 auto;min-width:0;justify-content:flex-end;gap:8px}
+.p-root.p-glass .p-paletteBtn{flex:1 1 160px;min-width:150px;overflow:hidden;max-width:380px;margin-right:auto;margin-left:12px;justify-content:flex-start;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);color:#9db0c0}
+.p-root.p-glass .p-paletteBtn .p-paletteText{flex:1;text-align:left;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-root.p-glass .p-ctrlBtn,.p-root.p-glass .p-top .p-iconBtn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#eef5fa}
+.p-root.p-glass .p-ctrlBtn:hover,.p-root.p-glass .p-top .p-iconBtn:hover{background:rgba(255,255,255,.14)}
+.p-root.p-glass .p-avatar{background:linear-gradient(135deg,#7c5cff,#3b6cff);box-shadow:0 6px 18px rgba(92,108,255,.4)}
+.p-root.p-glass .p-liveChip{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 12px;border-radius:999px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;border:1px solid rgba(74,222,128,.38);background:rgba(74,222,128,.12);color:#c3f7d6}
+.p-root.p-glass .p-liveChip .p-pulse{width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 0 rgba(74,222,128,.6);animation:p-livePulse 2s infinite}
+.p-root.p-glass .p-liveChip.tone-warning{border-color:rgba(245,196,81,.45);background:rgba(245,196,81,.12);color:#fbe3a6}
+.p-root.p-glass .p-liveChip.tone-warning .p-pulse{background:#f5c451;animation:none}
+.p-root.p-glass .p-liveChip.tone-error{border-color:rgba(255,102,120,.45);background:rgba(255,102,120,.12);color:#ffc2ca}
+.p-root.p-glass .p-liveChip.tone-error .p-pulse{background:#ff6678;animation:none}
+.p-root.p-glass .p-liveChip.tone-working{border-color:rgba(59,140,255,.45);background:rgba(59,140,255,.12);color:#cfe0ff}
+.p-root.p-glass .p-liveChip.tone-working .p-pulse{background:#3b8cff}
+.p-root.p-glass .p-liveChip.tone-neutral{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#cbd8e2}
+.p-root.p-glass .p-liveChip.tone-neutral .p-pulse{background:#9bb0c1;animation:none}
+@keyframes p-livePulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.6)}70%{box-shadow:0 0 0 7px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
+
+/* Saludo y colores de acento más nítidos. */
+.p-root.p-glass .p-head h1 em{background:linear-gradient(90deg,#3ee6d4,#7fd3ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.p-root.p-glass .p-head .p-eyebrow{text-transform:none}
+.p-root.p-glass .p-head .p-eyebrow::first-letter{text-transform:uppercase}
+.p-root.p-glass .p-head p b{color:#fff}
+.p-root.p-glass .p-head p b.p-pos{color:#3ee6d4}
+
+/* Calidad de datos: tarjeta chica abajo a la derecha. */
+.p-root.p-glass .p-qualityDock{display:flex;justify-content:flex-end;margin-top:16px}
+.p-root.p-glass .p-qualityMini{width:auto;max-width:440px;margin:0;padding:12px 14px;gap:12px}
+.p-root.p-glass .p-qualityMini b{font-size:13.5px}
+.p-root.p-glass .p-qualityMini p,.p-root.p-glass .p-qualityMini small{font-size:12px}
+@media (max-width:1560px){.p-root.p-glass .p-top .p-hideSm.p-ctrlLabel{display:none}}
+
+/* Tarjeta "Hoy · En vivo" (como la demo). */
+.p-root.p-glass .p-todayLive{display:flex;flex-direction:column;gap:14px}
+.p-root.p-glass .p-todayLive .p-cardHead{margin-bottom:0}
+.p-root.p-glass .p-liveChip.tone-healthy{cursor:default}
+.p-root.p-glass .p-todayTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.p-root.p-glass .p-todayTop>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.p-root.p-glass .p-todayValue{font-size:30px;letter-spacing:-.03em;line-height:1.1}
+.p-root.p-glass .p-todayTop .p-sub b{font-weight:700}
+.p-root.p-glass .p-todayMix{display:flex;flex-direction:column;gap:10px}
+.p-root.p-glass .p-todayRow{display:grid;grid-template-columns:110px minmax(0,1fr) 44px;align-items:center;gap:10px;font-size:12.5px;color:#c9d6e0}
+.p-root.p-glass .p-todayRow b{text-align:right;color:#fff}
+.p-root.p-glass .p-todayBar{height:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.p-root.p-glass .p-todayBar i{display:block;height:100%;border-radius:99px;animation:p-barGrow .8s cubic-bezier(.2,.8,.2,1) both}
+@keyframes p-barGrow{from{width:0!important}}
+.p-root.p-glass .p-todaySales{display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+.p-root.p-glass .p-todaySale{display:flex;align-items:center;gap:10px;width:100%;padding:7px 6px;border:0;border-radius:10px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background .2s}
+.p-root.p-glass .p-todaySale:hover{background:rgba(255,255,255,.05)}
+.p-root.p-glass .p-todaySale>i{width:8px;height:8px;flex:none;border-radius:50%}
+.p-root.p-glass .p-todaySale>span:nth-child(2){flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.p-root.p-glass .p-todaySale small{font-size:11.5px;color:#8ea4b5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-root.p-glass .p-todaySale .p-r{display:flex;flex-direction:column;align-items:flex-end;line-height:1.3}
+.p-root.p-glass .p-todaySale .p-r small.p-pos{color:#6ee7a0}
+
+/* Botón "Cargar costo" en la barra. */
+.p-root.p-glass .p-costBtn{height:38px;padding:0 14px;border-radius:12px;white-space:nowrap;flex:none}
+
+/* Animaciones: los botones se hunden al tocarlos y los menús se abren con zoom y cascada. */
+.p-root.p-glass .p-btn,.p-root.p-glass .p-ctrlBtn,.p-root.p-glass .p-iconBtn,.p-root.p-glass .p-liveChip,.p-root.p-glass .p-avatar,.p-root.p-glass .p-navItem,.p-root.p-glass .p-menu button{transition:transform .16s cubic-bezier(.2,.8,.2,1),background .2s,border-color .2s,box-shadow .2s,color .2s}
+.p-root.p-glass .p-btn:active,.p-root.p-glass .p-ctrlBtn:active,.p-root.p-glass .p-iconBtn:active,.p-root.p-glass .p-liveChip:active,.p-root.p-glass .p-avatar:active,.p-root.p-glass .p-navItem:active{transform:scale(.95)}
+.p-root.p-glass .p-ctrlBtn[aria-expanded="true"]{background:rgba(33,212,194,.16);border-color:rgba(33,212,194,.5)}
+.p-root.p-glass .p-ctrlBtn[aria-expanded="true"] svg:last-child{transform:rotate(180deg)}
+.p-root.p-glass .p-ctrlBtn svg{transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.p-root.p-glass .p-menu{transform:translateY(-8px) scale(.95);transform-origin:top right;filter:blur(6px);transition:opacity .24s cubic-bezier(.2,.8,.2,1),transform .24s cubic-bezier(.2,.8,.2,1),filter .24s,visibility .24s}
+.p-root.p-glass .p-menu.p-open{transform:none;filter:none}
+.p-root.p-glass .p-menu.p-open>button,.p-root.p-glass .p-menu.p-open>a{animation:p-menuItem .32s cubic-bezier(.2,.8,.2,1) both}
+.p-root.p-glass .p-menu.p-open>:nth-child(2){animation-delay:.03s}.p-root.p-glass .p-menu.p-open>:nth-child(3){animation-delay:.06s}.p-root.p-glass .p-menu.p-open>:nth-child(4){animation-delay:.09s}.p-root.p-glass .p-menu.p-open>:nth-child(5){animation-delay:.12s}.p-root.p-glass .p-menu.p-open>:nth-child(n+6){animation-delay:.15s}
+@keyframes p-menuItem{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.p-root.p-glass .p-menu button.p-on{background:rgba(33,212,194,.12)}
+@media (prefers-reduced-motion:reduce){.p-root.p-glass .p-menu,.p-root.p-glass .p-menu.p-open>*{animation:none;transition:none;filter:none}}
+
+/* Gráfico principal: ganancia en grande, pestañas de período, chips por canal y áreas apiladas. */
+.p-root.p-glass .p-heroChart{display:flex;flex-direction:column;gap:14px;position:relative;min-width:0}
+.p-root.p-glass .p-heroHead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.p-root.p-glass .p-heroLabel{display:block;font-size:12.5px;color:#9fb0bf;margin-bottom:4px}
+.p-root.p-glass .p-heroLabel::first-letter{text-transform:uppercase}
+.p-root.p-glass .p-heroValue{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.p-root.p-glass .p-heroValue b{font-size:clamp(30px,4vw,44px);font-weight:700;letter-spacing:-.035em;line-height:1.05;background:linear-gradient(180deg,#fff,#cfe9ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.p-root.p-glass .p-heroDelta{font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:999px;color:#3ee6a4;background:rgba(62,230,164,.12);border:1px solid rgba(62,230,164,.28)}
+.p-root.p-glass .p-heroDelta.p-down{color:#ff7a8a;background:rgba(255,122,138,.12);border-color:rgba(255,122,138,.3)}
+.p-root.p-glass .p-heroTools{display:flex;align-items:center;gap:8px}
+.p-root.p-glass .p-heroTabs,.p-root.p-glass .p-heroSeg{display:inline-flex;padding:3px;gap:2px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09)}
+.p-root.p-glass .p-heroTabs button,.p-root.p-glass .p-heroSeg button{border:0;background:transparent;color:#9fb0bf;font:inherit;font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:background .25s,color .25s,transform .15s}
+.p-root.p-glass .p-heroTabs button:hover,.p-root.p-glass .p-heroSeg button:hover{color:#fff}
+.p-root.p-glass .p-heroTabs button:active,.p-root.p-glass .p-heroSeg button:active{transform:scale(.95)}
+.p-root.p-glass .p-heroTabs button.p-on,.p-root.p-glass .p-heroSeg button.p-on{color:#06141a;background:linear-gradient(135deg,#3ee6d4,#21d4c2);box-shadow:0 4px 14px rgba(33,212,194,.35)}
+.p-root.p-glass .p-heroOptionsWrap{position:relative}
+.p-root.p-glass .p-heroOptions{position:absolute;right:0;top:calc(100% + 8px);z-index:30;display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:16px;min-width:250px;background:rgba(14,22,34,.92);backdrop-filter:blur(22px) saturate(1.4);border:1px solid rgba(255,255,255,.12);box-shadow:0 20px 50px rgba(0,0,0,.45);animation:p-heroPop .22s cubic-bezier(.2,.8,.2,1)}
+.p-root.p-glass .p-heroOptions small{color:#8597a6;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+@keyframes p-heroPop{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
+.p-root.p-glass .p-heroChips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.p-root.p-glass .p-heroChip{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;font:inherit;font-size:12.5px;color:#d5e1ea;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);cursor:pointer;transition:opacity .25s,background .25s,border-color .25s,transform .15s}
+.p-root.p-glass .p-heroChip:active{transform:scale(.96)}
+.p-root.p-glass .p-heroChip i{width:9px;height:9px;border-radius:50%;box-shadow:0 0 10px currentColor}
+.p-root.p-glass .p-heroChip b{color:#fff;font-weight:700}
+.p-root.p-glass .p-heroChip.p-on{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.26)}
+.p-root.p-glass .p-heroChip.p-dim{opacity:.45}
+.p-root.p-glass .p-heroNote{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#8fa1b0;margin-left:auto}
+.p-root.p-glass .p-heroNote i,.p-root.p-glass .p-heroTipReal i{width:16px;height:2px;border-radius:2px;background:rgba(255,255,255,.85)}
+.p-root.p-glass .p-heroPlot{position:relative;height:250px}
+.p-root.p-glass .p-heroPlot svg{width:100%;height:100%;display:block;overflow:visible}
+.p-root.p-glass .p-heroPlot svg path{animation:p-heroGrow .9s cubic-bezier(.2,.8,.2,1) both;transform-origin:50% 100%}
+@keyframes p-heroGrow{from{opacity:0;transform:scaleY(.6)}to{opacity:1;transform:none}}
+.p-root.p-glass .p-heroTip{position:absolute;top:6px;pointer-events:none;display:flex;flex-direction:column;gap:5px;min-width:190px;padding:10px 12px;border-radius:12px;font-size:12px;background:rgba(10,17,27,.9);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.14);box-shadow:0 14px 34px rgba(0,0,0,.4)}
+.p-root.p-glass .p-heroTip>b{font-size:12.5px;color:#fff;margin-bottom:2px}
+.p-root.p-glass .p-heroTip span{display:flex;align-items:center;gap:7px;color:#c3d0da}
+.p-root.p-glass .p-heroTip span i{width:8px;height:8px;border-radius:50%}
+.p-root.p-glass .p-heroTip span b{margin-left:auto;color:#fff;padding-left:12px}
+.p-root.p-glass .p-heroTipReal{border-top:1px solid rgba(255,255,255,.1);padding-top:5px;margin-top:2px}
+.p-root.p-glass .p-heroAxis{position:relative;height:16px;font-size:11px;color:#6f8291;margin-top:-6px}
+.p-root.p-glass .p-heroAxis span{position:absolute;top:0;white-space:nowrap}
+@media (max-width:560px){
+  .p-root.p-glass .p-heroTools{width:100%}
+  .p-root.p-glass .p-heroTabs{flex:1;justify-content:space-between}
+  .p-root.p-glass .p-heroTabs button{padding:6px 8px;font-size:12px}
+  .p-root.p-glass .p-heroPlot{height:200px}
+  .p-root.p-glass .p-heroNote{margin-left:0}
+  .p-root.p-glass .p-heroOptions{right:0;min-width:230px}
+}
+@media (prefers-reduced-motion:reduce){.p-root.p-glass .p-heroPlot svg path,.p-root.p-glass .p-heroOptions{animation:none}}
+@media (max-width:560px){.p-root.p-glass .p-heroAxisAlt{display:none}.p-root.p-glass .p-heroChip{padding:6px 10px;font-size:12px}}
+
+/* Fila de abajo: desglose a la izquierda y Órdenes + Inversión apiladas a la derecha, sin huecos. */
+.p-root.p-glass .p-stackCol{display:flex;flex-direction:column;gap:16px;min-width:0}
+.p-root.p-glass .p-stackCol>.p-card{flex:1;display:flex;flex-direction:column}
+.p-root.p-glass .p-stackCol>.p-card>:last-child{margin-top:auto}
+
+/* Secciones de métricas: cantidad de columnas según cuántas tarjetas hay, para que no quede una sola abajo. */
+@media (min-width:1181px){
+  .p-root.p-glass .p-mGrid.p-n3,.p-root.p-glass .p-mGrid.p-n5,.p-root.p-glass .p-mGrid.p-n6,.p-root.p-glass .p-mGrid.p-n9{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (min-width:1500px){.p-root.p-glass .p-mGrid.p-n5{grid-template-columns:repeat(5,minmax(0,1fr))}}
+
+/* Color de cada canal: Rentia 360 turquesa, Tiendanube azul, Mercado Libre amarillo, Meta rosa. */
+.p-root.p-glass .p-mSection{--ch:#21d4c2;position:relative;border-top:1px solid rgba(255,255,255,.08)}
+.p-root.p-glass .p-mSection.ch-tiendanube{--ch:#4f8cff}
+.p-root.p-glass .p-mSection.ch-mercadolibre{--ch:#ffd23f}
+.p-root.p-glass .p-mSection.ch-meta{--ch:#ff6fae}
+.p-root.p-glass .p-mSection.ch-custom{--ch:#a78bfa}
+.p-root.p-glass .p-mSection::before{content:'';position:absolute;left:24px;right:24px;top:-1px;height:1px;background:linear-gradient(90deg,transparent,var(--ch),transparent);opacity:.75;pointer-events:none}
+.p-root.p-glass .p-mSection .p-chIcon{background:color-mix(in srgb,var(--ch) 12%,rgba(255,255,255,.04));border-color:color-mix(in srgb,var(--ch) 40%,transparent);box-shadow:0 0 22px color-mix(in srgb,var(--ch) 28%,transparent)}
+.p-root.p-glass .p-mSection .p-metric{position:relative;isolation:isolate}
+.p-root.p-glass .p-mSection .p-metric::before{content:'';position:absolute;left:18px;right:18px;top:0;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ch) 85%,transparent),transparent);opacity:.55;transition:opacity .3s;pointer-events:none}
+.p-root.p-glass .p-mSection .p-metric::after{content:'';position:absolute;inset:0;border-radius:inherit;background:radial-gradient(140px 90px at 100% 0%,color-mix(in srgb,var(--ch) 16%,transparent),transparent 70%);opacity:.8;transition:opacity .3s;pointer-events:none;z-index:-1}
+.p-root.p-glass .p-mSection .p-metric:hover{border-color:color-mix(in srgb,var(--ch) 45%,transparent);box-shadow:0 18px 40px rgba(0,0,0,.3),0 0 0 1px color-mix(in srgb,var(--ch) 18%,transparent),0 10px 40px color-mix(in srgb,var(--ch) 14%,transparent)}
+.p-root.p-glass .p-mSection .p-metric:hover::before{opacity:1}
+.p-root.p-glass .p-mSection .p-metric:hover::after{opacity:1}
+.p-root.p-glass .p-mSection .p-metric:hover .p-more{color:var(--ch)}
+.p-root.p-glass .p-metric .p-kpiLabel{color:#b9c7d3}
+
+/* Animaciones: los mini gráficos se dibujan y los % aparecen con un pequeño rebote. */
+.p-root.p-glass .p-spark polyline{stroke-dasharray:1;stroke-dashoffset:1;animation:p-sparkDraw 1.1s cubic-bezier(.4,0,.2,1) forwards;animation-delay:calc(var(--i,0)*70ms + 250ms)}
+.p-root.p-glass .p-spark polygon{opacity:0;animation:p-sparkFill .8s ease forwards;animation-delay:calc(var(--i,0)*70ms + 900ms)}
+@keyframes p-sparkDraw{to{stroke-dashoffset:0}}
+@keyframes p-sparkFill{to{opacity:1}}
+.p-root.p-glass .p-metric .p-delta{animation:p-deltaPop .55s cubic-bezier(.3,1.5,.5,1) both;animation-delay:calc(var(--i,0)*70ms + 450ms)}
+.p-root.p-glass .p-metric .p-deltaNote{animation:p-deltaNote .5s ease both;animation-delay:calc(var(--i,0)*70ms + 650ms)}
+@keyframes p-deltaPop{from{opacity:0;transform:translateY(6px) scale(.7)}to{opacity:1;transform:none}}
+@keyframes p-deltaNote{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.p-root.p-glass .p-spark polyline,.p-root.p-glass .p-spark polygon,.p-root.p-glass .p-metric .p-delta,.p-root.p-glass .p-metric .p-deltaNote{animation:none;stroke-dashoffset:0;opacity:1}}
+
+/* Calidad de datos: una barra fina al pie, no una tarjeta suelta. */
+.p-root.p-glass .p-qualityDock{display:block;margin-top:16px}
+.p-root.p-glass .p-qualityMini{width:100%;max-width:none;margin:0;padding:10px 16px;gap:12px;border-radius:14px;background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.08)}
+.p-root.p-glass .p-qualityMini.p-ready{border-color:rgba(50,213,131,.22);background:linear-gradient(90deg,rgba(50,213,131,.07),rgba(255,255,255,.02))}
+.p-root.p-glass .p-qualityMini .p-ring{width:34px;height:34px}
+.p-root.p-glass .p-qualityMini>div{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-width:0}
+.p-root.p-glass .p-qualityMini>div p{margin:0;color:#9fb0bf}
+.p-root.p-glass .p-qualityMini .p-btn{margin-left:auto;flex:none}
+.p-root.p-glass .p-metric .p-more{position:absolute;right:18px;bottom:12px;margin:0}
+.p-root.p-glass .p-metric{padding-bottom:18px}
+.p-root.p-glass .p-qualityMini .p-ring>:not(svg){display:none}
+@media (min-width:1181px){.p-root.p-glass .p-mGrid.p-n5 .p-spark{width:60px}.p-root.p-glass .p-mGrid.p-n5 .p-metric small{padding-right:68px}}
+/* Celular: métricas de a dos, compactas. */
+@media (max-width:560px){
+  .p-root.p-glass .p-mGrid{grid-template-columns:1fr 1fr!important;gap:10px}
+  .p-root.p-glass .p-mSection .p-metric{padding:12px 12px 14px}
+  .p-root.p-glass .p-mSection .p-metric small{font-size:11.5px;gap:5px}
+  .p-root.p-glass .p-mSection .p-metric small .p-mini{width:13px;height:13px}
+  .p-root.p-glass .p-mSection .p-metric b{font-size:18px;margin:6px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .p-root.p-glass .p-mSection .p-metric .p-deltaNote,.p-root.p-glass .p-mSection .p-metric .p-more{display:none}
+  .p-root.p-glass .p-mHead{gap:6px}
+}
+
+/* Pie del menú lateral: calidad de datos. */
+.p-root.p-glass .p-sideQuality{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:1px solid rgba(245,196,81,.28);border-radius:14px;background:linear-gradient(90deg,rgba(245,196,81,.08),rgba(255,255,255,.02));text-align:left;font:inherit;color:inherit;cursor:pointer;transition:border-color .25s,transform .15s,background .25s}
+.p-root.p-glass .p-sideQuality.p-ready{border-color:rgba(50,213,131,.25);background:linear-gradient(90deg,rgba(50,213,131,.08),rgba(255,255,255,.02))}
+.p-root.p-glass .p-sideQuality:hover{border-color:rgba(255,255,255,.22)}
+.p-root.p-glass .p-sideQuality:active{transform:scale(.98)}
+.p-root.p-glass .p-sideQuality .p-ring{width:34px;height:34px;flex:none}
+.p-root.p-glass .p-sideQuality .p-ring>:not(svg){display:none}
+.p-root.p-glass .p-sideQuality .p-ring circle{stroke-width:5}
+.p-root.p-glass .p-sideQuality b{display:block;font-size:12.5px}
+.p-root.p-glass .p-sideQuality small{display:block;color:#8fa1b0;font-size:11px;margin-top:1px}
+.p-root.p-glass .p-collapsed .p-sideQuality{justify-content:center;padding:8px}
+
+/* Menú de la cuenta. */
+.p-root.p-glass .p-accountMenu{min-width:290px}
+.p-root.p-glass .p-accHead{display:flex;align-items:center;gap:11px;padding:8px 10px 10px}
+.p-root.p-glass .p-accHead b{display:block;font-size:14px}
+.p-root.p-glass .p-accHead small{display:block;color:#8fa1b0;font-size:12px;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.p-root.p-glass .p-accAvatar{display:grid;place-items:center;flex:none;width:38px;height:38px;border-radius:50%;overflow:hidden;font-weight:800;font-size:14px;color:#fff;background:linear-gradient(135deg,#6d5dfc,#3b82f6)}
+.p-root.p-glass .p-accAvatar img{width:100%;height:100%;object-fit:cover}
+.p-root.p-glass .p-menu .p-accStore{margin:2px 0 4px;padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.04)}
+.p-root.p-glass .p-menu .p-accStore .p-menuCap{padding:0 0 1px;font-size:10px}
+.p-root.p-glass .p-menu .p-accStore b{display:block;font-size:13.5px}
+.p-root.p-glass .p-planPill{flex:none;font-style:normal;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;color:#06141a;background:linear-gradient(135deg,#3ee6d4,#21d4c2)}
+.p-root.p-glass .p-menu a small{display:block;color:var(--dim);font-size:11px;font-weight:500}
+.p-root.p-glass .p-menu a span{flex:1}
+
+/* Barra superior en pantallas medianas: el buscador no se achica de más; el chip de estado queda como un punto. */
+@media (max-width:1600px){.p-root.p-glass .p-paletteBtn .p-kbd{display:none}}
+@media (max-width:1500px){.p-root.p-glass .p-liveChip .p-liveText{display:none}.p-root.p-glass .p-liveChip{padding:0 12px}}
+
+/* Encabezados de bloques en el celular: el texto ocupa todo el ancho y la etiqueta baja. */
+@media (max-width:560px){
+  .p-root.p-glass .p-blockHead{flex-wrap:wrap;gap:10px 12px}
+  .p-root.p-glass .p-blockHead>div{flex:1 1 calc(100% - 56px);min-width:0}
+  .p-root.p-glass .p-blockHead .p-chip{margin-left:52px}
+}
+.p-root.p-glass .p-menu .p-accStore .p-avatarSq{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:10px}
+.p-root.p-glass .p-menu .p-accStore>span:nth-child(2){flex:1;min-width:0}
+/* Grillas de 4 con 6 tarjetas: 3 + 3 en vez de 4 + 2. */
+@media (min-width:1181px){.p-root.p-glass .p-grid.p-g4:has(>:nth-child(6):last-child){grid-template-columns:repeat(3,minmax(0,1fr))}}

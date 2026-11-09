@@ -26,7 +26,7 @@ export function completedWeek(offset:number,now=Date.now()):Week {
 }
 const dayMonth=new Intl.DateTimeFormat('es-AR',{day:'numeric',month:'long',timeZone:'UTC'});
 const shortDay=new Intl.DateTimeFormat('es-AR',{weekday:'short',day:'numeric',timeZone:'UTC'});
-const weekLabel=(week:Week)=>`${dayMonth.format(new Date(`${week.start}T00:00:00Z`)).replace(/ de \w+$/,'')} al ${dayMonth.format(new Date(`${week.end}T00:00:00Z`))}`;
+const weekLabel=(week:Week)=>`${week.start.slice(0,7)===week.end.slice(0,7)?dayMonth.format(new Date(`${week.start}T00:00:00Z`)).replace(/ de \w+$/,''):dayMonth.format(new Date(`${week.start}T00:00:00Z`))} al ${dayMonth.format(new Date(`${week.end}T00:00:00Z`))}`;
 const change=(current:number,previous:number|undefined)=>previous?((current-previous)/Math.abs(previous))*100:null;
 const signed=(value:number|null)=>value===null?'—':`${value>0?'+':''}${Math.round(value)}%`;
 

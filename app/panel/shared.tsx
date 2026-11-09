@@ -304,18 +304,34 @@ export function Sparkline({values,color}:{values:number[];color:string}) {
   if(clean.length<2||clean.every(value=>value===clean[0]))return null;
   const max=Math.max(...clean),min=Math.min(...clean),range=max-min||1;
   const points=clean.map((value,index)=>`${(index/(clean.length-1)*76).toFixed(1)},${(28-(value-min)/range*24).toFixed(1)}`).join(' ');
-  return <svg className="p-spark" viewBox="0 0 76 30" aria-hidden="true"><polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+  return <svg className="p-spark" viewBox="0 0 76 30" aria-hidden="true"><polygon points={`0,30 ${points} 76,30`} fill={color} fillOpacity=".14"/><polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" pathLength={1}/></svg>;
+}
+
+function useCountUp(target:number,duration=900) {
+  const [value,setValue]=useState(0);
+  const from=useRef(0);
+  useEffect(()=>{
+    const reduced=typeof window!=='undefined'&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const origin=from.current,start=performance.now(),length=reduced?0:duration;
+    let frame=0;
+    const tick=(now:number)=>{const progress=length?Math.min(1,(now-start)/length):1;setValue(origin+(target-origin)*(1-Math.pow(1-progress,3)));if(progress<1)frame=requestAnimationFrame(tick);else from.current=target;};
+    frame=requestAnimationFrame(tick);
+    return ()=>cancelAnimationFrame(frame);
+  },[target,duration]);
+  return value;
 }
 
 export function RpDelta({current,previous,mode='relative',neutral=false}:{current:number;previous:number|undefined;mode?:'relative'|'points';neutral?:boolean}) {
   const t=useT();
+  const target=previous===undefined||previous===0?0:mode==='points'?Math.abs(current-previous):Math.abs((current-previous)/Math.abs(previous)*100);
+  const shown=useCountUp(Number.isFinite(target)?target:0);
   if(previous===undefined)return <span className="p-delta p-flat">{t('Comparando períodos…')}</span>;
   const difference=current-previous;
   const threshold=mode==='points'?0.05:Math.max(0.01,Math.abs(previous)*0.001);
   if(Math.abs(difference)<threshold)return <span className="p-delta p-flat">{t('Sin cambios')}</span>;
   if(previous===0)return <span className="p-delta p-flat">{t('Sin historial anterior')}</span>;
   const up=difference>0;
-  const value=mode==='points'?`${Math.abs(difference).toFixed(1)} pp`:`${Math.abs(difference/Math.abs(previous)*100).toFixed(1).replace('.',',')}%`;
+  const value=mode==='points'?`${shown.toFixed(1).replace('.',',')} pp`:`${shown.toFixed(1).replace('.',',')}%`;
   return <><span className={`p-delta ${neutral?'p-flat':up?'p-up':'p-down'}`}>{up?'▲':'▼'} {value}</span> <span className="p-sub p-deltaNote">{t('vs. período anterior')}</span></>;
 }
 

@@ -8,7 +8,7 @@ import { MercadoLibreIntegration, useMercadoLibreSync } from '../../components/m
 import { ConnectionNotice, ConnectionUpdatedAt } from '../../components/connection-status';
 import { automaticSyncDue, connectionHealth } from '../../lib/connection-health';
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { RefreshCw, ArrowRight, LogOut, PanelLeft, Search, CalendarDays, ChevronDown, Coins, Languages, LayoutGrid, Menu, Pencil, PlugZap, Settings2, ShieldCheck, Sparkles, TriangleAlert, X } from 'lucide-react';
+import { Plus, RefreshCw, ArrowRight, LogOut, PanelLeft, Search, CalendarDays, ChevronDown, Coins, CreditCard, Languages, LifeBuoy, Menu, PlugZap, ShieldCheck, Sparkles, TriangleAlert, UsersRound, X } from 'lucide-react';
 import SetupChecklist from '../../components/setup-checklist';
 import type { ProductCostRow } from '../../components/product-costs';
 import MetaAccountPicker from '../../components/meta-account-picker';
@@ -21,12 +21,13 @@ import { cashflowView, useCashflowData } from '../../components/panel/use-cashfl
 import { alertKey, buildAlerts, defaultAlertSettings, urgentAlerts, type AlertSettings } from '../../lib/alerts';
 import { campaignMargins, campaignProfits } from '../../lib/campaign-profit';
 import dynamic from 'next/dynamic';
-import { sectionLoading, ProductCosts, MeliBilling, ShippingCommissionSettings, Cashflow, WeeklySummary, UtmTools, AbandonedCarts, LifetimeValue, Customers, SalesEvents, CampaignProfit, NavItem, overviewSections, operationSections, configurationSections, sections, periodOptions, Integration, ProductAnalyticsRow, MetaAdsData, Dashboard, CostRule, SubscriptionData, OrderQuota, DisplayCurrency, DisplayLanguage, CustomDateRange, DashboardLayoutConfig, dashboardPresets, defaultDashboardLayout, ExchangeRates, PreferencesContext, locales, AccessContext, usePreferences, useT, useMoney, analyticsQuery, inclusiveRangeDays, previousDateRange, defaultDateRange, parseCost, automaticSyncLabel, ComingSoonSection } from './shared';
+import { sectionLoading, RpRing, ProductCosts, MeliBilling, ShippingCommissionSettings, Cashflow, WeeklySummary, UtmTools, AbandonedCarts, LifetimeValue, Customers, SalesEvents, CampaignProfit, NavItem, overviewSections, operationSections, configurationSections, sections, periodOptions, Integration, ProductAnalyticsRow, MetaAdsData, Dashboard, CostRule, SubscriptionData, OrderQuota, DisplayCurrency, DisplayLanguage, CustomDateRange, DashboardLayoutConfig, defaultDashboardLayout, ExchangeRates, PreferencesContext, locales, AccessContext, usePreferences, useT, useMoney, analyticsQuery, inclusiveRangeDays, previousDateRange, defaultDateRange, parseCost, automaticSyncLabel, ComingSoonSection } from './shared';
 import '../report-details.css';
 import '../order-review.css';
 import './panel-v2.css';
 import './rp.css';
 import './rp-extra.css';
+import './rp-glass.css';
 
 // Cada sección del panel se carga recién cuando se abre.
 const SubscriptionSection=dynamic(()=>import('./sections/subscription').then(module=>module.SubscriptionSection),{loading:sectionLoading});
@@ -43,6 +44,12 @@ const ExchangeRateSection=dynamic(()=>import('./sections/costs').then(module=>mo
 const AdvancedCostRules=dynamic(()=>import('./sections/costs').then(module=>module.AdvancedCostRules),{loading:sectionLoading});
 const ProductAnalyticsSection=dynamic(()=>import('./sections/products').then(module=>module.ProductAnalyticsSection),{loading:sectionLoading});
 const InventorySection=dynamic(()=>import('./sections/products').then(module=>module.InventorySection),{loading:sectionLoading});
+
+// Fundido corto del contenido al cambiar idioma, moneda o período.
+function flashContent() {
+  if(typeof document==='undefined'||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+  document.querySelector('.p-content')?.animate([{opacity:.35,filter:'blur(4px)',transform:'translateY(6px)'},{opacity:1,filter:'blur(0)',transform:'none'}],{duration:480,easing:'cubic-bezier(.2,.8,.2,1)'});
+}
 
 export default function Panel() {
   const [currency,setCurrencyState]=useState<DisplayCurrency>('ARS');
@@ -67,8 +74,8 @@ export default function Panel() {
     void refreshRates().catch(()=>undefined);
   });},[]);
   useEffect(()=>{document.documentElement.lang=language;},[language]);
-  const setCurrency=(value:DisplayCurrency)=>{setCurrencyState(value);window.localStorage.setItem('rentia-display-currency',value)};
-  const setLanguage=(value:DisplayLanguage)=>{setLanguageState(value);window.localStorage.setItem('rentia-display-language',value)};
+  const setCurrency=(value:DisplayCurrency)=>{flashContent();setCurrencyState(value);window.localStorage.setItem('rentia-display-currency',value)};
+  const setLanguage=(value:DisplayLanguage)=>{flashContent();setLanguageState(value);window.localStorage.setItem('rentia-display-language',value)};
   const preferences={currency,language,rates,rateSource,setCurrency,setLanguage,refreshRates};
   return <PreferencesContext.Provider value={preferences}><PanelApp/></PreferencesContext.Provider>;
 }
@@ -121,9 +128,10 @@ function PanelApp() {
   const [quota,setQuota]=useState<OrderQuota|null>(null);
   // Prueba gratis por terminar: se avisa arriba del panel en los últimos 3 días.
   const [trialEnding,setTrialEnding]=useState<{days:number;endsAt:string}|null>(null);
+  const [planLabel,setPlanLabel]=useState('');
   // Una instalación de Tiendanube que quedó en espera (por ejemplo, si se cerró el onboarding) se conecta al entrar.
   useEffect(()=>{fetch('/api/integrations/tiendanube/claim',{cache:'no-store'}).then(response=>response.ok?response.json() as Promise<{pending?:boolean}>:null).then(async data=>{if(!data?.pending)return;const response=await fetch('/api/integrations/tiendanube/claim',{method:'POST'});const result=await response.json().catch(()=>({})) as {claimed?:boolean;automatic?:boolean;reason?:string};if(result.claimed)window.location.assign(`/panel?section=integraciones&connected=tiendanube${result.automatic?'':'&automation=pending'}`);else if(result.reason==='store_already_connected')window.location.assign('/panel?section=integraciones&error=store_already_connected');}).catch(()=>undefined);},[]);
-  useEffect(()=>{let cancelled=false;fetch('/api/subscription',{cache:'no-store'}).then(response=>response.ok?response.json():null).then((data:SubscriptionData|null)=>{if(cancelled)return;if(data?.quota)setQuota(data.quota);const sub=data?.subscription;if(sub?.status==='trialing'&&sub.trialDaysRemaining<=3)setTrialEnding({days:Math.max(1,sub.trialDaysRemaining),endsAt:sub.trialEndsAt});}).catch(()=>{});return()=>{cancelled=true;};},[active]);
+  useEffect(()=>{let cancelled=false;fetch('/api/subscription',{cache:'no-store'}).then(response=>response.ok?response.json():null).then((data:SubscriptionData|null)=>{if(cancelled)return;if(data?.quota)setQuota(data.quota);const sub=data?.subscription;if(sub?.status==='trialing'&&sub.trialDaysRemaining<=3)setTrialEnding({days:Math.max(1,sub.trialDaysRemaining),endsAt:sub.trialEndsAt});if(sub)setPlanLabel(sub.status==='trialing'?'Prueba gratis':(({free:'Gratis',starter:'Starter',growth:'Growth',pro:'Pro',scale:'Scale',enterprise:'Enterprise'} as Record<string,string>)[['active','past_due'].includes(sub.status)?sub.planId:'free']||''));}).catch(()=>{});return()=>{cancelled=true;};},[active]);
   useEffect(()=>{
     const invalid=(event:Event)=>{
       const field=event.target as HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement;
@@ -491,6 +499,7 @@ function PanelApp() {
   }
 
   function changePeriod(days:number) {
+    flashContent();
     const next=periodOptions.find(option=>option.days===days)||periodOptions[1];
     periodDaysRef.current=next.days;activeRangeRef.current=null;setCustomRange(null);setPeriod(next.label);setPeriodOpen(false);setCustomRangeOpen(false);
     void Promise.all([loadDashboard(next.days,null),loadProductAnalytics(next.days,null),loadMetaAds(next.days,null)]);
@@ -515,11 +524,6 @@ function PanelApp() {
     void Promise.all([loadDashboard(days,next),loadProductAnalytics(days,next),loadMetaAds(days,next)]);
   }
 
-  function applyDashboardPreset(preset:keyof typeof dashboardPresets) {
-    const next=structuredClone(dashboardPresets[preset]);
-    setDashboardLayout(next);setDashboardMenuOpen(false);
-    void saveDashboardPreferences(next);
-  }
 
   const tiendanube=integrations.find(item=>item.provider==='tiendanube'&&item.status==='connected');
   const meta=integrations.find(item=>item.provider==='meta'&&item.status==='connected');
@@ -538,12 +542,10 @@ function PanelApp() {
     actions:urgentAlerts(businessAlerts).filter(alert=>alertReads[alertKey(alert)]!=='dismissed').length,
   };
   const activeLabel=t(sections.find(item=>item.id===active)?.label||'Configuración');
-  const settingsActive=configurationSections.some(item=>item.id===active);
   const storeInitials=store.split(/\s+/).filter(Boolean).map(word=>word[0]).join('').slice(0,2).toUpperCase()||'R';
   const selectedPeriodDays=customRange?inclusiveRangeDays(customRange):(periodOptions.find(option=>option.label===period)?.days||30);
   const displayRange=customRange||rollingDisplayRange(selectedPeriodDays);
   const displayPeriod=formatDisplayRange(displayRange,locales[language]);
-  const dashboardModeLabel=dashboardLayout.sections.length===1&&['profitability','advertising','operation'].includes(dashboardLayout.sections[0].id)?dashboardLayout.sections[0].title:'Personalizado';
 
   const closeMenus=()=>{setPeriodOpen(false);setCustomRangeOpen(false);setCurrencyOpen(false);setLanguageOpen(false);setDashboardMenuOpen(false);setProfileOpen(false);setAlertsOpen(false);};
   const toggleMenu=(menu:'period'|'currency'|'language'|'dashboard'|'profile'|'alerts')=>{const open={period:periodOpen||customRangeOpen,currency:currencyOpen,language:languageOpen,dashboard:dashboardMenuOpen,profile:profileOpen,alerts:alertsOpen}[menu];closeMenus();if(open)return;({period:setPeriodOpen,currency:setCurrencyOpen,language:setLanguageOpen,dashboard:setDashboardMenuOpen,profile:setProfileOpen,alerts:setAlertsOpen})[menu](true);};
@@ -553,33 +555,33 @@ function PanelApp() {
   const paletteItems=[...sections.map(item=>({label:t(item.label),hint:configurationSections.includes(item)?'configuración':operationSections.includes(item)?'operación':'resumen',run:()=>selectSection(item.id)})),
     ...(canManage?[{label:'Actualizar datos de Tiendanube',hint:'acción',run:()=>void runSync()},{label:'Personalizar dashboard',hint:'acción',run:()=>{selectSection('resumen');setDashboardEditorOpen(true);}}]:[])].filter(item=>item.label.toLowerCase().includes(paletteQuery.toLowerCase()));
 
-  return <AccessContext.Provider value={canManage}><div className="p-root" onKeyDown={event=>{if(event.key==='Escape'){closeMenus();setPaletteOpen(false);}}}><div className={`p-app ${sidebarCollapsed?'p-collapsed':''} ${mobileNavOpen?'p-navOpen':''}`}>
+  return <AccessContext.Provider value={canManage}><div className="p-root p-glass" onKeyDown={event=>{if(event.key==='Escape'){closeMenus();setPaletteOpen(false);}}}><div className={`p-app ${sidebarCollapsed?'p-collapsed':''} ${mobileNavOpen?'p-navOpen':''}`}>
     <aside className="p-side">
-      <div className="p-sideTop"><a className="p-brand" href="/panel?section=resumen" title="Rentia"><img src="/favicon.svg" alt=""/><span>Rentia</span></a><button type="button" className="p-iconBtn p-hideSm" onClick={toggleSidebar} aria-label={sidebarCollapsed?'Expandir menú':'Contraer menú'} title={sidebarCollapsed?'Expandir menú':'Contraer menú'}><PanelLeft className="p-i" aria-hidden="true"/></button><button type="button" className="p-iconBtn p-mobileClose" onClick={()=>setMobileNavOpen(false)} aria-label="Cerrar navegación"><X className="p-i" aria-hidden="true"/></button></div>
+      <div className="p-sideTop"><a className="p-brand" href="/panel?section=resumen" title="Rentia"><img src="/favicon.svg" alt=""/><span className="p-brandName"><span>Rentia</span><small>{store}{planLabel?` · ${planLabel}`:''}</small></span></a><button type="button" className="p-iconBtn p-hideSm" onClick={toggleSidebar} aria-label={sidebarCollapsed?'Expandir menú':'Contraer menú'} title={sidebarCollapsed?'Expandir menú':'Contraer menú'}><PanelLeft className="p-i" aria-hidden="true"/></button><button type="button" className="p-iconBtn p-mobileClose" onClick={()=>setMobileNavOpen(false)} aria-label="Cerrar navegación"><X className="p-i" aria-hidden="true"/></button></div>
       <nav className="p-navScroll" aria-label="Navegación principal">{navGroups.map(([group,items,collapsible])=><div key={group}>{collapsible?<button type="button" className="p-navGroup p-navToggle" aria-expanded={settingsOpen} onClick={()=>{if(sidebarCollapsed){setSidebarCollapsed(false);window.localStorage.setItem('rentia-sidebar-collapsed','0');setSettingsOpen(true);}else setSettingsOpen(current=>!current);}}>{group}<ChevronDown aria-hidden="true"/></button>:<div className="p-navGroup">{group}</div>}<div className={`p-navList ${collapsible&&!settingsOpen?'p-closed':''}`}>{items.map(item=>{const Icon=item.icon;const count=navCount[item.id];return <button type="button" key={item.id} className={`p-navItem ${active===item.id?'p-on':''}`} onClick={()=>selectSection(item.id)} title={t(item.label)} aria-current={active===item.id?'page':undefined}><Icon className="p-i" aria-hidden="true" strokeWidth={1.9}/><span className="p-navLabel">{t(item.label)}</span>{item.badge?<span className="p-navBadge">{t(item.badge)}</span>:count?<span className="p-navCount">{count}</span>:null}</button>;})}</div></div>)}</nav>
       <div className="p-sideFoot">
         <button type="button" className={`p-status tone-${connections.tone}`} onClick={()=>selectSection('integraciones')} title={`${t(connections.label)}. ${connections.detail}`}><span className="p-pulse"/><span className="p-txt">{t(connections.label)}</span></button>
-        <button type="button" className="p-store" onClick={openAccountSettings} disabled={!profileLoaded} title="Configuración de mi cuenta"><span className="p-avatarSq">{storeInitials}</span><span className="p-txt"><b>{store}</b><small>{t('Cuenta Rentia')}</small></span><Settings2 className="p-i p-txt p-storeGear" aria-hidden="true"/></button>
+        {dashboard?.quality&&dashboard.quality.status!=='empty'&&(()=>{const quality=dashboard.quality;const ready=quality.completeOrders===quality.totalOrders;return <button type="button" className={`p-sideQuality ${ready?'p-ready':''}`} onClick={()=>selectSection('calidad')} title={`${quality.score}% de calidad de datos: ${quality.completeOrders} de ${quality.totalOrders} órdenes con todos sus costos.`}><RpRing value={quality.score} size={34} color={ready?'#32d583':'#f5c451'}/><span className="p-txt"><b>{quality.score}% calidad de datos</b><small>{ready?`${quality.totalOrders.toLocaleString('es-AR')} órdenes con costos completos`:`${(quality.totalOrders-quality.completeOrders).toLocaleString('es-AR')} órdenes por revisar`}</small></span></button>;})()}
       </div>
     </aside>
     <button type="button" className="p-navScrim" onClick={()=>setMobileNavOpen(false)} aria-label="Cerrar navegación"/>
     <div className="p-main">
       <header className="p-top" ref={toolbarRef}>
         <button type="button" className="p-iconBtn p-mobileMenu" onClick={()=>setMobileNavOpen(true)} aria-label="Abrir navegación"><Menu className="p-i" aria-hidden="true"/></button>
-        <div className="p-crumbs"><small>{activeLabel}</small><small>/</small><b title={store}>{store}</b></div>
+        <div className="p-crumbs"><small title={store}>{store}</small><small aria-hidden="true">›</small><b>{activeLabel}</b></div>
         <div className="p-topRight">
-          <button type="button" className="p-ctrlBtn p-hideMd p-paletteBtn" onClick={()=>{closeMenus();setPaletteQuery('');setPaletteIndex(0);setPaletteOpen(true);}}><Search className="p-i" aria-hidden="true"/>{t('Buscar')} <span className="p-kbd">Ctrl K</span></button>
+          <button type="button" className="p-ctrlBtn p-hideMd p-paletteBtn" onClick={()=>{closeMenus();setPaletteQuery('');setPaletteIndex(0);setPaletteOpen(true);}}><Search className="p-i" aria-hidden="true"/><span className="p-paletteText">{t('Buscar órdenes, productos o clientes…')}</span> <span className="p-kbd">Ctrl K</span></button>
+          <button type="button" className={`p-liveChip p-hideSm tone-${connections.tone}`} onClick={()=>selectSection('integraciones')} title={`${t(connections.label)}. ${connections.detail}`} aria-label={t(connections.label)}><span className="p-pulse"/><span className="p-liveText">{t(connections.label)}</span></button>
           <div className="p-ctrl"><button type="button" className="p-ctrlBtn" onClick={()=>toggleMenu('period')} aria-expanded={periodOpen||customRangeOpen} aria-label={`${t('Período')}: ${displayPeriod}`}><CalendarDays className="p-i" aria-hidden="true"/><span>{periodLabel}</span><ChevronDown className="p-i" aria-hidden="true"/></button>
             <div className={`p-menu p-wide ${periodOpen||customRangeOpen?'p-open':''}`}>{periodOptions.map(option=><button type="button" key={option.days} className={!customRange&&selectedPeriodDays===option.days?'p-on':''} onClick={()=>{changePeriod(option.days);closeMenus();}}><span>{t(option.days===90?'Trimestre':option.days===365?'Año':`Últimos ${option.label}`)}<small>{formatDisplayRange(rollingDisplayRange(option.days),locales[language])}</small></span>{!customRange&&selectedPeriodDays===option.days&&'✓'}</button>)}<hr/><small className="p-menuCap">{t('PERSONALIZADO')}</small><form className="p-range" onSubmit={applyCustomRange}><label>{t('Desde')}<RpDate value={rangeDraft.start} max={rangeDraft.end} onChange={event=>setRangeDraft(current=>({...current,start:event.target.value}))} required/></label><label>{t('Hasta')}<RpDate value={rangeDraft.end} min={rangeDraft.start} max={new Date().toISOString().slice(0,10)} onChange={event=>setRangeDraft(current=>({...current,end:event.target.value}))} required/></label>{rangeError&&<small className="p-rangeError">{rangeError}</small>}<button className="p-btn p-small p-primary" type="submit" style={{gridColumn:'1/-1'}}>{t('Aplicar rango')}</button></form></div></div>
           <div className="p-ctrl p-hideSm" title={`${rateSource}${rates[currency]?` · 1 ${currency} = ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(rates[currency]||1)} ARS`:''}`}><button type="button" className="p-ctrlBtn" onClick={()=>toggleMenu('currency')} aria-expanded={currencyOpen} aria-label="Moneda de visualización"><Coins className="p-i" aria-hidden="true"/><span>{currency}</span><ChevronDown className="p-i" aria-hidden="true"/></button>
             <div className={`p-menu ${currencyOpen?'p-open':''}`}>{(['ARS','USD','EUR'] as DisplayCurrency[]).map(value=><button type="button" key={value} className={currency===value?'p-on':''} disabled={!rates[value]} onClick={()=>{setCurrency(value);setCurrencyOpen(false);}}><span>{value}<small>{value==='ARS'?'Pesos argentinos':rates[value]?`1 ${value} = $ ${new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(rates[value]||1)}`:'Sin cotización'}</small></span>{currency===value&&'✓'}</button>)}<hr/><button type="button" onClick={()=>{closeMenus();selectSection('moneda');}}>{t('Configurar cotización')}</button></div></div>
           <div className="p-ctrl p-hideSm"><button type="button" className="p-ctrlBtn" onClick={()=>toggleMenu('language')} aria-expanded={languageOpen} aria-label="Idioma"><Languages className="p-i" aria-hidden="true"/><span className="p-ctrlLabel">{language.toUpperCase()}</span></button>
             <div className={`p-menu ${languageOpen?'p-open':''}`}>{([['es','Español'],['pt','Português'],['en','English']] as const).map(([value,label])=><button type="button" key={value} className={language===value?'p-on':''} onClick={()=>{setLanguage(value);setLanguageOpen(false);}}><span>{label}</span>{language===value&&'✓'}</button>)}</div></div>
-          {active==='resumen'&&canManage&&<div className="p-ctrl"><button type="button" className="p-ctrlBtn" onClick={()=>toggleMenu('dashboard')} aria-expanded={dashboardMenuOpen} aria-label="Vista del dashboard"><LayoutGrid className="p-i" aria-hidden="true"/><span className="p-hideSm p-ctrlLabel">{dashboardModeLabel}</span><ChevronDown className="p-i" aria-hidden="true"/></button>
-            <div className={`p-menu ${dashboardMenuOpen?'p-open':''}`}><small className="p-menuCap">VISTAS RÁPIDAS</small><button type="button" onClick={()=>applyDashboardPreset('profitability')}>Rentabilidad</button><button type="button" onClick={()=>applyDashboardPreset('advertising')}>Publicidad</button><button type="button" onClick={()=>applyDashboardPreset('operation')}>Operación</button><hr/><button type="button" onClick={()=>{setDashboardMenuOpen(false);setDashboardEditorOpen(true);setDashboardPreferenceMessage('');}}><Pencil className="p-i" aria-hidden="true"/>Personalizar dashboard</button></div></div>}
+          {canManage&&<button type="button" className="p-btn p-primary p-small p-costBtn" onClick={()=>{closeMenus();selectSection('costos');}}><Plus className="p-i" aria-hidden="true"/><span className="p-hideSm">Cargar costo</span></button>}
           <AlertsBell alerts={businessAlerts} reads={alertReads} open={alertsOpen} onToggle={()=>toggleMenu('alerts')} onClose={closeMenus} onMark={markAlerts} onNavigate={section=>{closeMenus();selectSection(section);}}/>
           <div className="p-ctrl"><button type="button" className="p-avatar" onClick={()=>toggleMenu('profile')} aria-label="Abrir mi cuenta" aria-expanded={profileOpen}>{profileUser?.imageUrl?<img src={profileUser.imageUrl} alt=""/>:storeInitials}</button>
-            <div className={`p-menu ${profileOpen?'p-open':''}`}><div className="p-menuUser"><b>{profileUser?.fullName||'Mi cuenta'}</b><small>{profileUser?.primaryEmailAddress?.emailAddress||'Perfil personal de Rentia'}</small></div><hr/><button type="button" onClick={openAccountSettings} disabled={!profileLoaded}><ShieldCheck className="p-i" aria-hidden="true"/><span>Administrar mi cuenta<small>Perfil, seguridad y dispositivos</small></span></button><div className="p-menuUser"><small className="p-menuCap" style={{padding:0}}>TIENDA ACTUAL</small><b>{store}</b></div><hr/><div className="p-showSm"><small className="p-menuCap">MONEDA</small><div className="p-menuSeg">{(['ARS','USD','EUR'] as DisplayCurrency[]).map(value=><button type="button" key={value} className={currency===value?'p-on':''} disabled={!rates[value]} onClick={()=>setCurrency(value)}>{value}</button>)}</div><small className="p-menuCap">IDIOMA</small><div className="p-menuSeg">{([['es','ES'],['pt','PT'],['en','EN']] as const).map(([value,label])=><button type="button" key={value} className={language===value?'p-on':''} onClick={()=>setLanguage(value)}>{label}</button>)}</div><hr/></div><button type="button" onClick={logout}><LogOut className="p-i" aria-hidden="true"/>{t('Cerrar sesión')}</button></div></div>
+            <div className={`p-menu p-accountMenu ${profileOpen?'p-open':''}`}><div className="p-accHead"><span className="p-accAvatar">{profileUser?.imageUrl?<img src={profileUser.imageUrl} alt=""/>:storeInitials}</span><span><b>{profileUser?.fullName||'Mi cuenta'}</b><small>{profileUser?.primaryEmailAddress?.emailAddress||'Perfil personal de Rentia'}</small></span></div><button type="button" className="p-accStore" onClick={()=>{closeMenus();selectSection('plan');}}><span className="p-avatarSq">{storeInitials}</span><span><small className="p-menuCap">TIENDA ACTUAL</small><b>{store}</b></span>{planLabel&&<em className="p-planPill">{planLabel}</em>}</button><hr/><button type="button" onClick={openAccountSettings} disabled={!profileLoaded}><ShieldCheck className="p-i" aria-hidden="true"/><span>Administrar mi cuenta<small>Perfil, seguridad y dispositivos</small></span></button><button type="button" onClick={()=>{closeMenus();selectSection('plan');}}><CreditCard className="p-i" aria-hidden="true"/><span>{t('Plan y facturación')}<small>Tu plan, pagos y comprobantes</small></span></button>{canManage&&<button type="button" onClick={()=>{closeMenus();selectSection('equipo');}}><UsersRound className="p-i" aria-hidden="true"/><span>{t('Equipo')}<small>Invitá a quienes trabajan con vos</small></span></button>}<button type="button" onClick={()=>{closeMenus();selectSection('integraciones');}}><PlugZap className="p-i" aria-hidden="true"/><span>{t('Integraciones')}<small>{t(connections.label)}</small></span></button><a href="mailto:hola@rentiaapp.com" onClick={closeMenus}><LifeBuoy className="p-i" aria-hidden="true"/><span>Ayuda y soporte<small>hola@rentiaapp.com</small></span></a><hr/><div className="p-showSm"><small className="p-menuCap">MONEDA</small><div className="p-menuSeg">{(['ARS','USD','EUR'] as DisplayCurrency[]).map(value=><button type="button" key={value} className={currency===value?'p-on':''} disabled={!rates[value]} onClick={()=>setCurrency(value)}>{value}</button>)}</div><small className="p-menuCap">IDIOMA</small><div className="p-menuSeg">{([['es','ES'],['pt','PT'],['en','EN']] as const).map(([value,label])=><button type="button" key={value} className={language===value?'p-on':''} onClick={()=>setLanguage(value)}>{label}</button>)}</div><hr/></div><button type="button" onClick={logout}><LogOut className="p-i" aria-hidden="true"/>{t('Cerrar sesión')}</button></div></div>
         </div>
       </header>
 
@@ -593,7 +595,7 @@ function PanelApp() {
         {integrationsLoaded&&!hasSalesConnection&&<div className="p-notice p-import"><PlugZap className="p-i" aria-hidden="true"/><div><b>{t('Conectá tu tienda para empezar')}</b><p>Enlazar el canal es independiente de cargar envío, comisiones e impuestos.</p></div><button type="button" className="p-btn p-small p-primary" onClick={()=>selectSection('integraciones')}>Ver conexiones</button></div>}
         <ConnectionNotice health={connections} onOpen={()=>selectSection('integraciones')}/>
         {settingsLoaded&&costsLoaded&&dashboard&&<SetupChecklist connected={hasSalesConnection} productCount={costRows.filter(row=>!row.rentia_archived).length} missingProductCosts={costRows.filter(row=>!row.rentia_archived&&row.cost_source==='sin_costo').length} costsConfigured={dashboard.quality.configurationSaved} adsConnected={Boolean(meta&&adsData?.selected)} canManage={canManage} onNavigate={selectSection}/>}
-        <DashboardOverview dashboard={dashboard} previousDashboard={previousDashboard} syncing={syncing} days={selectedPeriodDays} storeName={store} periodLabel={displayPeriod} layout={dashboardLayout} savingLayout={savingDashboard} onNavigate={selectSection} onEdit={()=>{setDashboardEditorOpen(true);setDashboardPreferenceMessage('');}} onLayoutReorder={next=>{setDashboardLayout(next);void saveDashboardPreferences(next,false);}} onChartChange={chart=>{const next={...dashboardLayout,chart};setDashboardLayout(next);void saveDashboardPreferences(next,false);}}/>
+        <DashboardOverview dashboard={dashboard} previousDashboard={previousDashboard} onPeriodChange={changePeriod} syncing={syncing} days={selectedPeriodDays} storeName={store} periodLabel={displayPeriod} layout={dashboardLayout} savingLayout={savingDashboard} onNavigate={selectSection} onEdit={()=>{setDashboardEditorOpen(true);setDashboardPreferenceMessage('');}} onLayoutReorder={next=>{setDashboardLayout(next);void saveDashboardPreferences(next,false);}} onChartChange={chart=>{const next={...dashboardLayout,chart};setDashboardLayout(next);void saveDashboardPreferences(next,false);}}/>
       </>:active==='acciones'?<DecisionCenter dashboard={dashboard} products={productAnalytics.filter(row=>!row.rentia_archived)} costs={costRows.filter(row=>!row.rentia_archived)} alerts={businessAlerts} campaigns={campaignRows} alertSettings={alertSettings} canManage={canManage} onAlertSettings={setAlertSettings} onNavigate={selectSection}/>
       :active==='cashflow'?<Cashflow data={cashflowState.data} error={cashflowState.error} rules={costRules} money={money} onNavigate={selectSection}/>
       :active==='eventos'?<SalesEvents money={money} canManage={canManage}/>
