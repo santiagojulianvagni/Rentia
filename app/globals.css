@@ -564,3 +564,6 @@
 .signedOutError .signedOutChip{opacity:.55}
 @keyframes signedOutBounce{0%,100%{translate:0 0}50%{translate:0 -7px}}
 .authInstall{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:12px 14px;border:1px solid #21d4c24d;border-radius:12px;background:#21d4c214;color:#d8e6ef;font-size:13.5px;line-height:1.45}.authInstall img{width:28px;height:28px;flex:none;border-radius:7px}.authInstall p{margin:0}.authInstall b{color:#f4f8fb}
+
+/* Traducción de la interfaz: se oculta un instante mientras carga el diccionario del idioma elegido. */
+html.i18n-wait body{visibility:hidden}

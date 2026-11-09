@@ -10,6 +10,8 @@ import { automaticSyncDue, connectionHealth } from '../../lib/connection-health'
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Plus, RefreshCw, ArrowRight, LogOut, PanelLeft, Search, CalendarDays, ChevronDown, Coins, CreditCard, Languages, LifeBuoy, Menu, PlugZap, ShieldCheck, Sparkles, TriangleAlert, UsersRound, X } from 'lucide-react';
 import SetupChecklist from '../../components/setup-checklist';
+import { useUiTranslation } from '../../components/ui-language';
+import { preferredLanguage } from '../../lib/ui-translate';
 import type { ProductCostRow } from '../../components/product-costs';
 import MetaAccountPicker from '../../components/meta-account-picker';
 import type { CostSettings } from '../../lib/cost-engine';
@@ -66,14 +68,14 @@ export default function Panel() {
   }
   useEffect(()=>{void Promise.resolve().then(()=>{
     const savedCurrency=window.localStorage.getItem('rentia-display-currency') as DisplayCurrency|null;
-    const savedLanguage=window.localStorage.getItem('rentia-display-language') as DisplayLanguage|null;
+    const savedLanguage=preferredLanguage() as DisplayLanguage;
     const savedRates=window.localStorage.getItem('rentia-exchange-rates');
     if(savedCurrency&&['ARS','USD','EUR'].includes(savedCurrency))setCurrencyState(savedCurrency);
     if(savedLanguage&&['es','pt','en'].includes(savedLanguage))setLanguageState(savedLanguage);
     if(savedRates){try{setRates(JSON.parse(savedRates) as ExchangeRates);}catch{window.localStorage.removeItem('rentia-exchange-rates')}}
     void refreshRates().catch(()=>undefined);
   });},[]);
-  useEffect(()=>{document.documentElement.lang=language;},[language]);
+  useUiTranslation(language);
   const setCurrency=(value:DisplayCurrency)=>{flashContent();setCurrencyState(value);window.localStorage.setItem('rentia-display-currency',value)};
   const setLanguage=(value:DisplayLanguage)=>{flashContent();setLanguageState(value);window.localStorage.setItem('rentia-display-language',value)};
   const preferences={currency,language,rates,rateSource,setCurrency,setLanguage,refreshRates};

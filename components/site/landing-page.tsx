@@ -9,6 +9,7 @@ import ProfitDemo from './profit-demo';
 import PricingCalculator from './pricing-calculator';
 import ProductTour from './product-tour';
 import Words from './words';
+import RememberLanguage from './remember-language';
 import { LANG_HREFLANG, LANG_PATH, LANGS, landingCopy, type Lang } from '../../lib/landing-i18n';
 import { siteOrigin } from '../../lib/site-origin';
 
@@ -37,6 +38,7 @@ export default function LandingPage({ lang }: { lang: Lang }) {
   return <main className="rl" lang={lang}>
     <div id="progress"/>
     <SiteEffects/>
+    <RememberLanguage lang={lang}/>
     <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true"><defs>
       <linearGradient id="ringGrad" x1="0" x2="1"><stop offset="0" stopColor="#21d4c2"/><stop offset="1" stopColor="#32d583"/></linearGradient>
       <linearGradient id="lineGrad" x1="0" x2="1"><stop offset="0" stopColor="#3b8cff" stopOpacity=".2"/><stop offset="1" stopColor="#21d4c2"/></linearGradient>
