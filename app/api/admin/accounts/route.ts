@@ -1,9 +1,10 @@
-import { currentUser } from '@clerk/nextjs/server';
+import { clerkClient, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getOrCreateSubscription, grantComplimentaryPlan, listAccountsForAdmin, revokeComplimentaryPlan } from '../../../../db/database';
+import { getOrCreateSubscription, getStoreIdentityByAccount, grantComplimentaryPlan, listAccountsForAdmin, revokeComplimentaryPlan } from '../../../../db/database';
 import { isRentiaOwnerEmail } from '../../../../lib/billing-checkout';
 import { RENTIA_PLANS } from '../../../../lib/plans';
+import { clerkMemberCap } from '../../../../lib/clerk-limits';
 
 // Administración de Rentia: ver cuentas y dar o quitar planes sin cargo. Solo los dueños,
 // identificados por la huella de su email (el mismo control que el cobro de prueba).
@@ -18,18 +19,40 @@ async function owner() {
 export async function GET(request:Request) {
   if (!await owner()) return NextResponse.json({error:'forbidden'},{status:403});
   const search=new URL(request.url).searchParams.get('q')||'';
-  return NextResponse.json({accounts:await listAccountsForAdmin(search.slice(0,100))},{headers:{'cache-control':'no-store'}});
+  const accounts=await listAccountsForAdmin(search.slice(0,100));
+  // Lugares de equipo acordados: solo para Enterprise (los demás planes tienen un cupo fijo).
+  const client=await clerkClient();
+  const teamLimits=new Map<string,number|null>();
+  await Promise.all(accounts.filter(row=>row.plan_id==='enterprise'&&row.organization_id).slice(0,50).map(async row=>{
+    try {
+      const organization=await client.organizations.getOrganization({organizationId:row.organization_id!});
+      const agreed=organization.privateMetadata.rentiaTeamLimit;
+      teamLimits.set(row.user_id,typeof agreed==='number'&&Number.isInteger(agreed)&&agreed>0?agreed:null);
+    } catch { teamLimits.set(row.user_id,null); }
+  }));
+  return NextResponse.json({accounts:accounts.map(row=>({...row,team_limit:teamLimits.get(row.user_id)??null})),clerkMemberCap:clerkMemberCap()},{headers:{'cache-control':'no-store'}});
 }
 
-const Body=z.object({userId:z.string().min(1).max(200),action:z.enum(['grant','revoke']),planId:z.string().optional()});
+const Body=z.object({userId:z.string().min(1).max(200),action:z.enum(['grant','revoke','seats']),planId:z.string().optional(),seats:z.number().int().min(1).max(500).nullable().optional()});
 
 export async function POST(request:Request) {
   if (!await owner()) return NextResponse.json({error:'forbidden'},{status:403});
   if (request.headers.get('origin')!==new URL(request.url).origin) return NextResponse.json({error:'invalid_origin'},{status:403});
   const parsed=Body.safeParse(await request.json().catch(()=>null));
   if (!parsed.success) return NextResponse.json({error:'invalid_body'},{status:400});
-  const {userId,action,planId}=parsed.data;
-  if (!await getOrCreateSubscription(userId)) return NextResponse.json({error:'account_not_found'},{status:404});
+  const {userId,action,planId,seats}=parsed.data;
+  const subscription=await getOrCreateSubscription(userId);
+  if (!subscription) return NextResponse.json({error:'account_not_found'},{status:404});
+  if (action==='seats') {
+    // Lugares de equipo de una tienda Enterprise: se guardan en su organización de Clerk, donde los lee el panel de Equipo.
+    if (subscription.plan_id!=='enterprise') return NextResponse.json({error:'not_enterprise'},{status:400});
+    if (seats===undefined) return NextResponse.json({error:'invalid_seats'},{status:400});
+    const link=await getStoreIdentityByAccount(userId);
+    if (!link) return NextResponse.json({error:'store_not_linked'},{status:409});
+    const client=await clerkClient();
+    await client.organizations.updateOrganizationMetadata(link.clerk_organization_id,{privateMetadata:{rentiaTeamLimit:seats}});
+    return NextResponse.json({teamLimit:seats});
+  }
   if (action==='grant') {
     if (!planId||!RENTIA_PLANS.some(plan=>plan.id===planId)||planId==='free') return NextResponse.json({error:'invalid_plan'},{status:400});
     return NextResponse.json({subscription:await grantComplimentaryPlan(userId,planId)});

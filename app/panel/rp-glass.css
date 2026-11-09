@@ -327,3 +327,12 @@
 .p-root.p-glass .p-menu .p-accStore>span:nth-child(2){flex:1;min-width:0}
 /* Grillas de 4 con 6 tarjetas: 3 + 3 en vez de 4 + 2. */
 @media (min-width:1181px){.p-root.p-glass .p-grid.p-g4:has(>:nth-child(6):last-child){grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* El contenido ocupa el ancho disponible y queda alineado con la barra superior (con el menú abierto o contraído). */
+.p-root.p-glass .p-content{max-width:none}
+/* Menú contraído: el pie entra en la columna angosta. */
+.p-root.p-glass .p-collapsed .p-sideFoot{justify-items:center}
+.p-root.p-glass .p-collapsed .p-status{justify-content:center;width:40px;height:40px;padding:0;border-radius:12px}
+.p-root.p-glass .p-collapsed .p-sideQuality{width:40px;height:40px;padding:0;justify-content:center;border-radius:12px}
+.p-root.p-glass .p-collapsed .p-sideQuality .p-ring{width:26px;height:26px}
+.p-root.p-glass .p-collapsed .p-sideQuality .p-ring circle{stroke-width:6}
