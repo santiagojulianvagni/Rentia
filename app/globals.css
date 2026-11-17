@@ -535,7 +535,8 @@
 .signedOut h1{margin:10px 0 10px;font-size:34px;line-height:1.1;letter-spacing:-.03em;color:#f2f7fb}
 .signedOut p{max-width:420px;margin:0 0 26px;color:#9bb0c1;font-size:16px;line-height:1.55}
 .signedOutActions{display:flex;gap:12px;justify-content:center;width:100%}
-.signedOutActions a{display:inline-flex;align-items:center;justify-content:center;min-width:180px;height:48px;padding:0 22px;border-radius:13px;font-size:15px;font-weight:700;text-decoration:none;transition:transform .2s,box-shadow .2s,border-color .2s}
+.signedOutActions a,.signedOutActions button{display:inline-flex;align-items:center;justify-content:center;min-width:180px;height:48px;padding:0 22px;border-radius:13px;font-size:15px;font-weight:700;text-decoration:none;transition:transform .2s,box-shadow .2s,border-color .2s}
+.signedOutActions button{border:0;font-family:inherit;cursor:pointer}
 .signedOutPrimary{background:#21d4c2;color:#031513;box-shadow:0 10px 30px rgba(33,212,194,.25)}
 .signedOutPrimary:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(33,212,194,.35)}
 .signedOutSecondary{border:1px solid #2c4a63;color:#f2f7fb;background:rgba(255,255,255,.02)}
@@ -549,11 +550,10 @@
   .signedOut{padding-top:36px}
   .signedOut h1{font-size:28px}
   .signedOutActions{flex-direction:column}
-  .signedOutActions a{width:100%}
+  .signedOutActions a,.signedOutActions button{width:100%}
   .signedOutArt{width:320px}
 }
 @media (prefers-reduced-motion:reduce){.signedOut *{animation:none!important}}
-.signedOutActions button{border:0;cursor:pointer;font:inherit}
 .signedOut small a{color:#21d4c2}
 .signedOutBusy .signedOutLogo i{animation:signedOutBlock .7s cubic-bezier(.2,.9,.3,1.3) both,signedOutBounce 1.6s ease-in-out .9s infinite}
 .signedOutBusy .signedOutLogo i:nth-child(2){animation-delay:.18s,1.1s}
