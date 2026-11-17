@@ -47,9 +47,10 @@ Grabá la pantalla con la Herramienta Recortes de Windows: **Win + Shift + R**, 
    - **Carritos abandonados, Cashflow y Resumen semanal**, rápido.
 4. **Venta en tiempo real (20 s)**
    - Creá una venta manual en la demo.
-   - Volvé a Rentia y mostrá que aparece sola, sin tocar "Actualizar".
+   - Volvé a Rentia y mostrá que aparece sola, sin tocar "Actualizar". El panel busca novedades cada 30 segundos: esperá ese rato sin tocar nada.
 5. **Desinstalar y volver a instalar (40 s)**
-   - Desinstalá Rentia desde el admin de la demo y mostrá en Rentia que la conexión quedó desconectada.
+   - Desinstalá Rentia desde el admin de la demo y mostrá en Rentia que la conexión quedó desconectada (si no cambia, recargá la página).
+   - Reinstalá enseguida: unos días después de desinstalar, Tiendanube pide borrar los datos de la tienda.
    - Volvé a instalar con el link del paso 1.
 6. **Ingreso de un usuario que ya tiene cuenta (30 s)**
    - Si estás logueado, cerrá sesión primero. Al volver del paso 5, Rentia muestra el registro con el aviso.
@@ -57,3 +58,9 @@ Grabá la pantalla con la Herramienta Recortes de Windows: **Win + Shift + R**, 
    - Mostrá que la tienda quedó conectada de nuevo y que el historial sigue ahí.
 
 **Después de grabar:** subilo a YouTube como "No listado" y pegá el link en la ficha, en "Video de la aplicación", o mandalo directo a Tiendanube cuando lo pidan.
+
+## Ensayo del 17/11/2026
+
+Se probó el guion completo en la tienda demo (prueba3880, entrando por "Acceder al admin (SSO)" desde el portal de socios): instalación, desinstalación, reinstalación con el aviso en el registro, ingreso con la cuenta existente y venta manual (#100) que apareció sola en Rentia. La demo tiene 3 productos sin costo cargado (para mostrar en el video cómo se carga) y una venta.
+
+Antes de mandar el acceso a Tiendanube: darle a la cuenta de Rentia de la demo un plan sin cargo desde /admin, porque su prueba gratis vence el 22/11.
