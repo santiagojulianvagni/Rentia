@@ -67,7 +67,8 @@
 }
 
 /* Al cambiar de sección, el contenido entra con un fundido suave. */
-.p-root.p-glass .p-content>*{animation:p-glassIn .5s cubic-bezier(.2,.8,.2,1) both}
+/* backwards (no both): al terminar no deja transform/filter puestos, que harían que los paneles fijos (detalle de orden, ventanas) se midan contra el contenido y no contra la pantalla. */
+.p-root.p-glass .p-content>*{animation:p-glassIn .5s cubic-bezier(.2,.8,.2,1) backwards}
 @keyframes p-glassIn{from{opacity:0;transform:translateY(10px);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
 @media (prefers-reduced-motion:reduce){.p-root.p-glass .p-content>*{animation:none}}
 
