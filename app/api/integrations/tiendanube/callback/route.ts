@@ -32,7 +32,13 @@ export async function GET(request:Request) {
       // La tienda ya tiene cuenta en Rentia: se renueva su conexión y se la manda a ingresar.
       await saveIntegration({userId:existingIntegration.user_id,provider:'tiendanube',storeId,encryptedToken:encrypted.encryptedToken,iv:encrypted.iv,scopes});
       try { await ensureTiendanubeWebhooks(existingIntegration.user_id,storeId,token.access_token,tiendanubeWebhookUrl(request.url)); } catch { /* se reintenta en la próxima conciliación */ }
-      return NextResponse.redirect(new URL('/panel?section=integraciones&connected=tiendanube',request.url));
+      // Quien vuelve de Tiendanube puede no tener la sesión abierta (o tener otra cuenta): lo
+      // mandamos a ingresar con un aviso. Si ya tiene la sesión de esa cuenta, sigue solo al panel.
+      const storeName=await tiendanubeStoreName(storeId,token.access_token).catch(()=>'');
+      const signIn=new URL('/ingresar',request.url);
+      signIn.searchParams.set('tiendanube','conectada');
+      if (storeName) signIn.searchParams.set('tienda',storeName.slice(0,80));
+      return NextResponse.redirect(signIn);
     }
     const storeName = await tiendanubeStoreName(storeId,token.access_token);
     const hold = await holdTiendanubeInstall({storeId,storeName,encryptedToken:encrypted.encryptedToken,iv:encrypted.iv,scopes});

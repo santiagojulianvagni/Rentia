@@ -35,9 +35,15 @@ function apiHeaders(token:string) {
   return {authorization:`Bearer ${token}`,'user-agent':'Rentia (hola@rentiaapp.com)','content-type':'application/json'};
 }
 
+// 401 = Tiendanube ya no acepta el permiso (la app se desinstaló o se revocó el acceso).
+async function markRevoked(storeId:string) {
+  try { await disconnectIntegrationByStore('tiendanube',storeId); } catch { /* la conciliación vuelve a intentarlo */ }
+}
+
 async function apiRequest(storeId:string,token:string,path:string,init:RequestInit={},notFoundValue?:unknown,version='v1') {
   const response=await tiendanubeFetch(storeId,`https://api.tiendanube.com/${version}/${storeId}/${path}`,{...init,headers:{...apiHeaders(token),...(init.headers||{})}});
   if (response.status===404&&notFoundValue!==undefined) {await response.body?.cancel();return notFoundValue;}
+  if (response.status===401) await markRevoked(storeId);
   if (!response.ok) {await response.body?.cancel();throw new Error(`Tiendanube respondió ${response.status} al consultar ${path.split('?')[0]}`);}
   if (response.status===204) return null;
   const body=await response.text();
@@ -62,6 +68,7 @@ async function fetchImportPage(storeId:string,token:string,path:string) {
   const total=Number(response.headers.get('x-total-count')||0);
   if(path.startsWith('orders?')&&total>10000){await response.body?.cancel();throw new CollectionWindowTooLarge();}
   if(response.status===404){await response.body?.cancel();return [];}
+  if(response.status===401)await markRevoked(storeId);
   if(!response.ok){
     const body=await response.text();
     if((response.status===400||response.status===422)&&/(?:10[.,]?000|too many|maximum.*(?:orders|results)|(?:query|result).*limit)/i.test(body))throw new CollectionWindowTooLarge();

@@ -6,11 +6,16 @@ import { useEffect, useState } from 'react';
 // tienda de apps de Tiendanube: su tienda queda en espera y se conecta al terminar.
 export default function InstallNotice({signIn=false}:{signIn?:boolean}) {
   const [store,setStore]=useState<string|null>(null);
+  const [alreadyConnected,setAlreadyConnected]=useState(false);
   useEffect(()=>{
+    // Reinstalación de una tienda que ya tiene cuenta en Rentia: la conexión ya está renovada.
+    const params=new URLSearchParams(window.location.search);
+    if (params.get('tiendanube')==='conectada') { void Promise.resolve().then(()=>{ setAlreadyConnected(true); setStore(params.get('tienda')||''); }); return; }
     fetch('/api/integrations/tiendanube/claim',{cache:'no-store'}).then(response=>response.ok?response.json() as Promise<{pending?:boolean;storeName?:string|null}>:null)
       .then(data=>{ if(data?.pending) setStore(data.storeName||''); }).catch(()=>undefined);
   },[]);
   if(store===null)return null;
   const name=store?<b>{store}</b>:'tu tienda';
+  if(alreadyConnected)return <div className="authInstall" role="status"><img src="/brands/tiendanube-icon.png" alt=""/><p>Rentia ya está conectada a {name}. Ingresá con tu cuenta de Rentia para verla.</p></div>;
   return <div className="authInstall" role="status"><img src="/brands/tiendanube-icon.png" alt=""/><p>{signIn?<>Ingresá a tu cuenta de Rentia y conectamos {name} sola.</>:<>Instalaste Rentia en {name}. Creá tu cuenta (o ingresá si ya tenés una) y la conectamos sola.</>}</p></div>;
 }
