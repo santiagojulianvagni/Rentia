@@ -4,6 +4,7 @@ import { useAuth, useClerk, useUser } from '@clerk/nextjs';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { onboardingRequest, OnboardingRequestError } from '../../lib/onboarding-request';
+import { BUSINESS_CATEGORIES, GOAL_SECTION, MAIN_GOALS, MONTHLY_ORDERS, SUGGESTED_PLAN, TAX_CONDITIONS } from '../../lib/business-profile';
 import SignedOutCard, { StatusCard } from '../../components/signed-out-card';
 
 type Step='checking'|'store'|'channels'|'connections';
@@ -23,6 +24,12 @@ export default function Onboarding() {
   const [name,setName]=useState('');
   const [store,setStore]=useState('');
   const [phone,setPhone]=useState('');
+  const [category,setCategory]=useState('');
+  const [monthlyOrders,setMonthlyOrders]=useState('');
+  const [taxCondition,setTaxCondition]=useState('');
+  const [goal,setGoal]=useState('');
+  // El panel abre en lo que la persona dijo que más le importa.
+  const landing=()=>`/panel?section=${GOAL_SECTION[goal]||'resumen'}`;
   const [channels,setChannels]=useState<Channel[]>(['tiendanube']);
   const [saving,setSaving]=useState(false);
   const [error,setError]=useState('');
@@ -40,7 +47,7 @@ export default function Onboarding() {
   const [installStore,setInstallStore]=useState<string|null>(null);
   useEffect(()=>{
     fetch('/api/integrations/tiendanube/claim',{cache:'no-store'}).then(response=>response.ok?response.json() as Promise<{pending?:boolean;storeName?:string|null}>:null)
-      .then(data=>{ if(data?.pending){ setInstallStore(data.storeName||''); if(data.storeName) setStore(current=>current||data.storeName||''); } }).catch(()=>undefined);
+      .then(data=>{ if(data?.pending){ setInstallStore(data.storeName||''); if(data.storeName) setStore(current=>current||(data.storeName!.charAt(0).toLocaleUpperCase('es-AR')+data.storeName!.slice(1))); } }).catch(()=>undefined);
   },[]);
 
   // Conecta la tienda que quedó en espera. Devuelve true si ya redirigió.
@@ -79,7 +86,7 @@ export default function Onboarding() {
       if (cancelled) return;
       if (await finishInstall(data.needsChannels)) return;
       if (data.needsChannels) {setStep('channels');return;}
-      window.location.assign('/panel?section=resumen');
+      window.location.assign(landing());
     }).catch(reason=>{
       if (cancelled) return;
       if (reason instanceof OnboardingRequestError&&reason.status===409&&reason.code==='store_required') {setName(current=>current||user?.fullName||'');setStep('store');return;}
@@ -94,12 +101,13 @@ export default function Onboarding() {
     const phoneDigits=phone.trim().replace(/^\+54/,'').replace(/\D/g,'');
     try {
       if (!name.trim()||!store.trim()) {setError('Completá tu nombre y el nombre de la tienda.');return;}
+      if (!category||!monthlyOrders||!taxCondition) {setError('Elegí tu rubro, cuántas órdenes tenés por mes y tu condición fiscal.');return;}
       if (phoneDigits&&(phoneDigits.length<6||phoneDigits.length>13)) {setError('Revisá el celular: ingresá entre 6 y 13 números, sin el código +54.');return;}
-      const data=await onboardingRequest<BootstrapResult>('/api/account/bootstrap',{name:name.trim(),store:store.trim(),phone:phoneDigits});
+      const data=await onboardingRequest<BootstrapResult>('/api/account/bootstrap',{name:name.trim(),store:store.trim(),phone:phoneDigits,category,monthlyOrders,taxCondition,goal:goal||undefined});
       await activateStore(data);
       if (await finishInstall(data.needsChannels)) return;
       if (data.needsChannels) setStep('channels');
-      else window.location.assign('/panel?section=resumen');
+      else window.location.assign(landing());
     } catch {setError('No pudimos crear o abrir la tienda. Revisá tu conexión y volvé a intentarlo.');}
     finally {setSaving(false);}
   }
@@ -112,7 +120,7 @@ export default function Onboarding() {
     if (saving) return;setSaving(true);setError('');
     try {
       await onboardingRequest('/api/settings',{type:'channels',channels});
-      if (next==='panel') window.location.assign('/panel?section=resumen');
+      if (next==='panel') window.location.assign(landing());
       else setStep(next);
     } catch {setError('No pudimos guardar los canales. Revisá tu conexión y volvé a intentarlo.');}
     finally {setSaving(false);}
@@ -122,7 +130,7 @@ export default function Onboarding() {
     if (saving) return;setSaving(true);setError('');
     try {
       await onboardingRequest('/api/settings',{type:'channels',channels:[]});
-      window.location.assign('/panel?section=resumen');
+      window.location.assign(landing());
     } catch {setError('No pudimos guardar tu elección. Revisá tu conexión y volvé a intentarlo.');}
     finally {setSaving(false);}
   }
@@ -147,10 +155,26 @@ export default function Onboarding() {
     <section className="onboardingShell">
       <div className="onboardingSteps"><span className="done"><b>1</b>Cuenta</span><span className={progress>=2?'done':'active'} aria-current={step==='store'?'step':undefined}><b>2</b>Tu negocio</span><span className={progress>=3?'done':step==='channels'?'active':''} aria-current={step==='channels'?'step':undefined}><b>3</b>Canales</span></div>
       <div className="progress" aria-hidden="true"><i className="done"/><i className={progress>=2?'done':'active'}/><i className={progress>=3?'done':step==='channels'?'active':''}/></div>
-      {step==='store'?<>
-        <span className="tag">TU ESPACIO DE TRABAJO</span><h1>Contanos sobre tu tienda</h1><p className="onboardingLead">{installStore!==null?<>Instalaste Rentia en {installStore?<b>{installStore}</b>:'tu tienda'} desde Tiendanube. Completá estos datos y la conectamos sola.</>:'Esta tienda será tu organización en Rentia. Vos quedás como propietario y administrador principal.'}</p>
-        <form className="storeSetupForm" onSubmit={createStore}><label>Tu nombre<input value={name} onChange={event=>setName(event.target.value)} placeholder="Ej. Martina García" required/></label><label>Nombre de la tienda<input value={store} onChange={event=>setStore(event.target.value)} placeholder="Ej. Casa Norte" required/></label><label>Celular de contacto <small>Opcional</small><div className="phoneField"><span>AR&nbsp;&nbsp;+54</span><input value={phone} inputMode="tel" onChange={event=>setPhone(event.target.value)} placeholder="11 5555 5555"/></div><em>No bloquea tu registro. La verificación por SMS se habilitará con un proveedor compatible en Argentina.</em></label>{error&&<p className="formError" role="alert">{error}</p>}<button className="button" disabled={saving}>{saving?'Creando tienda…':'Continuar →'}</button></form>
-      </>:step==='channels'?<>
+      {step==='store'?<div className="obGrid">
+        <div>
+          <span className="tag">TU ESPACIO DE TRABAJO</span><h1>Contanos sobre tu tienda</h1><p className="onboardingLead">{installStore!==null?<>Ya conectamos {installStore?<b>{installStore}</b>:'tu tienda'} desde Tiendanube. Completá estos datos y entrás a tu panel.</>:'Con estos datos adaptamos Rentia a tu negocio. Te lleva menos de un minuto.'}</p>
+          <form className="obForm" onSubmit={createStore}>
+            <div className="obRow"><label><span>Tu nombre</span><input value={name} onChange={event=>setName(event.target.value)} placeholder="Martina García" autoComplete="name" required/></label><label><span>Nombre de la tienda</span><input value={store} onChange={event=>setStore(event.target.value)} placeholder="Casa Norte" required/></label></div>
+            <fieldset className="obChips"><legend>¿Qué vendés?</legend><div>{BUSINESS_CATEGORIES.map(([id,label])=><button key={id} type="button" aria-pressed={category===id} className={category===id?'on':undefined} onClick={()=>setCategory(id)}>{label}</button>)}</div></fieldset>
+            <fieldset className="obChips"><legend>¿Cuántas órdenes tenés por mes?</legend><div>{MONTHLY_ORDERS.map(([id,label])=><button key={id} type="button" aria-pressed={monthlyOrders===id} className={monthlyOrders===id?'on':undefined} onClick={()=>setMonthlyOrders(id)}>{label}</button>)}</div></fieldset>
+            <fieldset className="obChips"><legend>Tu condición fiscal</legend><div>{TAX_CONDITIONS.map(([id,label])=><button key={id} type="button" aria-pressed={taxCondition===id} className={taxCondition===id?'on':undefined} onClick={()=>setTaxCondition(id)}>{label}</button>)}</div></fieldset>
+            <fieldset className="obChips"><legend>¿Qué querés lograr con Rentia? <small>(opcional)</small></legend><div>{MAIN_GOALS.map(([id,label])=><button key={id} type="button" aria-pressed={goal===id} className={goal===id?'on':undefined} onClick={()=>setGoal(current=>current===id?'':id)}>{label}</button>)}</div></fieldset>
+            <label><span>Celular <small>(opcional)</small></span><div className="obPhone"><span>+54</span><input value={phone} inputMode="tel" onChange={event=>setPhone(event.target.value)} placeholder="11 5555 5555" autoComplete="tel-national"/></div><em>Solo para avisos importantes de tu cuenta.</em></label>
+            {error&&<p className="formError" role="alert">{error}</p>}
+            <button className="button" disabled={saving}>{saving?'Creando tu espacio…':'Continuar →'}</button>
+          </form>
+        </div>
+        <aside className="obPreview" aria-label="Vista previa">
+          <div className="obCard"><small>Así va a verse en Rentia</small><div className="obStore"><i aria-hidden="true">{(store.trim()||'T').charAt(0).toLocaleUpperCase('es-AR')}</i><b>{store.trim()||'Tu tienda'}</b></div><div className="obTiles"><div><small>Ganancia real</small><b>$ —</b></div><div><small>Margen</small><b>— %</b></div></div></div>
+          <ul className="obCard obChecklist">{installStore!==null?<><li className="done">Tiendanube conectada</li><li className="now">Importando hasta 12 meses de ventas</li></>:<li className="now">Después conectás Tiendanube o Mercado Libre</li>}<li>Cargar el costo de tus productos</li>{monthlyOrders&&<li className="plan">Plan sugerido para tu volumen: <b>{SUGGESTED_PLAN[monthlyOrders]}</b></li>}</ul>
+        </aside>
+      </div>
+      :step==='channels'?<>
         <span className="tag">TUS CANALES</span><h1>¿Dónde vendés hoy?</h1><p className="onboardingLead">Elegí uno o ambos. Esto adapta Rentia a tu operación; conectar las cuentas sigue siendo opcional.</p>
         <div className="channelChoices"><button disabled={saving} aria-pressed={channels.includes('tiendanube')} className={channels.includes('tiendanube')?'selected':''} onClick={()=>toggleChannel('tiendanube')}>{tiendanubeLogo}<div><b>Tiendanube</b><small>Tienda, órdenes, productos y stock.</small></div><i>✓</i></button><button disabled={saving} aria-pressed={channels.includes('mercadolibre')} className={channels.includes('mercadolibre')?'selected':''} onClick={()=>toggleChannel('mercadolibre')}>{mercadoLibreLogo}<div><b>Mercado Libre</b><small>Marketplace, publicaciones y comisiones.</small></div><i>✓</i></button></div>
         {error&&<p className="formError" role="alert">{error}</p>}<div className="onboardingActions"><button className="outline" disabled={saving} onClick={skipOnboarding}>Configurar después</button><button className="button" disabled={saving||!channels.length} onClick={()=>persistChannels('connections')}>{saving?'Guardando…':'Continuar →'}</button></div>

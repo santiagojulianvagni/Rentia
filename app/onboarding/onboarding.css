@@ -1,0 +1,32 @@
+.obGrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.85fr);gap:36px;align-items:start}
+.obForm{display:grid;gap:18px;margin-top:22px;padding:24px;border:1px solid #263d51;border-radius:20px;background:#0c1826}
+.obForm label{display:grid;gap:7px;color:#c8d6e2;font-size:14px;font-weight:600}
+.obForm label small,.obChips legend small{color:#7d93a6;font-weight:400}
+.obForm input{width:100%;box-sizing:border-box;height:46px;padding:0 14px;border:1px solid #294357;border-radius:12px;background:#08131f;color:#f4f8fb;font:inherit;font-size:15px;font-weight:400}
+.obForm input::placeholder{color:#5f7488}
+.obForm input:focus{outline:2px solid rgba(33,212,194,.55);outline-offset:1px}
+.obForm em{color:#7d93a6;font-size:12.5px;font-style:normal;font-weight:400}
+.obForm .button{height:48px;font-size:15px}
+.obRow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.obPhone{display:flex}.obPhone span{display:flex;align-items:center;padding:0 12px;border:1px solid #294357;border-right:0;border-radius:12px 0 0 12px;background:#0f2232;color:#9bb0c3;font-size:14px;font-weight:400}.obPhone input{border-radius:0 12px 12px 0}
+.obChips{margin:0;padding:0;border:0;display:grid;gap:9px}
+.obChips legend{padding:0;margin-bottom:9px;color:#c8d6e2;font-size:14px;font-weight:600}
+.obChips>div{display:flex;flex-wrap:wrap;gap:8px}
+.obChips button{padding:9px 14px;border:1px solid #294357;border-radius:999px;background:#08131f;color:#c8d6e2;font:inherit;font-size:13.5px;cursor:pointer;transition:border-color .15s,background .15s,color .15s}
+.obChips button:hover{border-color:#3b5f78;color:#f4f8fb}
+.obChips button.on{border-color:#21d4c2;background:rgba(33,212,194,.12);color:#e8fffb}
+.obPreview{position:sticky;top:24px;display:grid;gap:14px;margin-top:140px}
+.obCard{padding:18px;border:1px solid #1d3346;border-radius:18px;background:#0b1826}
+.obCard>small{display:block;margin-bottom:12px;color:#8ea6b8;font-size:12.5px}
+.obStore{display:flex;align-items:center;gap:10px;margin-bottom:14px}.obStore i{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#123b36;color:#5fe8d9;font-style:normal;font-weight:700}.obStore b{color:#fff;font-size:16px}
+.obTiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}.obTiles div{padding:10px 12px;border-radius:12px;background:#0f2232}.obTiles small{display:block;color:#8ea6b8;font-size:12px}.obTiles b{color:#fff;font-size:17px}
+.obChecklist{margin:0;list-style:none;display:grid;gap:10px;font-size:14px;color:#9bb0c3}
+.obChecklist li{position:relative;padding-left:24px}.obChecklist li:before{content:'';position:absolute;left:2px;top:4px;width:12px;height:12px;border:2px solid #3b5f78;border-radius:50%}
+.obChecklist li.done{color:#5fe8d9}.obChecklist li.done:before{border-color:#21d4c2;background:#21d4c2}
+.obChecklist li.now{color:#e8f0f6}.obChecklist li.now:before{border-color:#21d4c2}
+.obChecklist li.plan{color:#c8d6e2}.obChecklist li.plan:before{border:0;width:auto;height:auto;content:'★';top:0;color:#21d4c2;font-size:13px}
+@media (max-width:900px){.obGrid{grid-template-columns:1fr}.obPreview{position:static;margin-top:0;order:-1}.obPreview .obChecklist{display:none}}
+@media (max-width:560px){.obRow{grid-template-columns:1fr}.obForm{padding:18px}}
+.onboardingShell:has(.obGrid){width:min(1120px,calc(100% - 40px));max-width:1120px}
+.obGrid h1{white-space:nowrap}
+@media (max-width:900px){.obGrid h1{white-space:normal}}

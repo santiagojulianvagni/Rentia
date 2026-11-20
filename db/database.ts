@@ -1349,3 +1349,10 @@ export async function revokeComplimentaryPlan(userId:string) {
   await database().prepare("UPDATE subscriptions SET provider=NULL,provider_status=NULL,plan_id='free',status='free',requested_plan_id=NULL,updated_at=? WHERE user_id=? AND provider='complimentary'").bind(now,userId).run();
   return database().prepare('SELECT * FROM subscriptions WHERE user_id=?').bind(userId).first<SubscriptionRecord>();
 }
+
+// Datos del negocio del onboarding (rubro, órdenes por mes, condición fiscal, objetivo).
+export async function saveBusinessProfile(userId:string,profile:{category:string|null;monthlyOrders:string|null;taxCondition:string|null;goal:string|null}) {
+  await ensureSchema();
+  await database().prepare('UPDATE accounts SET business_category=COALESCE(?,business_category),monthly_orders=COALESCE(?,monthly_orders),tax_condition=COALESCE(?,tax_condition),main_goal=COALESCE(?,main_goal),updated_at=? WHERE user_id=?')
+    .bind(profile.category,profile.monthlyOrders,profile.taxCondition,profile.goal,new Date().toISOString(),userId).run();
+}

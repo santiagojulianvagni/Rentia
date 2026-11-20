@@ -2,6 +2,8 @@ import { auth, clerkClient, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { getAccount, getAccountByEmail, getSettings, getStoreIdentityByOrganization, getStoreIdentityByOwner, recordError, saveAccount, saveAccountContact, saveStoreIdentityLink } from '../../../../db/database';
 import { notify, storeName as storeName_ } from '../../../../lib/notifications';
+import { parseBusinessProfile } from '../../../../lib/business-profile';
+import { saveBusinessProfile } from '../../../../db/database';
 import { welcomeEmail } from '../../../../lib/email/templates';
 import { TRIAL_DAYS } from '../../../../lib/plans';
 
@@ -59,6 +61,7 @@ async function bootstrap(request:Request) {
 
   try {
     await saveAccount({userId:storeUserId,email:primaryEmail.toLowerCase(),name:ownerName,store:storeName});
+    await saveBusinessProfile(storeUserId,parseBusinessProfile(body as Record<string,unknown>));
     if (phoneDigits) {
       await saveAccountContact({userId:storeUserId,phoneCountry:'AR',phoneNumber:phoneDigits,phoneE164:`+54${phoneDigits}`});
     }
