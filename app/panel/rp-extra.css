@@ -548,3 +548,31 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-card.p-tone-g,.p-root .p-card.p-tone-r{color:inherit}
 .p-root .p-cohort td.p-cohortCell{background:rgba(33,212,194,var(--a));font-size:12px}
 @media (max-width:760px){.p-root .p-ltvCheck{grid-template-columns:1fr}}
+/* Cangurito: saludo del día y festejo de récords */
+.p-root .p-mascot{display:inline-block;flex:none;line-height:0}
+.p-root .p-mascot svg{display:block;width:100%;height:100%}
+.p-root .p-kGreet{display:flex;align-items:center;gap:12px;margin:10px 0 8px}
+.p-root .p-kBubble{position:relative;padding:10px 38px 10px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface2);color:#c9d7e2;font-size:14px;line-height:1.45;max-width:560px}
+.p-root .p-kBubble:before{content:"";position:absolute;left:-7px;top:50%;width:12px;height:12px;background:var(--surface2);border-left:1px solid var(--line);border-bottom:1px solid var(--line);transform:translateY(-50%) rotate(45deg)}
+.p-root .p-kBubble b{color:var(--text)}.p-root .p-kBubble b.p-pos{color:var(--green)}.p-root .p-kBubble b.p-neg{color:#ff8c99}
+.p-root .p-kBubble button{position:absolute;right:6px;top:6px;display:grid;place-items:center;width:26px;height:26px;border:0;border-radius:8px;background:none;color:var(--dim);cursor:pointer}
+.p-root .p-kBubble button:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.p-root .p-kBubble button .p-i{width:14px;height:14px}
+.p-root .kWave{transform-box:fill-box;transform-origin:18% 82%;animation:pKWave 2.6s ease-in-out infinite}
+.p-root .kBlink{transform-box:fill-box;transform-origin:center;animation:pKBlink 4.2s infinite}
+@keyframes pKWave{0%,60%,100%{transform:rotate(0)}10%,30%{transform:rotate(-14deg)}20%,40%{transform:rotate(8deg)}}
+@keyframes pKBlink{0%,46%,50%,100%{transform:scaleY(1)}48%{transform:scaleY(.1)}}
+.p-root .p-record{display:flex;align-items:center;gap:22px;overflow:hidden;margin:0 0 18px;padding:22px 26px;border-color:rgba(33,212,194,.45);box-shadow:0 0 0 4px rgba(33,212,194,.08),0 20px 60px rgba(33,212,194,.12)}
+.p-root .p-record h2{margin:4px 0 6px;font-size:23px;letter-spacing:-.02em}
+.p-root .p-record p{margin:0 0 14px;color:var(--muted);line-height:1.45}
+.p-root .p-record p b{color:var(--text)}
+.p-root .p-recordBody{position:relative;min-width:0}
+.p-root .p-recordBody .p-eyebrowS{color:var(--cyan)}
+.p-root .p-recordBody .p-actions{display:flex;gap:10px;flex-wrap:wrap}
+.p-root .p-recordConfetti{position:absolute;inset:0;pointer-events:none}
+.p-root .p-recordConfetti i{position:absolute;top:-12px;width:8px;height:8px;border-radius:2px;animation:pKFall linear 3}
+.p-root .p-kHop{position:relative;animation:pKHop .9s ease-in-out 4}
+@keyframes pKFall{to{transform:translateY(260px) rotate(540deg)}}
+@keyframes pKHop{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+@media (max-width:640px){.p-root .p-record{flex-direction:column;text-align:center;padding:20px}.p-root .p-recordBody .p-actions{justify-content:center}.p-root .p-kGreet .p-mascot{width:44px!important;height:55px!important}}
+@media (prefers-reduced-motion:reduce){.p-root .kWave,.p-root .kBlink,.p-root .p-kHop,.p-root .p-recordConfetti i{animation:none}.p-root .p-recordConfetti{display:none}}

@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
   <title>Cangurito de Rentia · duerme</title>
+  <style>.kZ{transform-box:fill-box;transform-origin:center;animation:kZ 2.4s ease-in-out infinite}.kZ2{animation-delay:.4s}.kZ3{animation-delay:.8s}@keyframes kZ{0%,100%{transform:translate(0,0);opacity:.35}50%{transform:translate(3px,-7px);opacity:1}}@media (prefers-reduced-motion:reduce){.kZ{animation:none}}</style>
   <g stroke-linecap="round" transform="translate(0 30)">
     <!-- cola -->
     <path d="M132 352 Q112 410 52 419" fill="none" stroke="#3B8CF6" stroke-width="36"/>
@@ -32,8 +33,8 @@
     <path d="M248 170 Q258 175 268 170" fill="none" stroke="#0B1826" stroke-width="5"/>
     </g>
     <!-- zzz -->
-    <path d="M318 64 H334 L318 80 H334" fill="none" stroke="#3B8CF6" stroke-width="6" stroke-linejoin="round"/>
-    <path d="M342 30 H364 L342 52 H364" fill="none" stroke="#3B8CF6" stroke-width="6" stroke-linejoin="round"/>
-    <path d="M366 -12 H392 L366 14 H392" fill="none" stroke="#3B8CF6" stroke-width="6" stroke-linejoin="round"/>
+    <path class="kZ kZ1" d="M318 64 H334 L318 80 H334" fill="none" stroke="#3B8CF6" stroke-width="6" stroke-linejoin="round"/>
+    <path class="kZ kZ2" d="M342 30 H364 L342 52 H364" fill="none" stroke="#3B8CF6" stroke-width="6" stroke-linejoin="round"/>
+    <path class="kZ kZ3" d="M366 -12 H392 L366 14 H392" fill="none" stroke="#3B8CF6" stroke-width="6" stroke-linejoin="round"/>
   </g>
 </svg>

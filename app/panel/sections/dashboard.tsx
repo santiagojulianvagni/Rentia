@@ -5,11 +5,12 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import { Share2, Trophy, ArrowRight, GripVertical, Plus, SlidersHorizontal, X } from 'lucide-react';
 import RpChart from '../../../components/panel/rp-chart';
 import HeroChart from './hero-chart';
+import { MascotGreeting, RecordCelebration } from '../../../components/panel/mascot';
 import type { ProductCostRow } from '../../../components/product-costs';
 import type { ShareContent } from '../../../components/panel/share-card';
 import { type AlertSettings, type BusinessAlert } from '../../../lib/alerts';
 import { type CampaignProfitRow } from '../../../lib/campaign-profit';
-import { AlertSettingsCard, ShareDialog, ProductAnalyticsRow, TimelinePoint, Dashboard, DashboardMetricKey, DashboardChannel, DashboardLayoutSection, DashboardLayoutConfig, dashboardMetricKeys, dashboardPresets, AccessContext, useT, useMoney, date, TermHelp, Granularity, timelineGranularity, aggregateTimeline, dashboardMetricLabels, dashboardMetricHelp, Sparkline, RpDelta, dailySeries } from '../shared';
+import { AlertSettingsCard, ShareDialog, ProductAnalyticsRow, TimelinePoint, Dashboard, DashboardMetricKey, DashboardChannel, DashboardLayoutSection, DashboardLayoutConfig, dashboardMetricKeys, dashboardPresets, AccessContext, useT, useMoney, usePreferences, date, TermHelp, Granularity, timelineGranularity, aggregateTimeline, dashboardMetricLabels, dashboardMetricHelp, Sparkline, RpDelta, dailySeries } from '../shared';
 
 export function DashboardEditor({layout,saving,message,onClose,onSave,onPreview}:{layout:DashboardLayoutConfig;saving:boolean;message:string;onClose:()=>void;onSave:(layout:DashboardLayoutConfig)=>void;onPreview:(layout:DashboardLayoutConfig)=>void}) {
   const original=useRef<DashboardLayoutConfig>(structuredClone(layout));
@@ -55,6 +56,7 @@ export function DashboardOverview({dashboard,previousDashboard,days,storeName,pe
   const canManage=useContext(AccessContext);
   const money=useMoney();
   const t=useT();
+  const {language}=usePreferences();
   const [arranging,setArranging]=useState(false);
   // Saludo según la hora del navegador (zona horaria de quien mira).
   const [greeting,setGreeting]=useState({text:'Hola',date:''});
@@ -178,7 +180,8 @@ export function DashboardOverview({dashboard,previousDashboard,days,storeName,pe
   let used=0;
   let cardOrder=0;
   return <>
-    <div className="p-head"><div><div className="p-eyebrow">{greeting.date||t('MÉTRICAS PRINCIPALES')}</div><h1>{greeting.text}, <em>{storeName}</em></h1><p>{metrics?<>{periodLabel}: <b>{metrics.totalOrders} órdenes</b> y <b className="p-pos">{money(metrics.profit)}</b> de ganancia real. </>:null}{t('La ganancia es provisoria cuando faltan costos. Las ventas de otros canales sin costo cargado se muestran aparte.')}</p></div><div className="p-actions"><button type="button" className="p-btn" onClick={shareStats} disabled={!metrics}><Share2 className="p-i" aria-hidden="true"/>Compartir</button>{canManage&&<><button type="button" className={`p-btn ${arranging?'p-primary':''}`} onClick={()=>setArranging(value=>!value)}><SlidersHorizontal className="p-i" aria-hidden="true"/>{arranging?'Finalizar':'Personalizar'}</button><button type="button" className="p-btn" onClick={()=>onNavigate('facturacion')}><Plus className="p-i" aria-hidden="true"/>{t('Ventas de otros canales')}</button></>}</div></div>
+    <div className="p-head"><div><div className="p-eyebrow">{greeting.date||t('MÉTRICAS PRINCIPALES')}</div><h1>{greeting.text}, <em>{storeName}</em></h1><MascotGreeting lang={language} money={money}/><p>{metrics?<>{periodLabel}: <b>{metrics.totalOrders} órdenes</b> y <b className="p-pos">{money(metrics.profit)}</b> de ganancia real. </>:null}{t('La ganancia es provisoria cuando faltan costos. Las ventas de otros canales sin costo cargado se muestran aparte.')}</p></div><div className="p-actions"><button type="button" className="p-btn" onClick={shareStats} disabled={!metrics}><Share2 className="p-i" aria-hidden="true"/>Compartir</button>{canManage&&<><button type="button" className={`p-btn ${arranging?'p-primary':''}`} onClick={()=>setArranging(value=>!value)}><SlidersHorizontal className="p-i" aria-hidden="true"/>{arranging?'Finalizar':'Personalizar'}</button><button type="button" className="p-btn" onClick={()=>onNavigate('facturacion')}><Plus className="p-i" aria-hidden="true"/>{t('Ventas de otros canales')}</button></>}</div></div>
+    <RecordCelebration lang={language} money={money} onShare={setShare}/>
      {share&&<ShareDialog content={share} storeName={storeName} onClose={()=>setShare(null)}/>}
     {arranging&&<div className="p-arrangeBar p-reveal"><span><GripVertical className="p-i" aria-hidden="true"/><b>Ordená las tarjetas</b><small>Arrastrá una caja a la posición o sección que quieras.</small></span><span><em>{savingLayout?'Guardando…':'Los cambios se guardan automáticamente'}</em><button type="button" className="p-btn p-small" onClick={onEdit}>Editar secciones y métricas</button></span></div>}
     <div className="p-grid p-g3" style={{margin:'0 0 16px'}}>
