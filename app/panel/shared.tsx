@@ -4,7 +4,7 @@
 import type { MeliPostSale } from '../../lib/meli-post-sale';
 import { type ProductAdsData } from '../../components/product-ads';
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Repeat, CalendarHeart, ShoppingBasket, Store, CalendarRange, Wallet, ArrowLeftRight, BadgeDollarSign, Boxes, CreditCard, FileChartColumn, LayoutDashboard, Megaphone, PackageSearch, PlugZap, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, UsersRound, X, type LucideIcon } from 'lucide-react';
+import { Repeat, CalendarHeart, ShoppingBasket, Store, CalendarRange, Wallet, ArrowLeftRight, BadgeDollarSign, Boxes, CreditCard, FileChartColumn, LayoutDashboard, Megaphone, PackageSearch, PlugZap, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, Trophy, UsersRound, X, type LucideIcon } from 'lucide-react';
 import type { ProductCostRow } from '../../components/product-costs';
 import ThemedSelect from '../../components/themed-select';
 import HelpPopover from '../../components/term-help';
@@ -61,7 +61,11 @@ export const configurationSections:NavItem[]=[
   {id:'moneda',label:'Cotización dólar',icon:ArrowLeftRight},
   {id:'plan',label:'Plan y facturación',icon:CreditCard},
 ];
-export const sections=[...overviewSections,...operationSections,...configurationSections];
+// Secciones que se abren desde el menú de la cuenta y no aparecen en la barra lateral.
+export const accountSections:NavItem[]=[
+  {id:'logros',label:'Mis logros',icon:Trophy},
+];
+export const sections=[...overviewSections,...operationSections,...configurationSections,...accountSections];
 export const periodOptions=[{label:'7 días',days:7},{label:'30 días',days:30},{label:'90 días',days:90},{label:'365 días',days:365}];
 export type Integration={provider:string;external_store_id:string;scopes:string;status:string;connected_at:string};
 export type OrderItem={external_product_id?:string;external_variant_id?:string;external_line_id:string;name:string;sku:string|null;quantity:number;unit_price:number;unit_cost:number;cost_source:'manual'|'tiendanube'|'orden'|'orden_manual'|'publicacion'|'sin_costo'};

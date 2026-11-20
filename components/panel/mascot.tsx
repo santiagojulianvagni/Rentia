@@ -13,7 +13,7 @@ export function Mascot({pose,size,className=''}:{pose:MascotPose;size:number;cla
 
 // Un solo pedido del historial, compartido por el saludo y el festejo.
 let historyRequest:Promise<SalesDay[]>|null=null;
-function useSalesHistory() {
+export function useSalesHistory() {
   const [days,setDays]=useState<SalesDay[]|null>(null);
   useEffect(()=>{
     historyRequest??=fetch('/api/insights/records',{cache:'no-store'}).then(response=>response.ok?response.json():null).then(data=>Array.isArray(data?.days)?data.days as SalesDay[]:[]).catch(()=>{historyRequest=null;return [];});
