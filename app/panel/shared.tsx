@@ -4,7 +4,7 @@
 import type { MeliPostSale } from '../../lib/meli-post-sale';
 import { type ProductAdsData } from '../../components/product-ads';
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Repeat, CalendarHeart, ShoppingBasket, Store, CalendarRange, Wallet, RefreshCw, ArrowLeftRight, BadgeDollarSign, Boxes, CreditCard, FileChartColumn, LayoutDashboard, Megaphone, PackageSearch, PlugZap, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, UsersRound, X, type LucideIcon } from 'lucide-react';
+import { Repeat, CalendarHeart, ShoppingBasket, Store, CalendarRange, Wallet, ArrowLeftRight, BadgeDollarSign, Boxes, CreditCard, FileChartColumn, LayoutDashboard, Megaphone, PackageSearch, PlugZap, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, UsersRound, X, type LucideIcon } from 'lucide-react';
 import type { ProductCostRow } from '../../components/product-costs';
 import ThemedSelect from '../../components/themed-select';
 import HelpPopover from '../../components/term-help';
@@ -359,5 +359,5 @@ export function inventoryStatus(row:ProductAnalyticsRow):InventoryStatus { if(ro
 export function inventoryStatusLabel(status:InventoryStatus) { return status==='saludable'?'Saludable':status==='bajo'?'Stock bajo':status==='critico'?'Crítico':status==='sin_stock'?'Sin stock':status==='sin_movimiento'?'Sin movimiento':'No controla'; }
 
 export function DataSection({title,subtitle,children}:{title:string;subtitle:string;children:React.ReactNode}) { return <section className="dataSection"><div><span className="muted">DATOS REALES</span><h2>{title}</h2><p>{subtitle}</p></div>{children}</section>; }
-export function EmptyData({syncing,onSync}:{syncing:boolean;onSync:()=>void}) { return <div className="p-card p-soon p-reveal"><div><RefreshCw className="p-i p-soonIcon" aria-hidden="true"/><h2>{syncing?'Sincronizando…':'Todavía no hay datos importados'}</h2><p className="p-sub">Consultaremos nuevamente la información autorizada de Tiendanube.</p><button type="button" className="p-btn p-primary" onClick={onSync} disabled={syncing}>{syncing?'Actualizando…':'Actualizar datos'}</button></div></div>; }
+export function EmptyData({syncing,onSync}:{syncing:boolean;onSync:()=>void}) { return <div className="p-card p-soon p-reveal"><div><img src="/mascota/canguro-busca-lupa-oscuro.svg" alt="" width={120} height={150} style={{display:"block",margin:"0 auto 10px"}}/><h2>{syncing?'Sincronizando…':'Todavía no hay datos importados'}</h2><p className="p-sub">Consultaremos nuevamente la información autorizada de Tiendanube.</p><button type="button" className="p-btn p-primary" onClick={onSync} disabled={syncing}>{syncing?'Actualizando…':'Actualizar datos'}</button></div></div>; }
 

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <title>Cangurito de Rentia · duerme (fondo oscuro)</title>
+  <g stroke-linecap="round" transform="translate(0 30)">
+    <!-- cola -->
+    <path d="M132 352 Q112 410 52 419" fill="none" stroke="#3B8CF6" stroke-width="36"/>
+    <circle cx="48" cy="419" r="21" fill="#21D4C2"/>
+    <!-- patas -->
+    <g><rect x="168" y="372" width="34" height="58" rx="17" fill="#2E5276"/><rect x="164" y="416" width="60" height="26" rx="13" fill="#21D4C2"/></g>
+    <g><rect x="230" y="372" width="34" height="58" rx="17" fill="#2E5276"/><rect x="226" y="416" width="60" height="26" rx="13" fill="#21D4C2"/></g>
+    <!-- cuerpo -->
+    <rect x="112" y="195" width="202" height="202" rx="22" fill="#21D4C2"/>
+    <!-- brazos -->
+    <path d="M141 232 L86 286" fill="none" stroke="#2E5276" stroke-width="35"/>
+    <circle cx="80.3" cy="291.6" r="21" fill="#3B8CF6"/>
+    <path d="M288 236 L332 292" fill="none" stroke="#3B8CF6" stroke-width="35"/>
+    <circle cx="336.9" cy="298.3" r="21" fill="#21D4C2"/>
+    <!-- gráfico y bolsa -->
+    <rect x="179" y="280" width="16" height="26" rx="2" fill="#0B1826"/>
+    <rect x="206" y="262" width="16" height="44" rx="2" fill="#3B8CF6"/>
+    <rect x="232" y="240" width="16" height="66" rx="2" fill="#ffffff"/>
+    <path d="M160 301 H275 A57.5 62 0 0 1 160 301 Z" fill="#7FE6DB" stroke="#0B1826" stroke-width="7" stroke-linejoin="round"/>
+    <g transform="rotate(8 234 190)">
+    <!-- orejas -->
+    <rect x="142" y="27" width="45" height="70" rx="22.5" fill="#3B8CF6" transform="rotate(-20 165 62)"/>
+    <rect x="202" y="29" width="42" height="67" rx="21" fill="#2E5276"/>
+    <!-- cabeza, hocico y nariz -->
+    <rect x="160" y="99" width="148" height="89" rx="14" fill="#21D4C2"/>
+    <path d="M236 99 H294 A14 14 0 0 1 308 113 V158 H270 A34 34 0 0 1 236 124 Z" fill="#3B8CF6"/>
+    <path d="M280 99 H294 A14 14 0 0 1 308 113 V134 H300 A20 20 0 0 1 280 114 Z" fill="#0B1826"/>
+    <!-- ojo y boca -->
+    <path d="M205 125 Q217 139 229 125" fill="none" stroke="#0B1826" stroke-width="6"/>
+    <path d="M248 170 Q258 175 268 170" fill="none" stroke="#0B1826" stroke-width="5"/>
+    </g>
+    <!-- zzz -->
+    <path d="M318 64 H334 L318 80 H334" fill="none" stroke="#3B8CF6" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M342 30 H364 L342 52 H364" fill="none" stroke="#3B8CF6" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M366 -12 H392 L366 14 H392" fill="none" stroke="#3B8CF6" stroke-width="6" stroke-linejoin="round"/>
+  </g>
+</svg>

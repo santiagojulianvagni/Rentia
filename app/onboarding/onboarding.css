@@ -15,7 +15,8 @@
 .obChips button{padding:9px 14px;border:1px solid #294357;border-radius:999px;background:#08131f;color:#c8d6e2;font:inherit;font-size:13.5px;cursor:pointer;transition:border-color .15s,background .15s,color .15s}
 .obChips button:hover{border-color:#3b5f78;color:#f4f8fb}
 .obChips button.on{border-color:#21d4c2;background:rgba(33,212,194,.12);color:#e8fffb}
-.obPreview{position:sticky;top:24px;display:grid;gap:14px;margin-top:140px}
+.obPreview{position:sticky;top:24px;display:grid;gap:14px;margin-top:0}
+.obMascot{justify-self:center;width:112px;height:auto;margin-bottom:-10px}
 .obCard{padding:18px;border:1px solid #1d3346;border-radius:18px;background:#0b1826}
 .obCard>small{display:block;margin-bottom:12px;color:#8ea6b8;font-size:12.5px}
 .obStore{display:flex;align-items:center;gap:10px;margin-bottom:14px}.obStore i{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#123b36;color:#5fe8d9;font-style:normal;font-weight:700}.obStore b{color:#fff;font-size:16px}
@@ -25,7 +26,7 @@
 .obChecklist li.done{color:#5fe8d9}.obChecklist li.done:before{border-color:#21d4c2;background:#21d4c2}
 .obChecklist li.now{color:#e8f0f6}.obChecklist li.now:before{border-color:#21d4c2}
 .obChecklist li.plan{color:#c8d6e2}.obChecklist li.plan:before{border:0;width:auto;height:auto;content:'★';top:0;color:#21d4c2;font-size:13px}
-@media (max-width:900px){.obGrid{grid-template-columns:1fr}.obPreview{position:static;margin-top:0;order:-1}.obPreview .obChecklist{display:none}}
+@media (max-width:900px){.obGrid{grid-template-columns:1fr}.obPreview{position:static;margin-top:0;order:-1}.obPreview .obChecklist,.obMascot{display:none}}
 @media (max-width:560px){.obRow{grid-template-columns:1fr}.obForm{padding:18px}}
 .onboardingShell:has(.obGrid){width:min(1120px,calc(100% - 40px));max-width:1120px}
 .obGrid h1{white-space:nowrap}

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <title>Cangurito de Rentia · festeja (fondo oscuro)</title>
+  <g stroke-linecap="round" transform="translate(0 4)">
+    <!-- confeti -->
+    <rect x="58" y="96" width="13" height="13" rx="2" fill="#3B8CF6" transform="rotate(20 64.5 102.5)"/>
+    <rect x="116" y="30" width="11" height="11" rx="2" fill="#21D4C2" transform="rotate(-15 121.5 35.5)"/>
+    <rect x="300" y="24" width="13" height="13" rx="2" fill="#7FE6DB" transform="rotate(30 306.5 30.5)"/>
+    <rect x="368" y="92" width="11" height="11" rx="2" fill="#3B8CF6" transform="rotate(-25 373.5 97.5)"/>
+    <rect x="40" y="236" width="11" height="11" rx="2" fill="#21D4C2" transform="rotate(35 45.5 241.5)"/>
+    <rect x="352" y="250" width="13" height="13" rx="2" fill="#7FE6DB" transform="rotate(10 358.5 256.5)"/>
+    <!-- cola -->
+    <path d="M132 352 Q112 410 52 419" fill="none" stroke="#3B8CF6" stroke-width="36"/>
+    <circle cx="48" cy="419" r="21" fill="#21D4C2"/>
+    <!-- patas -->
+    <g transform="rotate(14 185 380)"><rect x="168" y="372" width="34" height="58" rx="17" fill="#2E5276"/><rect x="164" y="416" width="60" height="26" rx="13" fill="#21D4C2"/></g>
+    <g transform="rotate(14 247 380)"><rect x="230" y="372" width="34" height="58" rx="17" fill="#2E5276"/><rect x="226" y="416" width="60" height="26" rx="13" fill="#21D4C2"/></g>
+    <!-- cuerpo -->
+    <rect x="112" y="195" width="202" height="202" rx="22" fill="#21D4C2"/>
+    <!-- brazos -->
+    <path d="M141 232 L94 174" fill="none" stroke="#2E5276" stroke-width="35"/>
+    <circle cx="89.0" cy="167.8" r="21" fill="#3B8CF6"/>
+    <path d="M288 232 L336 172" fill="none" stroke="#3B8CF6" stroke-width="35"/>
+    <circle cx="341.0" cy="165.8" r="21" fill="#21D4C2"/>
+    <!-- gráfico y bolsa -->
+    <rect x="179" y="280" width="16" height="26" rx="2" fill="#0B1826"/>
+    <rect x="206" y="262" width="16" height="44" rx="2" fill="#3B8CF6"/>
+    <rect x="232" y="240" width="16" height="66" rx="2" fill="#ffffff"/>
+    <path d="M160 301 H275 A57.5 62 0 0 1 160 301 Z" fill="#7FE6DB" stroke="#0B1826" stroke-width="7" stroke-linejoin="round"/>
+    <g>
+    <!-- orejas -->
+    <rect x="142" y="27" width="45" height="70" rx="22.5" fill="#3B8CF6" transform="rotate(-20 165 62)"/>
+    <rect x="202" y="29" width="42" height="67" rx="21" fill="#2E5276"/>
+    <!-- cabeza, hocico y nariz -->
+    <rect x="160" y="99" width="148" height="89" rx="14" fill="#21D4C2"/>
+    <path d="M236 99 H294 A14 14 0 0 1 308 113 V158 H270 A34 34 0 0 1 236 124 Z" fill="#3B8CF6"/>
+    <path d="M280 99 H294 A14 14 0 0 1 308 113 V134 H300 A20 20 0 0 1 280 114 Z" fill="#0B1826"/>
+    <!-- ojo y boca -->
+    <path d="M205 133 Q217 115 229 133" fill="none" stroke="#0B1826" stroke-width="6"/>
+    <path d="M242 164 Q258 186 276 164 Z" fill="#0B1826" stroke="#0B1826" stroke-width="4" stroke-linejoin="round"/>
+    </g>
+    <!-- líneas de salto -->
+    <path d="M152 474 H182 M204 486 H238 M260 474 H290" fill="none" stroke="#7FE6DB" stroke-width="8"/>
+  </g>
+</svg>
