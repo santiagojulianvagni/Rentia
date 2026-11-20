@@ -5,6 +5,7 @@ import { Share2, X } from 'lucide-react';
 import { MASCOT_ART, type MascotPose } from './mascot-art';
 import { dailyGreeting, liveRecords, recordText, todayInArgentina, type Greeting, type Lang, type LiveRecord, type Piece, type SalesDay } from '../../lib/mascot';
 import type { ShareContent } from './share-card';
+import { buildAchievementShare } from './achievement-share';
 
 // El dibujo es fijo y propio (no viene de datos de nadie), por eso se puede insertar tal cual.
 export function Mascot({pose,size,className=''}:{pose:MascotPose;size:number;className?:string}) {
@@ -60,6 +61,7 @@ export function MascotGreeting({lang,money}:{lang:Lang;money:(value:number)=>str
 export function RecordCelebration({lang,money,onShare}:{lang:Lang;money:(value:number)=>string;onShare:(content:ShareContent)=>void}) {
   const days=useSalesHistory();
   const [record,setRecord]=useState<LiveRecord|null>(null);
+  const [preparing,setPreparing]=useState(false);
   const chosen=useRef(false);
   useEffect(()=>{
     if(!days||chosen.current)return;
@@ -71,8 +73,13 @@ export function RecordCelebration({lang,money,onShare}:{lang:Lang;money:(value:n
   },[days]);
   if(!record||!days)return null;
   const text=recordText(record,todayInArgentina(),lang,money);
-  const series=days.slice(-30).map(day=>day.revenue);
-  const share=()=>onShare({eyebrow:lang==='en'?'New record':lang==='pt'?'Novo recorde':record.kind==='orders'?'Nuevo logro':'Nuevo récord',title:text.title,value:record.kind==='orders'?record.value.toLocaleString('es-AR'):money(record.value),privateValue:record.kind==='orders'?text.title:(lang==='en'?'Record':lang==='pt'?'Recorde':'Récord'),period:new Intl.DateTimeFormat(lang==='en'?'en-US':lang==='pt'?'pt-BR':'es-AR',{day:'numeric',month:'long',year:'numeric'}).format(new Date()),series});
+  // Mismo diseño que en Mis logros: el récord se pasa como logro del historial.
+  const share=async()=>{
+    const today=todayInArgentina(),date=record.kind==='yesterday'?record.id.slice(4):today;
+    const event={id:record.id,kind:record.kind==='yesterday'?'day' as const:record.kind,date,value:record.kind==='orders'?record.previous:record.value,previous:record.kind==='orders'?null:record.previous,previousDate:record.kind==='orders'?null:record.previousDate};
+    setPreparing(true);
+    try{onShare(await buildAchievementShare(event,days,today,money));}finally{setPreparing(false);}
+  };
   const confetti=Array.from({length:24},(_,index)=><i key={index} style={{left:`${(index*37)%100}%`,background:['#21D4C2','#3B8CF6','#7FE6DB','#ffffff'][index%4],animationDelay:`${(index%7)*.18}s`,animationDuration:`${1.8+(index%5)*.3}s`}}/>);
   return <div className="p-card p-record p-reveal" translate="no" role="status">
     <div className="p-recordConfetti" aria-hidden="true">{confetti}</div>
@@ -81,7 +88,7 @@ export function RecordCelebration({lang,money,onShare}:{lang:Lang;money:(value:n
       <span className="p-eyebrowS">{text.tag}</span>
       <h2>{text.title}</h2>
       <p><Pieces pieces={text.pieces}/></p>
-      <div className="p-actions"><button type="button" className="p-btn p-primary" onClick={()=>setRecord(null)}>{lang==='en'?'Awesome!':lang==='pt'?'Que demais!':'¡Genial!'}</button><button type="button" className="p-btn" onClick={share}><Share2 className="p-i" aria-hidden="true"/>{lang==='en'?'Share':lang==='pt'?'Compartilhar':'Compartir el logro'}</button></div>
+      <div className="p-actions"><button type="button" className="p-btn p-primary" onClick={()=>setRecord(null)}>{lang==='en'?'Awesome!':lang==='pt'?'Que demais!':'¡Genial!'}</button><button type="button" className="p-btn" onClick={()=>void share()} disabled={preparing}><Share2 className="p-i" aria-hidden="true"/>{lang==='en'?'Share':lang==='pt'?'Compartilhar':'Compartir el logro'}</button></div>
     </div>
   </div>;
 }

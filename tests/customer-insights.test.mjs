@@ -1,7 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {argentinaSlot,customerInsights,paymentLabel} from '../lib/customer-insights.ts';
-import {customerKey,placeName,tiendanubeCategories,tiendanubeOrderExtras} from '../lib/order-customer.ts';
+import {registerHooks} from 'node:module';
+
+// customer-insights importa otros archivos de lib sin extensión, como lo resuelve Next.js.
+registerHooks({resolve(specifier,context,next){
+  try{return next(specifier,context);}catch(error){
+    if(error.code==='ERR_MODULE_NOT_FOUND'&&specifier.startsWith('.')&&!/\.[a-z]+$/i.test(specifier))return next(`${specifier}.ts`,context);
+    throw error;
+  }
+}});
+const {argentinaSlot,customerInsights,paymentLabel}=await import('../lib/customer-insights.ts');
+const {provinceName,countProvinces}=await import('../lib/provinces.ts');
+
+test('provinces written in different ways count once',()=>{
+  assert.equal(provinceName('Capital Federal'),'CABA');
+  assert.equal(provinceName('Ciudad Autónoma de Buenos Aires'),'CABA');
+  assert.equal(provinceName('Bs. As.'),'Buenos Aires');
+  assert.equal(provinceName('Provincia de Buenos Aires'),'Buenos Aires');
+  assert.equal(provinceName('CORDOBA'),'Córdoba');
+  assert.equal(provinceName('Tierra del Fuego, Antártida e Islas del Atlántico Sur'),'Tierra del Fuego');
+  assert.equal(provinceName('Montevideo'),null);
+  assert.equal(countProvinces(['CABA','Capital Federal','Cordoba','Córdoba','Neuquen',null,'Narnia']),3);
+});
+const {customerKey,placeName,tiendanubeCategories,tiendanubeOrderExtras}=await import('../lib/order-customer.ts');
 
 const order=(values)=>({provider:'tiendanube',customerKey:null,firstOrderAt:null,province:null,city:null,shippingMethod:null,paymentMethod:null,paymentType:null,installments:null,createdAt:'2026-10-05T15:00:00.000Z',total:1000,storefront:'store',...values});
 

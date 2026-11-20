@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { CalendarRange, Flame, Share2, Sun, Target, TrendingUp, Trophy, type LucideIcon } from 'lucide-react';
 import { Mascot, useSalesHistory } from './mascot';
 import ShareDialog, { type ShareContent } from './share-card';
+import { buildAchievementShare } from './achievement-share';
 import { achievementHistory, type AchievementEvent, type AchievementKind } from '../../lib/achievement-history';
 import { todayInArgentina } from '../../lib/mascot';
 
@@ -39,6 +40,7 @@ export default function AchievementsPage({storeName,money,language}:{storeName:s
   const lang=(language in COPY?language:'es') as Lang,copy=COPY[lang],locale=LOCALE[lang];
   const [today,setToday]=useState<string|null>(null);
   const [share,setShare]=useState<ShareContent|null>(null);
+  const [preparing,setPreparing]=useState<string|null>(null);
   useEffect(()=>{queueMicrotask(()=>setToday(todayInArgentina()));},[]);
   const head=<div className="p-head"><div><div className="p-eyebrow">{copy.eyebrow}</div><h1>{copy.title} <em>{copy.titleEm}</em></h1><p>{copy.lead}</p></div></div>;
   if(!days||!today)return <div translate="no">{head}<div className="p-card p-empty">{copy.loading}</div></div>;
@@ -49,7 +51,8 @@ export default function AchievementsPage({storeName,money,language}:{storeName:s
   const monthYear=(month:string)=>new Intl.DateTimeFormat(locale,{month:'long',year:'numeric',timeZone:'UTC'}).format(time(`${month}-01`));
   const groups=new Map<string,AchievementEvent[]>();
   for(const event of data.events){const key=event.date.slice(0,7);groups.set(key,[...(groups.get(key)||[]),event]);}
-  const shareEvent=(event:AchievementEvent)=>{const text=describe(event,lang,money);setShare({eyebrow:lang==='en'?'Achievement':lang==='pt'?'Conquista':'Logro',title:text.title,value:text.value,privateValue:text.title,period:fullDate(event.date),series:days.filter(day=>day.date<=event.date).slice(-30).map(day=>day.revenue)});};
+  // La imagen trae datos extra (producto estrella, provincias) que se piden al tocar Compartir.
+  const shareEvent=async(event:AchievementEvent)=>{setPreparing(event.id);try{setShare(await buildAchievementShare(event,days,today,money));}finally{setPreparing(null);}};
 
   return <div translate="no">
     {head}
@@ -74,7 +77,7 @@ export default function AchievementsPage({storeName,money,language}:{storeName:s
         <div className="p-lgText"><b>{text.title}</b><small>{text.detail}</small></div>
         <b className="p-mono p-lgValue">{text.value}</b>
         <time className="p-lgDate" dateTime={event.date}>{shortDate(event.date)}</time>
-        <button type="button" className="p-btn p-small" onClick={()=>shareEvent(event)}><Share2 className="p-i" aria-hidden="true"/>{copy.share}</button>
+        <button type="button" className="p-btn p-small" onClick={()=>void shareEvent(event)} disabled={preparing!==null}><Share2 className="p-i" aria-hidden="true"/>{preparing===event.id?'…':copy.share}</button>
       </div>;})}
     </section>)}
     {share&&<ShareDialog content={share} storeName={storeName} onClose={()=>setShare(null)}/>}

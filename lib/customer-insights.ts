@@ -5,6 +5,8 @@ export type CustomerOrder={
   shippingMethod:string|null;paymentMethod:string|null;paymentType:string|null;installments:number|null;
   createdAt:string;total:number;storefront:string|null;
 };
+import { countProvinces } from './provinces';
+
 export type Share={name:string;orders:number;revenue:number;share:number};
 
 const PAYMENT_LABELS:Record<string,string>={
@@ -80,6 +82,8 @@ export function customerInsights(orders:CustomerOrder[],periodStart:string) {
       revenuePerCustomer:customers.length?sum(customers,'revenue')/customers.length:0,
     },
     provinces:ranked(orders,order=>order.province,10),
+    // Cuántas provincias distintas (de las 24), para "vendí en 18 provincias".
+    provinceCount:countProvinces(orders.map(order=>order.province)),
     cities:ranked(orders,order=>order.city&&order.province?`${order.city} (${order.province})`:order.city,10),
     shipping:ranked(orders,order=>order.shippingMethod,8),
     payments:ranked(orders,order=>paymentLabel(order)==='Sin dato'?null:paymentLabel(order),8),
