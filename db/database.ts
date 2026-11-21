@@ -77,6 +77,18 @@ export async function getAccount(userId: string) {
 }
 
 // Idioma del dueño (es, en o pt): con él se mandan los mails de la cuenta.
+// Meta de facturación propia del mes (AAAA-MM). Solo vale para ese mes; null la borra.
+export async function getMonthlyGoal(userId:string,month:string) {
+  await ensureSchema();
+  const row=await database().prepare('SELECT goal_amount FROM accounts WHERE user_id=? AND goal_month=?').bind(userId,month).first<{goal_amount:number|null}>();
+  return row?.goal_amount===null||row?.goal_amount===undefined?null:Number(row.goal_amount);
+}
+
+export async function setMonthlyGoal(userId:string,month:string,amount:number|null) {
+  await ensureSchema();
+  await database().prepare('UPDATE accounts SET goal_month=?,goal_amount=? WHERE user_id=?').bind(amount===null?null:month,amount,userId).run();
+}
+
 export async function setAccountLanguage(userId:string,language:'es'|'en'|'pt') {
   await ensureSchema();
   await database().prepare('UPDATE accounts SET language=? WHERE user_id=?').bind(language,userId).run();

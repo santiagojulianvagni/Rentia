@@ -595,3 +595,60 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-lgDate{color:var(--dim);font-size:13px;text-align:right}
 @media (max-width:900px){.p-root .p-lgStats{grid-template-columns:repeat(2,minmax(0,1fr))}.p-root .p-lgHero .p-mascot{display:none}}
 @media (max-width:640px){.p-root .p-lgItem{grid-template-columns:40px minmax(0,1fr) auto;row-gap:6px}.p-root .p-lgDate{grid-column:2;text-align:left}.p-root .p-lgItem .p-btn{grid-column:3;grid-row:2}}
+/* Publicidad: ROAS de equilibrio de la marca y por producto */
+.p-root .p-beGrid{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;margin-bottom:16px}
+.p-root .p-beBig{margin:4px 0 2px;font-size:42px;font-weight:700;letter-spacing:-.03em}
+.p-root .p-beGauge{position:relative;height:14px;margin:34px 0 8px;border-radius:99px}
+.p-root .p-beGauge i{position:absolute;top:-8px;width:3px;height:30px;margin-left:-1px;border-radius:2px;background:#fff}
+.p-root .p-beGauge span{position:absolute;top:-28px;transform:translateX(-50%);color:var(--muted);font-size:12px;font-weight:700;white-space:nowrap}
+.p-root .p-beGauge span.p-beYou{top:auto;bottom:-46px;color:var(--text)}
+.p-root .p-beLegend{display:flex;justify-content:space-between;margin-top:26px;color:var(--dim);font-size:12px}
+.p-root .p-beList{margin:8px 0 0;padding:0;list-style:none}
+.p-root .p-beList li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.p-root .p-beList li>span{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.p-root .p-beName{color:var(--text)}
+@media (max-width:900px){.p-root .p-beGrid{grid-template-columns:1fr}}
+/* Dashboard: meta del mes */
+.p-root .p-goal{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:22px;align-items:center;margin:0 0 18px}
+.p-root .p-goalHead{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;margin:6px 0 2px}
+.p-root .p-goalHead>b{font-size:32px;font-weight:700;letter-spacing:-.03em}
+.p-root .p-goalBar{position:relative;height:14px;margin:28px 0 10px;border-radius:99px;background:var(--raise)}
+.p-root .p-goalBar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--green))}
+.p-root .p-goalBar>em{position:absolute;top:-6px;width:2px;height:26px;margin-left:-1px;background:var(--amber);font-style:normal}
+.p-root .p-goalBar>em span{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);color:var(--amber);font-size:11px;font-weight:700;white-space:nowrap}
+.p-root .p-goalMini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.p-root .p-goalMini div{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}
+.p-root .p-goalMini small{display:block;color:var(--muted);font-size:12px}
+.p-root .p-goalMini b{font-size:18px}
+.p-root .p-goalLinks{display:flex;gap:16px;margin-top:10px}
+.p-root .p-goalEdit{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-top:12px}
+.p-root .p-goalEdit label{display:grid;gap:5px;color:var(--muted);font-size:13px}
+.p-root .p-goalInput{display:flex;align-items:center;gap:6px;padding:0 12px;border:1px solid var(--line2);border-radius:10px;background:var(--bg2)}
+.p-root .p-goalInput input{width:160px;padding:9px 0;border:0;outline:0;background:none;color:var(--text);font:inherit}
+@media (max-width:900px){.p-root .p-goal{grid-template-columns:1fr}}
+/* Estado de resultados */
+.p-root .p-stMonth{min-width:190px}
+.p-root .p-statement td{padding-top:10px;padding-bottom:10px}
+.p-root .p-statement tr.p-st-income td,.p-root .p-statement tr.p-st-subtotal td{font-weight:700;color:var(--text)}
+.p-root .p-statement tr.p-st-subtotal td{border-top:1px solid var(--line2)}
+.p-root .p-statement tr.p-st-total td{font-weight:800;font-size:15px;border-top:2px solid var(--line2);color:var(--text)}
+.p-root .p-statement tr.p-st-cost td:first-child{padding-left:26px;color:var(--muted)}
+/* Simulador de lanzamiento */
+.p-root .p-simGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start}
+.p-root .p-simTwo{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.p-root .p-simAffix{color:var(--dim);font-weight:600}
+.p-root .p-simToggle{display:inline-flex;padding:3px;border:1px solid var(--line2);border-radius:10px;background:var(--bg2)}
+.p-root .p-simToggle button{padding:7px 18px;border:0;border-radius:8px;background:none;color:var(--muted);font:inherit;font-weight:600;cursor:pointer}
+.p-root .p-simToggle button.p-on{background:var(--raise);color:var(--text)}
+.p-root .p-simResults{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.p-root .p-simResults>div{padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface2)}
+.p-root .p-simResults small{display:block;color:var(--muted);font-size:12px}
+.p-root .p-simResults b{display:block;margin:4px 0 2px;font-size:24px}
+.p-root .p-simLines{margin:0;padding:0;list-style:none}
+.p-root .p-simLines li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);color:var(--muted);font-size:14px}
+.p-root .p-simLines li.p-simTotal{border-bottom:0;color:var(--text);font-weight:700}
+.p-root .p-simTarget{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:14px;color:var(--muted);font-size:14px}
+.p-root .p-simTarget>b{color:var(--text);margin-left:auto}
+.p-root .p-simPct{width:84px}
+.p-root .p-simPct input{width:40px}
+@media (max-width:900px){.p-root .p-simGrid,.p-root .p-simTwo{grid-template-columns:1fr}}

@@ -4,7 +4,7 @@
 import type { MeliPostSale } from '../../lib/meli-post-sale';
 import { type ProductAdsData } from '../../components/product-ads';
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Repeat, CalendarHeart, ShoppingBasket, Store, CalendarRange, Wallet, ArrowLeftRight, BadgeDollarSign, Boxes, CreditCard, FileChartColumn, LayoutDashboard, Megaphone, PackageSearch, PlugZap, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, Trophy, UsersRound, X, type LucideIcon } from 'lucide-react';
+import { Repeat, CalendarHeart, ShoppingBasket, Store, CalendarRange, Wallet, ArrowLeftRight, BadgeDollarSign, Boxes, CreditCard, FileChartColumn, LayoutDashboard, Megaphone, PackageSearch, PlugZap, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, Trophy, FileSpreadsheet, Calculator, UsersRound, X, type LucideIcon } from 'lucide-react';
 import type { ProductCostRow } from '../../components/product-costs';
 import ThemedSelect from '../../components/themed-select';
 import HelpPopover from '../../components/term-help';
@@ -38,6 +38,8 @@ export const overviewSections:NavItem[]=[
   {id:'semanal',label:'Resumen semanal',icon:CalendarRange},
   {id:'eventos',label:'Eventos',icon:CalendarHeart},
   {id:'cashflow',label:'Cashflow',icon:Wallet},
+  {id:'resultados',label:'Estado de resultados',icon:FileSpreadsheet},
+  {id:'simulador',label:'Simulador de lanzamiento',icon:Calculator},
   {id:'acciones',label:'Acciones',icon:Sparkles},
   {id:'calidad',label:'Calidad de datos',icon:ShieldCheck},
   {id:'informes',label:'Informes',icon:FileChartColumn},
