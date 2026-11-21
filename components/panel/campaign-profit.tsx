@@ -42,7 +42,8 @@ function ProductBreakEvens({products}:{products:ProductBreakEven[]}) {
 // Ganancia estimada por campaña de Meta Ads y Mercado Libre Product Ads.
 export default function CampaignProfit({rows,money,metaMargin,meliMargin,metaComparable,meliComparable,metaConnected,meliConnected,period,onNavigate,brand,products=[]}:{rows:CampaignProfitRow[];money:(value:number)=>string;metaMargin:number|null;meliMargin:number|null;metaComparable:boolean;meliComparable:boolean;metaConnected:boolean;meliConnected:boolean;period:string;onNavigate:(section:string)=>void;brand?:Brand;products?:ProductBreakEven[]}) {
   const totals=campaignTotals(rows);
-  const marginMissing=(metaConnected&&metaMargin===null)||(meliConnected&&meliMargin===null);
+  // Solo se avisa que falta el margen de un canal si ese canal tiene campañas con inversión.
+  const marginMissing=(rows.some(row=>row.channel==='meta')&&metaMargin===null)||(rows.some(row=>row.channel==='mercadolibre')&&meliMargin===null);
   return <>
     <div className="p-head"><div><div className="p-eyebrow">PUBLICIDAD · {period}</div><h1>Ganancia por campaña</h1><p>Cuánta plata deja o se lleva cada campaña después de pagar productos, envíos, comisiones, impuestos y la propia publicidad.</p></div></div>
     {brand&&(metaConnected||meliConnected)&&<div className="p-beGrid"><BrandBreakEven brand={brand}/><ProductBreakEvens products={products}/></div>}

@@ -608,24 +608,20 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-beList li>span{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .p-root .p-beName{color:var(--text)}
 @media (max-width:900px){.p-root .p-beGrid{grid-template-columns:1fr}}
-/* Dashboard: meta del mes */
-.p-root .p-goal{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:22px;align-items:center;margin:0 0 18px}
-.p-root .p-goalHead{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;margin:6px 0 2px}
-.p-root .p-goalHead>b{font-size:32px;font-weight:700;letter-spacing:-.03em}
-.p-root .p-goalBar{position:relative;height:14px;margin:28px 0 10px;border-radius:99px;background:var(--raise)}
+/* Dashboard: meta del mes (franja de una línea) */
+.p-root .p-goalStrip{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;margin:0 0 18px;padding:10px 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface2)}
+.p-root .p-goalTag{color:var(--cyan);font-size:10.5px;font-weight:800;letter-spacing:.12em;white-space:nowrap}
+.p-root .p-goalAmount{white-space:nowrap}.p-root .p-goalAmount b{font-size:15px;color:var(--text)}
+.p-root .p-goalBar{position:relative;flex:1 1 140px;min-width:120px;max-width:320px;height:6px;border-radius:99px;background:var(--raise)}
 .p-root .p-goalBar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--green))}
-.p-root .p-goalBar>em{position:absolute;top:-6px;width:2px;height:26px;margin-left:-1px;background:var(--amber);font-style:normal}
-.p-root .p-goalBar>em span{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);color:var(--amber);font-size:11px;font-weight:700;white-space:nowrap}
-.p-root .p-goalMini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.p-root .p-goalMini div{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}
-.p-root .p-goalMini small{display:block;color:var(--muted);font-size:12px}
-.p-root .p-goalMini b{font-size:18px}
-.p-root .p-goalLinks{display:flex;gap:16px;margin-top:10px}
-.p-root .p-goalEdit{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-top:12px}
-.p-root .p-goalEdit label{display:grid;gap:5px;color:var(--muted);font-size:13px}
-.p-root .p-goalInput{display:flex;align-items:center;gap:6px;padding:0 12px;border:1px solid var(--line2);border-radius:10px;background:var(--bg2)}
-.p-root .p-goalInput input{width:160px;padding:9px 0;border:0;outline:0;background:none;color:var(--text);font:inherit}
-@media (max-width:900px){.p-root .p-goal{grid-template-columns:1fr}}
+.p-root .p-goalBar>em{position:absolute;top:-4px;width:2px;height:14px;margin-left:-1px;background:var(--amber)}
+.p-root .p-goalDetail{font-size:12.5px;white-space:nowrap}
+.p-root .p-goalLinks{display:flex;gap:14px;margin-left:auto;font-size:12.5px}
+.p-root .p-goalEdit{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-left:auto}
+.p-root .p-goalEdit label{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px}
+.p-root .p-goalInput{display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid var(--line2);border-radius:9px;background:var(--bg2)}
+.p-root .p-goalInput input{width:130px;border:0;outline:0;background:none;color:var(--text);font:inherit}
+
 /* Estado de resultados */
 .p-root .p-stMonth{min-width:190px}
 .p-root .p-statement td{padding-top:10px;padding-bottom:10px}

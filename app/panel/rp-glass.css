@@ -48,6 +48,11 @@
 .p-root.p-glass input:not([type=checkbox]):not([type=radio]):not([type=range]),
 .p-root.p-glass select,
 .p-root.p-glass textarea{background-color:rgba(0,0,0,.24)}
+/* El texto dentro de un campo (.p-input) no lleva fondo ni borde propio: el recuadro ya los tiene.
+   Sin esto, una regla vieja de panel-v2.css (.appPage input) pintaba una mancha más oscura adentro. */
+.appPage .p-input input:not([type=checkbox]):not([type=radio]):not([type=range]),.appPage .p-input select,.appPage .p-input textarea,
+.p-root .p-input input,.p-root .p-input select,.p-root .p-input textarea{background-color:transparent!important;border-radius:0!important;box-shadow:none!important}
+.p-root .p-input input:-webkit-autofill{-webkit-box-shadow:none!important;box-shadow:none!important}
 .p-root.p-glass .p-btn{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .p-root.p-glass .p-primary{box-shadow:0 10px 28px rgba(33,212,194,.32)}
 .p-root.p-glass table tr:hover td{background:rgba(255,255,255,.035)}

@@ -28,32 +28,29 @@ export default function MonthGoal({result,revenue,money,canManage,onNavigate}:{r
     }finally{setSaving(false);}
   }
   const editor=editing&&<form className="p-goalEdit" onSubmit={event=>{event.preventDefault();const amount=Number(draft.replace(/[^\d]/g,''));if(amount>0)void save(amount);}}>
-    <label><span>Meta de facturación de {name}</span><span className="p-goalInput"><b>$</b><input inputMode="numeric" value={draft} onChange={event=>setDraft(event.target.value.replace(/[^\d.]/g,''))} placeholder="50.000.000" autoFocus/></span></label>
+    <label><span>Meta de facturación de {name}</span><span className="p-input p-goalInput"><b>$</b><input inputMode="numeric" value={draft} onChange={event=>setDraft(event.target.value.replace(/[^\d.]/g,''))} placeholder="50.000.000" autoFocus/></span></label>
     <button type="submit" className="p-btn p-primary p-small" disabled={saving}>Guardar</button>
     <button type="button" className="p-btn p-small" onClick={()=>setEditing(false)}>Cancelar</button>
   </form>;
 
-  if(!goal)return <div className="p-card p-goal p-reveal">
-    <div><span className="p-eyebrowS">META DE {name.toUpperCase()}</span><h3 style={{margin:'6px 0 4px'}}>Poné una meta para el mes</h3><p className="p-sub" style={{margin:0}}>Si cargás tus gastos fijos, la calculamos sola: lo que necesitás vender para cubrir todos tus costos.</p></div>
-    {editor||<div className="p-actions">{canManage&&<button type="button" className="p-btn p-primary p-small" onClick={()=>{setDraft('');setEditing(true);}}>Poner una meta</button>}<button type="button" className="p-btn p-small" onClick={()=>onNavigate('configuracion')}>Cargar gastos fijos</button></div>}
+  // Franja de una línea: un detalle arriba del dashboard, sin sacarle protagonismo al resto.
+  if(!goal)return <div className="p-goalStrip p-reveal">
+    <span className="p-goalTag">META DE {name.toUpperCase()}</span>
+    <span className="p-sub">Poné una meta o cargá tus gastos fijos y te decimos cuánto vender por día.</span>
+    {editor||<span className="p-goalLinks">{canManage&&<button type="button" className="p-linkBtn" onClick={()=>{setDraft('');setEditing(true);}}>Poner una meta</button>}<button type="button" className="p-linkBtn" onClick={()=>onNavigate('configuracion')}>Cargar gastos fijos</button></span>}
   </div>;
 
   const [label,tone]=STATUS[goal.status];
-  return <div className="p-card p-goal p-reveal">
-    <div className="p-goalMain">
-      <span className="p-eyebrowS">META DE {name.toUpperCase()} · {goal.source==='propia'?'TU META':'CUBRIR TODOS TUS COSTOS'}</span>
-      <div className="p-goalHead"><b className="p-mono">{short(goal.revenue)}</b><span className="p-sub">de {short(goal.target)}</span><span className={`p-chip ${tone}`}>{label}</span></div>
-      <div className="p-goalBar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(goal.progress*100)} aria-label={`Llevás ${money(goal.revenue)} de ${money(goal.target)}`}>
-        <i style={{width:`${goal.progress*100}%`}}/>
-        {goal.status!=='cumplida'&&<em style={{left:`${goal.idealProgress*100}%`}}><span>Lo ideal hoy</span></em>}
-      </div>
-      <p className="p-sub" style={{margin:0}}>{goal.status==='cumplida'?`Ya facturaste ${money(goal.revenue)} en ${name}. Desde acá, todo suma.`:`A esta altura lo ideal era llevar ${money(goal.ideal)} y llevás ${money(goal.revenue)}. `}{goal.status!=='cumplida'&&<b style={{color:'var(--text)'}}>Con este ritmo cerrás en {money(goal.projected)}.</b>}</p>
-      {editor||(canManage&&<div className="p-goalLinks"><button type="button" className="p-linkBtn" onClick={()=>{setDraft(goal.source==='propia'?String(Math.round(goal.target)):'');setEditing(true);}}>{goal.source==='propia'?'Cambiar mi meta':'Poner mi propia meta'}</button>{goal.source==='propia'&&result.breakEven!==null&&<button type="button" className="p-linkBtn" onClick={()=>void save(null)} disabled={saving}>Usar el punto de equilibrio</button>}</div>)}
-    </div>
-    <div className="p-goalMini">
-      <div><small>Te faltan</small><b className="p-mono">{goal.remaining>0?short(goal.remaining):'—'}</b></div>
-      <div><small>Quedan</small><b className="p-mono">{goal.daysLeft===1?'1 día':`${goal.daysLeft} días`}</b></div>
-      <div><small>Vendé por día</small><b className="p-mono">{goal.perDay?short(goal.perDay):'—'}</b></div>
-    </div>
+  const detail=goal.status==='cumplida'?'Desde acá, todo suma':`Faltan ${short(goal.remaining)} · ${goal.perDay?`${short(goal.perDay)} por día · `:''}${goal.daysLeft===1?'queda 1 día':`quedan ${goal.daysLeft} días`}`;
+  return <div className="p-goalStrip p-reveal" title={goal.status==='cumplida'?undefined:`Lo ideal a hoy era ${money(goal.ideal)}. Con este ritmo cerrás en ${money(goal.projected)}.`}>
+    <span className="p-goalTag">META DE {name.toUpperCase()}{goal.source==='propia'?'':' · CUBRIR COSTOS'}</span>
+    <span className="p-goalAmount"><b className="p-mono">{short(goal.revenue)}</b> <span className="p-sub">de {short(goal.target)}</span></span>
+    <span className="p-goalBar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(goal.progress*100)} aria-label={`Llevás ${money(goal.revenue)} de ${money(goal.target)}`}>
+      <i style={{width:`${goal.progress*100}%`}}/>
+      {goal.status!=='cumplida'&&<em style={{left:`${goal.idealProgress*100}%`}} title="Lo ideal a hoy"/>}
+    </span>
+    <span className={`p-chip ${tone}`}>{label}</span>
+    <span className="p-sub p-goalDetail">{detail}</span>
+    {editor||(canManage&&<span className="p-goalLinks"><button type="button" className="p-linkBtn" onClick={()=>{setDraft(goal.source==='propia'?String(Math.round(goal.target)):'');setEditing(true);}}>{goal.source==='propia'?'Cambiar':'Poner mi meta'}</button>{goal.source==='propia'&&result.breakEven!==null&&<button type="button" className="p-linkBtn" onClick={()=>void save(null)} disabled={saving}>Usar equilibrio</button>}</span>)}
   </div>;
 }
