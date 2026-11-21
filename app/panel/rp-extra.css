@@ -616,7 +616,8 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-goalBar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--green))}
 .p-root .p-goalBar>em{position:absolute;top:-4px;width:2px;height:14px;margin-left:-1px;background:var(--amber)}
 .p-root .p-goalDetail{font-size:12.5px;white-space:nowrap}
-.p-root .p-goalLinks{display:flex;gap:14px;margin-left:auto;font-size:12.5px}
+.p-root .p-goalLinks{display:flex;align-items:center;gap:14px;margin-left:auto;font-size:12.5px}
+.p-root .p-goalStrip .p-linkBtn{margin:0}
 .p-root .p-goalEdit{display:grid;gap:12px;flex:1 1 100%;padding-top:10px;border-top:1px solid var(--line)}
 .p-root .p-goalSuggest{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
 .p-root .p-goalOption{display:grid;gap:3px;padding:12px 14px;border:1px solid var(--line2);border-radius:12px;background:var(--bg2);color:var(--muted);text-align:left;font:inherit;cursor:pointer;transition:border-color .2s,transform .2s}
@@ -656,3 +657,20 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-simPct{width:84px}
 .p-root .p-simPct input{width:40px}
 @media (max-width:900px){.p-root .p-simGrid,.p-root .p-simTwo{grid-template-columns:1fr}}
+/* Simulador: buscador de productos, estado vacío y comparación por canal */
+.p-root .p-simPick{position:relative}
+.p-root .p-simMatches{margin:6px 0 0;padding:4px;list-style:none;border:1px solid var(--line2);border-radius:12px;background:var(--surface)}
+.p-root .p-simMatches button{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:8px 10px;border:0;border-radius:9px;background:none;color:var(--text);font:inherit;font-size:13.5px;text-align:left;cursor:pointer}
+.p-root .p-simMatches button:hover{background:var(--raise)}
+.p-root .p-simMatches button>span{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.p-root .p-simEmpty{display:flex;gap:18px;align-items:flex-start;margin-top:14px}
+.p-root .p-simEmpty img{flex:none}
+.p-root .p-simEmpty b{color:var(--text);font-size:16px}
+.p-root .p-simEmpty p{margin:4px 0 8px}
+.p-root .p-simEmpty ul{margin:0;padding-left:18px;color:var(--muted);font-size:13.5px;line-height:1.7}
+.p-root .p-simCompare{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+.p-root .p-simCompare ul{margin:8px 0 0;padding:0;list-style:none}
+.p-root .p-simCompare li{display:grid;grid-template-columns:1fr auto 70px;gap:12px;align-items:center;padding:8px 10px;border-radius:10px;font-size:14px;color:var(--muted)}
+.p-root .p-simCompare li.p-on{background:rgba(50,213,131,.07);color:var(--text)}
+.p-root .p-simCompare li .p-chip{margin-left:8px}
+.p-root .p-simCompare li>span:nth-child(3){text-align:right}

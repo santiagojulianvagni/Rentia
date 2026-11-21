@@ -19,8 +19,11 @@ test('suggestions come from the closed months: keep the pace, grow and beat the 
   const list=goalSuggestions(days,'2026-11-21',1200000,money);
   // Promedio de ago-oct: 1.000.000. Crecer: máx(1.150.000, 1.210.000) → 1.250.000. El récord (1.155.000) queda abajo y no se ofrece.
   assert.deepEqual(list.map(item=>[item.key,item.amount,item.recommended]),[['ritmo',1000000,false],['crecer',1250000,true]]);
-  const steady=goalSuggestions([...month('2026-08',1000000),...month('2026-09',1000000),...month('2026-10',1000000),...month('2026-06',2000000)],'2026-11-21',0,money);
-  assert.deepEqual(steady.map(item=>[item.key,item.amount]),[['ritmo',1000000],['crecer',1150000],['record',2100000]]);
+  const steady=goalSuggestions([...month('2026-08',1000000),...month('2026-09',1000000),...month('2026-10',1000000),...month('2026-06',1500000)],'2026-11-21',0,money);
+  assert.deepEqual(steady.map(item=>[item.key,item.amount]),[['ritmo',1000000],['crecer',1150000],['record',1600000]]);
+  // Un mes excepcional muy lejano (27 veces el ritmo) no se ofrece como meta.
+  const far=goalSuggestions([...month('2026-05',7200000),...month('2026-08',280000),...month('2026-09',280000),...month('2026-10',280000)],'2026-11-21',0,money);
+  assert.deepEqual(far.map(item=>item.key),['ritmo','crecer']);
   const growing=goalSuggestions([...month('2026-08',500000),...month('2026-09',600000),...month('2026-10',2000000)],'2026-11-21',0,money);
   assert.deepEqual(growing.map(item=>[item.key,item.amount,item.recommended]),[['ritmo',1050000,false],['crecer',2200000,true]]);
 });

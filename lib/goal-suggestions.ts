@@ -42,8 +42,10 @@ export function goalSuggestions(days:SalesDay[],today:string,projected:number,mo
     {key:'ritmo',label:'Mantener el ritmo',detail:recent.length>1?`Tu promedio de los últimos ${recent.length} meses (${money(average)})`:`Lo que facturaste en ${monthName(lastMonth)} (${money(lastRevenue)})`,amount:niceAmount(average),recommended:false},
     {key:'crecer',label:'Crecer',detail:growth===lastRevenue*1.1?`Un 10 % más que ${monthName(lastMonth)}`:'Un 15 % más que tu promedio',amount:niceAmount(growth),recommended:true},
   ];
-  // "Superar tu récord" solo si queda por encima de "crecer"; si no, no suma nada nuevo.
-  if(niceAmount(bestRevenue*1.05)>niceAmount(growth))list.push({key:'record',label:'Superar tu récord',detail:`Tu mejor mes fue ${monthName(bestMonth)} (${money(bestRevenue)})`,amount:niceAmount(bestRevenue*1.05),recommended:false});
+  // "Superar tu récord" solo si queda por encima de "crecer" y al alcance (hasta 1,5 veces esa
+  // meta): un mes excepcional muy lejano no sirve como meta.
+  const record=bestRevenue*1.05;
+  if(niceAmount(record)>niceAmount(growth)&&record<=growth*1.5)list.push({key:'record',label:'Superar tu récord',detail:`Tu mejor mes fue ${monthName(bestMonth)} (${money(bestRevenue)})`,amount:niceAmount(bestRevenue*1.05),recommended:false});
   // Sin opciones repetidas: si dos dan lo mismo, queda la más ambiciosa con su explicación.
   const seen=new Set<number>();
   const unique=[...list].reverse().filter(item=>{if(seen.has(item.amount))return false;seen.add(item.amount);return true;}).reverse();
