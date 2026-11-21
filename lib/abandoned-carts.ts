@@ -5,6 +5,9 @@ const record=(value:unknown):UnknownRecord=>value&&typeof value==='object'&&!Arr
 const text=(value:unknown)=>value===null||value===undefined?'':String(value).trim();
 const number=(value:unknown)=>{const parsed=Number(value);return Number.isFinite(parsed)?parsed:0;};
 
+
+// Día en hora argentina (UTC−3): un carrito de las 22 h es de ese día, no del siguiente.
+const argentinaDate=(value:string)=>{const time=value.length>10?Date.parse(value):NaN;return Number.isNaN(time)?value.slice(0,10):new Date(time-3*60*60*1000).toISOString().slice(0,10);};
 export type CartItem={name:string;quantity:number;price:number;productId:string|null;variantId:string|null};
 export type AbandonedCart={externalId:string;createdAt:string;completedAt:string|null;total:number;currency:string;units:number;items:CartItem[];contactedAt?:string|null;contactedBy?:string|null;contactedVia?:string|null};
 
@@ -35,7 +38,7 @@ export function cartSummary(carts:AbandonedCart[],paidOrders:number) {
     }
   }
   const days=new Map<string,{date:string;carts:number;value:number}>();
-  for(const cart of open){const date=cart.createdAt.slice(0,10);const day=days.get(date)||{date,carts:0,value:0};day.carts++;day.value+=cart.total;days.set(date,day);}
+  for(const cart of open){const date=argentinaDate(cart.createdAt);const day=days.get(date)||{date,carts:0,value:0};day.carts++;day.value+=cart.total;days.set(date,day);}
   const contacted=carts.filter(cart=>cart.contactedAt);
   // Recuperado después del mensaje: se pagó más tarde que el contacto.
   const recoveredAfterContact=contacted.filter(cart=>cart.completedAt&&cart.completedAt>=cart.contactedAt!);

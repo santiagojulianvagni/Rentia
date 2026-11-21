@@ -3,6 +3,7 @@ import { database, type Statement } from './client';
 import {ITEM_COST_JOINS,ITEM_UNIT_COST_SQL,ITEM_COST_SOURCE_SQL,ORDER_ANALYTICS_BATCH_SQL,ORDER_COUNT_SQL,ORDER_PAGE_SQL,PAID_TOTAL_SQL,PRODUCT_SALES_BATCH_SQL} from '../lib/commerce-queries';
 import type {AnalyticsOrder} from '../lib/order-calculations';
 import {atomicBatches} from '../lib/atomic-batches';
+import {ARGENTINA_DAY_SQL,ARGENTINA_MONTH_SQL,argentinaDayStart,argentinaMonth} from '../lib/local-date';
 import {billingEnforced,monthKey,monthlyOrderLimit} from '../lib/billing';
 
 export type Account = {
@@ -516,8 +517,8 @@ export async function saveManualCommission(userId:string,provider:string,externa
 
 export function analyticsWindow(days:number,offsetDays=0,range?:AnalyticsDateRange) {
   if (range) {
-    const since=`${range.start}T00:00:00.000Z`;
-    const untilValue=new Date(`${range.end}T00:00:00.000Z`);
+    const since=argentinaDayStart(range.start);
+    const untilValue=new Date(argentinaDayStart(range.end));
     untilValue.setUTCDate(untilValue.getUTCDate()+1);
     const until=untilValue.toISOString();
     return {since,until,sinceDate:range.start,untilDate:until.slice(0,10)};
@@ -807,7 +808,7 @@ export async function allowedOrderIds(userId:string,provider:string,orders:Array
   for(const order of fresh){const key=monthKey(order.createdAt);byMonth.set(key,[...(byMonth.get(key)||[]),order]);}
   const now=new Date().toISOString();
   for(const [month,list] of byMonth) {
-    const row=await database().prepare('SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND left(source_created_at,7)=?').bind(userId,month).first<{total:number}>();
+    const row=await database().prepare(`SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND ${ARGENTINA_MONTH_SQL('source_created_at')}=?`).bind(userId,month).first<{total:number}>();
     let remaining=Math.max(0,limit-Number(row?.total||0));
     for(const order of list) {
       if(remaining>0){allowed.add(order.externalId);remaining--;continue;}
@@ -823,10 +824,10 @@ export async function allowedOrderIds(userId:string,provider:string,orders:Array
 export async function getOrderQuota(userId:string,now=new Date()) {
   const subscription=await getOrCreateSubscription(userId);
   const limit=monthlyOrderLimit(subscription,now.getTime());
-  const month=now.toISOString().slice(0,7);
+  const month=argentinaMonth(now.toISOString());
   const [used,skipped,pending]=await Promise.all([
-    database().prepare('SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND left(source_created_at,7)=?').bind(userId,month).first<{total:number}>(),
-    database().prepare('SELECT COUNT(*) AS total FROM skipped_orders WHERE user_id=? AND left(source_created_at,7)=?').bind(userId,month).first<{total:number}>(),
+    database().prepare(`SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND ${ARGENTINA_MONTH_SQL('source_created_at')}=?`).bind(userId,month).first<{total:number}>(),
+    database().prepare(`SELECT COUNT(*) AS total FROM skipped_orders WHERE user_id=? AND ${ARGENTINA_MONTH_SQL('source_created_at')}=?`).bind(userId,month).first<{total:number}>(),
     database().prepare('SELECT COUNT(*) AS total FROM skipped_orders WHERE user_id=?').bind(userId).first<{total:number}>(),
   ]);
   return {enforced:billingEnforced(),month,limit,used:Number(used?.total||0),skippedThisMonth:Number(skipped?.total||0),skippedTotal:Number(pending?.total||0)};
@@ -843,7 +844,7 @@ export async function recoverableSkippedOrders(userId:string,provider:string,max
   const limit=monthlyOrderLimit(await getOrCreateSubscription(userId));
   const rows=limit===null
     ?await database().prepare('SELECT external_order_id FROM skipped_orders WHERE user_id=? AND provider=? ORDER BY source_created_at LIMIT ?').bind(userId,provider,max).all<{external_order_id:string}>()
-    :await database().prepare('SELECT s.external_order_id FROM skipped_orders s WHERE s.user_id=? AND s.provider=? AND (SELECT COUNT(*) FROM orders o WHERE o.user_id=s.user_id AND left(o.source_created_at,7)=left(s.source_created_at,7))<? ORDER BY s.source_created_at LIMIT ?').bind(userId,provider,limit,max).all<{external_order_id:string}>();
+    :await database().prepare(`SELECT s.external_order_id FROM skipped_orders s WHERE s.user_id=? AND s.provider=? AND (SELECT COUNT(*) FROM orders o WHERE o.user_id=s.user_id AND ${ARGENTINA_MONTH_SQL('o.source_created_at')}=${ARGENTINA_MONTH_SQL('s.source_created_at')})<? ORDER BY s.source_created_at LIMIT ?`).bind(userId,provider,limit,max).all<{external_order_id:string}>();
   return rows.results.map(row=>row.external_order_id);
 }
 
@@ -943,7 +944,7 @@ export async function saveAlertReads(userId:string,viewerId:string,keys:string[]
 // Ventas pagadas por día de todo el historial, para récords, rachas e hitos al compartir.
 export async function getSalesHistory(userId:string) {
   const [days,units]=await Promise.all([
-    database().prepare("SELECT left(source_created_at,10) AS date,COUNT(*) AS orders,COALESCE(SUM(total),0) AS revenue FROM orders WHERE user_id=? AND payment_status='paid' AND status!='cancelled' GROUP BY 1 ORDER BY 1").bind(userId).all<{date:string;orders:number;revenue:number}>(),
+    database().prepare(`SELECT ${ARGENTINA_DAY_SQL('source_created_at')} AS date,COUNT(*) AS orders,COALESCE(SUM(total),0) AS revenue FROM orders WHERE user_id=? AND payment_status='paid' AND status!='cancelled' GROUP BY 1 ORDER BY 1`).bind(userId).all<{date:string;orders:number;revenue:number}>(),
     database().prepare("SELECT COALESCE(SUM(oi.quantity),0) AS units FROM order_items oi JOIN orders o ON o.user_id=oi.user_id AND o.provider=oi.provider AND o.external_order_id=oi.external_order_id WHERE oi.user_id=? AND o.payment_status='paid' AND o.status!='cancelled'").bind(userId).first<{units:number}>(),
   ]);
   return {days:days.results.map(row=>({date:row.date,orders:Number(row.orders),revenue:Number(row.revenue)})),units:Number(units?.units||0)};

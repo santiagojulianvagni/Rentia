@@ -1,6 +1,7 @@
 import { getCostRules, getSettings, iterateAnalyticsOrders } from '../db/database';
 import type { CostRule } from './cost-engine';
 import { costSettings, orderCosts } from './order-calculations';
+import { argentinaDay } from './local-date';
 
 // Plata por cobrar de ventas ya hechas, estimada con lo que Rentia sabe de cada orden:
 // - Pago Nube: se libera a los días de acreditación configurados (1, 7 o 14) desde la venta,
@@ -34,7 +35,7 @@ export async function getReceivables(userId:string,today:string):Promise<Receiva
       continue;
     }
     if(PAGO_NUBE.test(String(order.payment_method||''))&&payoutDays) {
-      const release=Date.parse(`${order.source_created_at.slice(0,10)}T00:00:00Z`)+payoutDays*DAY;
+      const release=Date.parse(`${argentinaDay(order.source_created_at)}T00:00:00Z`)+payoutDays*DAY;
       if(release<=todayTime)continue;
       const date=new Date(release).toISOString().slice(0,10);
       const entry=byDate.get(date)||{date,amount:0,orders:0};

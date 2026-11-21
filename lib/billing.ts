@@ -1,4 +1,5 @@
 import { getPlan } from './plans';
+import { argentinaMonth } from './local-date';
 
 export type BillingSubscription={plan_id:string;status:string;trial_ends_at:string};
 
@@ -17,5 +18,6 @@ export function monthlyOrderLimit(subscription:BillingSubscription|null,now=Date
 }
 
 export function monthKey(value:string|null|undefined) {
-  return typeof value==='string'&&/^\d{4}-\d{2}/.test(value)?value.slice(0,7):new Date().toISOString().slice(0,7);
+  // Mes en hora argentina, igual que el conteo de órdenes del mes en la base.
+  return typeof value==='string'&&/^\d{4}-\d{2}/.test(value)?argentinaMonth(value):argentinaMonth(new Date().toISOString());
 }

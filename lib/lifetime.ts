@@ -5,7 +5,8 @@
 export type LifetimeOrder={customerKey:string;createdAt:string;total:number};
 
 const DAY=24*60*60*1000;
-const monthKey=(iso:string)=>iso.slice(0,7);
+// Mes en hora argentina (UTC−3): una compra del 31 a las 22 h es de ese mes, no del siguiente.
+const monthKey=(iso:string)=>{const time=iso.length>10?Date.parse(iso):NaN;return Number.isNaN(time)?iso.slice(0,7):new Date(time-3*60*60*1000).toISOString().slice(0,7);};
 const monthsBetween=(from:string,to:string)=>{const [a,b]=from.split('-').map(Number),[c,d]=to.split('-').map(Number);return (c-a)*12+(d-b);};
 const median=(values:number[])=>{if(!values.length)return 0;const sorted=[...values].sort((a,b)=>a-b),middle=Math.floor(sorted.length/2);return sorted.length%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2;};
 

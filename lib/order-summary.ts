@@ -2,6 +2,7 @@ import {calculateFixedAdditionalCosts,calculateVariableAdditionalCosts,type Cost
 import {allocateOrderCosts,orderCosts,type AnalyticsOrder} from './order-calculations';
 import {emptySalesChannel,type SalesChannelTotals} from './sales-channels';
 import {orderReturnNeedsReview} from './sales-channels';
+import {argentinaDay} from './local-date';
 
 export async function summarizeOrders(source:AsyncIterable<AnalyticsOrder>,settings:CostSettings,rules:CostRule[],days:number,paidTotals:{orders:number;revenue:number},configurationSaved:boolean,periodEnd:Date) {
   // A cada orden solo se le cargan los gastos variables; los fijos van una vez al total.
@@ -30,7 +31,7 @@ export async function summarizeOrders(source:AsyncIterable<AnalyticsOrder>,setti
       if(order.refund_loss===null){refundPending++;channel.refundPending++;}
       else {
         totals.refundLoss+=order.refund_loss;channel.refundLoss+=order.refund_loss;
-        const date=order.source_created_at.slice(0,10),point=timeline.get(date)||{date,orders:0,storeRevenue:0,externalRevenue:0,profit:0,adSpend:0,operatingCosts:0};
+        const date=argentinaDay(order.source_created_at),point=timeline.get(date)||{date,orders:0,storeRevenue:0,externalRevenue:0,profit:0,adSpend:0,operatingCosts:0};
         point.profit-=order.refund_loss;point.operatingCosts+=order.refund_loss;timeline.set(date,point);
         const series=channelTimelines.get(order.provider)||new Map(),cp=series.get(date)||{date,orders:0,storeRevenue:0,externalRevenue:0,profit:0,adSpend:0,operatingCosts:0};cp.profit-=order.refund_loss;cp.operatingCosts+=order.refund_loss;series.set(date,cp);channelTimelines.set(order.provider,series);
       }
@@ -51,7 +52,7 @@ export async function summarizeOrders(source:AsyncIterable<AnalyticsOrder>,setti
     if(claimOpen)missing.push('claim');
     if(!missing.length){completeOrders++;channel.completeOrders++;channel.coveredProfit+=order.profit;coveredRevenue+=Number(order.total||0);coveredProfit+=order.profit;}
     else {incompleteOrders.push({provider:order.provider,externalOrderId:order.external_order_id,orderNumber:order.order_number?String(order.order_number):null,date:order.source_created_at,total:Number(order.total||0),currency:String(order.currency||'ARS'),missing});if(incompleteOrders.length>12)incompleteOrders.shift();}
-    const date=order.source_created_at.slice(0,10),point=timeline.get(date)||{date,orders:0,storeRevenue:0,externalRevenue:0,profit:0,adSpend:0,operatingCosts:0};
+    const date=argentinaDay(order.source_created_at),point=timeline.get(date)||{date,orders:0,storeRevenue:0,externalRevenue:0,profit:0,adSpend:0,operatingCosts:0};
     point.orders++;point.storeRevenue+=Number(order.total||0);point.profit+=order.profit;point.operatingCosts+=order.product_cost+order.shipping_cost+order.commission_cost+order.tax_cost+order.additional_cost;timeline.set(date,point);
     const series=channelTimelines.get(order.provider)||new Map();
     const channelPoint=series.get(date)||{date,orders:0,storeRevenue:0,externalRevenue:0,profit:0,adSpend:0,operatingCosts:0};
@@ -62,7 +63,7 @@ export async function summarizeOrders(source:AsyncIterable<AnalyticsOrder>,setti
   if(fixedTotal>0&&days>0) {
     const dayMs=24*60*60*1000,start=periodEnd.getTime()-days*dayMs,perDay=fixedTotal/days;
     for(let index=0;index<days;index++){
-      const date=new Date(start+index*dayMs).toISOString().slice(0,10);
+      const date=argentinaDay(new Date(start+index*dayMs).toISOString());
       const point=timeline.get(date)||{date,orders:0,storeRevenue:0,externalRevenue:0,profit:0,adSpend:0,operatingCosts:0};
       point.profit-=perDay;point.operatingCosts+=perDay;timeline.set(date,point);
     }
