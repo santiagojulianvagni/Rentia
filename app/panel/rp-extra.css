@@ -617,7 +617,15 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-goalBar>em{position:absolute;top:-4px;width:2px;height:14px;margin-left:-1px;background:var(--amber)}
 .p-root .p-goalDetail{font-size:12.5px;white-space:nowrap}
 .p-root .p-goalLinks{display:flex;gap:14px;margin-left:auto;font-size:12.5px}
-.p-root .p-goalEdit{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-left:auto}
+.p-root .p-goalEdit{display:grid;gap:12px;flex:1 1 100%;padding-top:10px;border-top:1px solid var(--line)}
+.p-root .p-goalSuggest{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.p-root .p-goalOption{display:grid;gap:3px;padding:12px 14px;border:1px solid var(--line2);border-radius:12px;background:var(--bg2);color:var(--muted);text-align:left;font:inherit;cursor:pointer;transition:border-color .2s,transform .2s}
+.p-root .p-goalOption:hover{border-color:var(--cyan);transform:translateY(-1px)}
+.p-root .p-goalOption.p-on{border-color:rgba(33,212,194,.55);box-shadow:0 0 0 3px rgba(33,212,194,.10)}
+.p-root .p-goalOption small{color:var(--cyan);font-size:11px;font-weight:700;letter-spacing:.04em}
+.p-root .p-goalOption b{color:var(--text);font-size:18px}
+.p-root .p-goalOption span{font-size:12px;line-height:1.35}
+.p-root .p-goalOwn{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .p-root .p-goalEdit label{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px}
 .p-root .p-goalInput{display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid var(--line2);border-radius:9px;background:var(--bg2)}
 .p-root .p-goalInput input{width:130px;border:0;outline:0;background:none;color:var(--text);font:inherit}

@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { monthGoal } from '../../lib/month-goal';
+import { goalSuggestions, nextGoal } from '../../lib/goal-suggestions';
+import { todayInArgentina } from '../../lib/mascot';
+import { useSalesHistory } from './mascot';
 
 type CashflowResult={breakEven:number|null;elapsed:number;totalDays:number;projectedRevenue:number;month:string};
 
@@ -15,6 +18,7 @@ export default function MonthGoal({result,revenue,money,canManage,onNavigate}:{r
   const [editing,setEditing]=useState(false);
   const [draft,setDraft]=useState('');
   const [saving,setSaving]=useState(false);
+  const history=useSalesHistory();
   useEffect(()=>{fetch('/api/account/goal',{cache:'no-store'}).then(response=>response.ok?response.json():null).then(data=>setCustom(typeof data?.amount==='number'?data.amount:null)).catch(()=>setCustom(null));},[]);
   if(!result||custom===undefined)return null;
 
@@ -27,11 +31,18 @@ export default function MonthGoal({result,revenue,money,canManage,onNavigate}:{r
       if(response.ok){setCustom(amount);setEditing(false);}
     }finally{setSaving(false);}
   }
-  const editor=editing&&<form className="p-goalEdit" onSubmit={event=>{event.preventDefault();const amount=Number(draft.replace(/[^\d]/g,''));if(amount>0)void save(amount);}}>
-    <label><span>Meta de facturación de {name}</span><span className="p-input p-goalInput"><b>$</b><input inputMode="numeric" value={draft} onChange={event=>setDraft(event.target.value.replace(/[^\d.]/g,''))} placeholder="50.000.000" autoFocus/></span></label>
-    <button type="submit" className="p-btn p-primary p-small" disabled={saving}>Guardar</button>
-    <button type="button" className="p-btn p-small" onClick={()=>setEditing(false)}>Cancelar</button>
-  </form>;
+  // Al poner una meta se sugieren tres, calculadas con la facturación real de la tienda.
+  const suggestions=history?goalSuggestions(history,todayInArgentina(),result.projectedRevenue,money):[];
+  const editor=editing&&<div className="p-goalEdit">
+    {suggestions.length>0&&<div className="p-goalSuggest">{suggestions.map(item=><button type="button" key={item.key} className={`p-goalOption${item.recommended?' p-on':''}`} disabled={saving} onClick={()=>void save(item.amount)}>
+      <small>{item.label}{item.recommended?' · recomendada':''}</small><b className="p-mono">{money(item.amount)}</b><span>{item.detail}</span>
+    </button>)}</div>}
+    <form className="p-goalOwn" onSubmit={event=>{event.preventDefault();const amount=Number(draft.replace(/[^\d]/g,''));if(amount>0)void save(amount);}}>
+      <label><span>{suggestions.length?'O poné la tuya':`Meta de facturación de ${name}`}</span><span className="p-input p-goalInput"><b>$</b><input inputMode="numeric" value={draft} onChange={event=>setDraft(event.target.value.replace(/[^\d.]/g,''))} placeholder="50.000.000" autoFocus={!suggestions.length}/></span></label>
+      <button type="submit" className="p-btn p-primary p-small" disabled={saving||!draft}>Guardar</button>
+      <button type="button" className="p-btn p-small" onClick={()=>setEditing(false)}>Cancelar</button>
+    </form>
+  </div>;
 
   // Franja de una línea: un detalle arriba del dashboard, sin sacarle protagonismo al resto.
   if(!goal)return <div className="p-goalStrip p-reveal">
@@ -51,6 +62,7 @@ export default function MonthGoal({result,revenue,money,canManage,onNavigate}:{r
     </span>
     <span className={`p-chip ${tone}`}>{label}</span>
     <span className="p-sub p-goalDetail">{detail}</span>
+    {!editor&&canManage&&goal.status==='cumplida'&&<button type="button" className="p-btn p-primary p-small" disabled={saving} onClick={()=>void save(nextGoal(goal.target,goal.revenue))}>¿La subimos a {short(nextGoal(goal.target,goal.revenue))}?</button>}
     {editor||(canManage&&<span className="p-goalLinks"><button type="button" className="p-linkBtn" onClick={()=>{setDraft(goal.source==='propia'?String(Math.round(goal.target)):'');setEditing(true);}}>{goal.source==='propia'?'Cambiar':'Poner mi meta'}</button>{goal.source==='propia'&&result.breakEven!==null&&<button type="button" className="p-linkBtn" onClick={()=>void save(null)} disabled={saving}>Usar equilibrio</button>}</span>)}
   </div>;
 }
