@@ -8,8 +8,9 @@ import type { ShareContent } from './share-card';
 import { buildAchievementShare } from './achievement-share';
 
 // El dibujo es fijo y propio (no viene de datos de nadie), por eso se puede insertar tal cual.
-export function Mascot({pose,size,className=''}:{pose:MascotPose;size:number;className?:string}) {
-  return <span className={`p-mascot ${className}`} style={{width:size,height:size*1.25}} dangerouslySetInnerHTML={{__html:MASCOT_ART[pose]}}/>;
+// Con label, los lectores de pantalla lo nombran ("Renti"); sin label es decorativo.
+export function Mascot({pose,size,className='',label}:{pose:MascotPose;size:number;className?:string;label?:string}) {
+  return <span className={`p-mascot ${className}`} style={{width:size,height:size*1.25}} {...label?{role:'img','aria-label':label}:{'aria-hidden':true}} dangerouslySetInnerHTML={{__html:MASCOT_ART[pose]}}/>;
 }
 
 // Un solo pedido del historial, compartido por el saludo y el festejo.
@@ -37,23 +38,32 @@ function Pieces({pieces}:{pieces:Piece[]}) {
   return <>{pieces.map((piece,index)=>piece.strong?<b key={index} className={piece.tone==='up'?'p-pos':piece.tone==='down'?'p-neg':undefined}>{piece.text}</b>:<span key={index}>{piece.text}</span>)}</>;
 }
 
-// Saludo del cangurito debajo del "Buen día". Se cierra hasta el día siguiente.
+const INTRO_KEY='rentia-renti-intro';
+const INTRO:Record<Lang,Piece[]>={
+  es:[{text:'¡Hola! Soy '},{text:'Renti',strong:true},{text:'. Cada día te voy a contar cómo vienen tus ventas. '}],
+  en:[{text:'Hi! I’m '},{text:'Renti',strong:true},{text:'. Every day I’ll tell you how your sales are going. '}],
+  pt:[{text:'Oi! Eu sou o '},{text:'Renti',strong:true},{text:'. Todo dia vou te contar como estão suas vendas. '}],
+};
+
+// Saludo de Renti, el cangurito, debajo del "Buen día". Se cierra hasta el día siguiente.
 export function MascotGreeting({lang,money}:{lang:Lang;money:(value:number)=>string}) {
   const days=useSalesHistory();
   // La hora y la fecha se toman en el navegador, después de cargar, igual que el "Buen día".
   const [now,setNow]=useState<Date|null>(null);
   const [closed,setClosed]=useState(false);
-  useEffect(()=>{queueMicrotask(()=>setNow(new Date()));},[]);
-  if(!days||!now||closed)return null;
-  const today=todayInArgentina(now),key=`rentia-greeting-${today}`;
-  if(store.get(key))return null;
-  const greeting:Greeting|null=dailyGreeting(days,today,now.getHours(),lang,money);
+  // La primera vez, Renti se presenta antes del saludo de siempre.
+  const [intro,setIntro]=useState(false);
+  useEffect(()=>{queueMicrotask(()=>{setNow(new Date());setIntro(!store.get(INTRO_KEY));});},[]);
+  const today=now?todayInArgentina(now):'',key=`rentia-greeting-${today}`;
+  const greeting:Greeting|null=days&&now&&!closed&&!store.get(key)?dailyGreeting(days,today,now.getHours(),lang,money):null;
+  const introduced=Boolean(greeting&&intro);
+  useEffect(()=>{if(introduced)store.set(INTRO_KEY,'1');},[introduced]);
   if(!greeting)return null;
   const close=()=>{store.set(key,'1');setClosed(true);};
   const label=lang==='en'?'Close':lang==='pt'?'Fechar':'Cerrar';
   return <div className="p-kGreet p-reveal" translate="no">
-    <Mascot pose={greeting.pose} size={56}/>
-    <div className="p-kBubble" role="status"><Pieces pieces={greeting.pieces}/><button type="button" onClick={close} aria-label={label}><X className="p-i" aria-hidden="true"/></button></div>
+    <Mascot pose={greeting.pose} size={56} label="Renti"/>
+    <div className="p-kBubble" role="status"><Pieces pieces={introduced?[...INTRO[lang],...greeting.pieces]:greeting.pieces}/><button type="button" onClick={close} aria-label={label}><X className="p-i" aria-hidden="true"/></button></div>
   </div>;
 }
 

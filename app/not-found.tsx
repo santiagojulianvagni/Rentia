@@ -6,10 +6,10 @@ export const metadata={title:'Página no encontrada — Rentia'};
 export default function NotFound() {
   return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24,background:'#07111f',color:'#f2f7fb'}}>
     <div style={{maxWidth:440,textAlign:'center'}}>
-      <img src="/mascota/canguro-duerme-oscuro.svg" alt="" width={128} height={160} style={{display:"block",margin:"0 auto 14px"}}/>
+      <img src="/mascota/canguro-duerme-oscuro.svg" alt="Renti" width={128} height={160} style={{display:"block",margin:"0 auto 14px"}}/>
       <p style={{margin:'0 0 6px',color:'#21d4c2',fontWeight:700,letterSpacing:'.12em',fontSize:12}}>ERROR 404</p>
       <h1 style={{fontSize:26,margin:'0 0 10px'}}>No encontramos esta página</h1>
-      <p style={{color:'#9bb0c1',lineHeight:1.5,margin:'0 0 22px'}}>Puede que el enlace esté mal escrito o que la página se haya movido.</p>
+      <p style={{color:'#9bb0c1',lineHeight:1.5,margin:'0 0 22px'}}>Renti buscó por todos lados, pero esta página no existe. Puede que el enlace esté mal escrito o que la página se haya movido.</p>
       <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
         <Link href="/" style={{padding:'10px 18px',borderRadius:10,background:'#21d4c2',color:'#031513',fontWeight:600,textDecoration:'none'}}>Ir al inicio</Link>
         <Link href="/panel" style={{padding:'10px 18px',borderRadius:10,border:'1px solid #264560',color:'#f2f7fb',textDecoration:'none'}}>Abrir mi panel</Link>

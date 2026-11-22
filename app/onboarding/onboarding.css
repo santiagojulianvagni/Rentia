@@ -17,6 +17,11 @@
 .obChips button.on{border-color:#21d4c2;background:rgba(33,212,194,.12);color:#e8fffb}
 .obPreview{position:sticky;top:24px;display:grid;gap:14px;margin-top:0}
 .obMascot{justify-self:center;width:112px;height:auto;margin-bottom:-10px}
+.obHello{display:flex;align-items:center;gap:12px;margin-bottom:-6px}
+.obHello .obMascot{flex:none;width:96px;margin:0}
+.obBubble{position:relative;margin:0;padding:11px 14px;border:1px solid #1d3346;border-radius:14px;background:#0b1826;color:#c8d6e2;font-size:14px;line-height:1.45}
+.obBubble:before{content:"";position:absolute;left:-7px;top:50%;width:12px;height:12px;background:#0b1826;border-left:1px solid #1d3346;border-bottom:1px solid #1d3346;transform:translateY(-50%) rotate(45deg)}
+.obBubble b{color:#5fe8d9}
 .obCard{padding:18px;border:1px solid #1d3346;border-radius:18px;background:#0b1826}
 .obCard>small{display:block;margin-bottom:12px;color:#8ea6b8;font-size:12.5px}
 .obStore{display:flex;align-items:center;gap:10px;margin-bottom:14px}.obStore i{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#123b36;color:#5fe8d9;font-style:normal;font-weight:700}.obStore b{color:#fff;font-size:16px}
@@ -26,7 +31,7 @@
 .obChecklist li.done{color:#5fe8d9}.obChecklist li.done:before{border-color:#21d4c2;background:#21d4c2}
 .obChecklist li.now{color:#e8f0f6}.obChecklist li.now:before{border-color:#21d4c2}
 .obChecklist li.plan{color:#c8d6e2}.obChecklist li.plan:before{border:0;width:auto;height:auto;content:'★';top:0;color:#21d4c2;font-size:13px}
-@media (max-width:900px){.obGrid{grid-template-columns:1fr}.obPreview{position:static;margin-top:0;order:-1}.obPreview .obChecklist,.obMascot{display:none}}
+@media (max-width:900px){.obGrid{grid-template-columns:1fr}.obPreview{position:static;margin-top:0;order:-1}.obPreview .obChecklist,.obMascot,.obHello{display:none}}
 @media (max-width:560px){.obRow{grid-template-columns:1fr}.obForm{padding:18px}}
 .onboardingShell:has(.obGrid){width:min(1120px,calc(100% - 40px));max-width:1120px}
 .obGrid h1{white-space:nowrap}

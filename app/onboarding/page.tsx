@@ -170,7 +170,7 @@ export default function Onboarding() {
           </form>
         </div>
         <aside className="obPreview" aria-label="Vista previa">
-          <img className="obMascot" src="/mascota/canguro-saluda-oscuro.svg" alt="" width={112} height={140}/>
+          <div className="obHello"><img className="obMascot" src="/mascota/canguro-saluda-oscuro.svg" alt="Renti" width={112} height={140}/><p className="obBubble">Hola, soy <b>Renti</b>. Te voy a ayudar a ver cuánto ganás de verdad.</p></div>
           <div className="obCard"><small>Así va a verse en Rentia</small><div className="obStore"><i aria-hidden="true">{(store.trim()||'T').charAt(0).toLocaleUpperCase('es-AR')}</i><b>{store.trim()||'Tu tienda'}</b></div><div className="obTiles"><div><small>Ganancia real</small><b>$ —</b></div><div><small>Margen</small><b>— %</b></div></div></div>
           <ul className="obCard obChecklist">{installStore!==null?<><li className="done">Tiendanube conectada</li><li className="now">Importando hasta 12 meses de ventas</li></>:<li className="now">Después conectás Tiendanube o Mercado Libre</li>}<li>Cargar el costo de tus productos</li>{monthlyOrders&&<li className="plan">Plan sugerido para tu volumen: <b>{SUGGESTED_PLAN[monthlyOrders]}</b></li>}</ul>
         </aside>

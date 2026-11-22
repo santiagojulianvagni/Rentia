@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, X } from 'lucide-react';
 import { Mascot } from './mascot';
 
-// "Preguntale a Rentia": el chat con IA sobre los números de la tienda. Por ahora se muestra como
+// "Preguntale a Renti": el chat con IA sobre los números de la tienda. Por ahora se muestra como
 // "próximamente": la interfaz está lista, pero todavía no consulta a la IA ni a los datos.
 const SUGGESTIONS=['¿Qué producto me deja más plata este mes?','¿Por qué bajó la ganancia?','¿Qué campaña debería pausar?','¿Llego a la meta del mes?'];
 const SOON='Esta te la voy a poder responder muy pronto, con tus números reales. Estamos terminando de entrenarme.';
@@ -36,20 +36,20 @@ export default function AskRentia() {
   }
 
   return <>
-    {!open&&<button type="button" className="p-askFab" onClick={()=>setOpen(true)} aria-label="Preguntale a Rentia">
-      <Mascot pose="saluda" size={40}/><span>Preguntale a Rentia</span>
+    {!open&&<button type="button" className="p-askFab" onClick={()=>setOpen(true)} aria-label="Preguntale a Renti">
+      <Mascot pose="saluda" size={40}/><span>Preguntale a Renti</span>
     </button>}
     {open&&<>
       <button type="button" className="p-askScrim" onClick={()=>setOpen(false)} aria-label="Cerrar el chat"/>
-      <section className="p-ask" role="dialog" aria-label="Preguntale a Rentia">
+      <section className="p-ask" role="dialog" aria-label="Preguntale a Renti">
         <header className="p-askHead">
           <span className="p-askAvatar"><Mascot pose="saluda" size={30}/></span>
-          <div><b>Preguntale a Rentia</b><small>Responde con tus números reales</small></div>
+          <div><b>Preguntale a Renti</b><small>Responde con tus números reales</small></div>
           <span className="p-chip p-a">Próximamente</span>
           <button type="button" className="p-askClose" onClick={()=>setOpen(false)} aria-label="Cerrar"><X size={18} aria-hidden="true"/></button>
         </header>
         <div className="p-askBody">
-          <div className="p-askMsg p-rentia"><span className="p-askAvatar p-sm"><Mascot pose="saluda" size={20}/></span><p>¡Hola! Muy pronto vas a poder preguntarme lo que quieras sobre tu tienda: qué producto te deja más plata, por qué bajó la ganancia o qué campaña conviene pausar. Te respondo con tus ventas, costos y campañas, y te llevo a la sección donde verlo.</p></div>
+          <div className="p-askMsg p-rentia"><span className="p-askAvatar p-sm"><Mascot pose="saluda" size={20}/></span><p>¡Hola! Soy Renti. Muy pronto vas a poder preguntarme lo que quieras sobre tu tienda: qué producto te deja más plata, por qué bajó la ganancia o qué campaña conviene pausar. Te respondo con tus ventas, costos y campañas, y te llevo a la sección donde verlo.</p></div>
           <div className="p-askExample" aria-label="Ejemplo de respuesta">
             <small>ASÍ VA A RESPONDER</small>
             <div className="p-askMsg p-you"><p>¿Qué producto me deja más plata este mes?</p></div>

@@ -96,7 +96,7 @@ export default function LaunchSimulator({money}:{money:(value:number)=>string}) 
       <div className="p-card p-reveal" style={{'--i':1} as React.CSSProperties}>
         <span className="p-eyebrowS">RESULTADO</span>
         {!result?<div className="p-simEmpty">
-          <img src="/mascota/canguro-busca-lupa-oscuro.svg" alt="" width={96} height={120}/>
+          <img src="/mascota/canguro-busca-lupa-oscuro.svg" alt="Renti" width={96} height={120}/>
           <div><b>Cargá el precio y el costo</b><p className="p-sub">O elegí un producto de tu tienda para partir de sus números. Vas a ver:</p>
             <ul><li>Cuánto te queda por venta y tu margen real</li><li>Lo máximo que podés gastar en publicidad por venta</li><li>El precio que necesitás para ganar el margen que buscás</li>{channels.length>1&&<li>En qué canal te deja más</li>}</ul></div>
         </div>:<>
