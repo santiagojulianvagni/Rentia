@@ -63,6 +63,7 @@
 .p-root.p-glass .p-drawer,
 .p-root.p-glass .p-modal,
 .p-root.p-glass .p-palette,
+.p-root.p-glass .p-ask,
 .p-root.p-glass dialog.p-dialog,
 .p-root.p-glass dialog.p-confirm{
   background:linear-gradient(165deg,rgba(18,34,54,.9),rgba(10,22,38,.92));
@@ -342,3 +343,4 @@
 .p-root.p-glass .p-collapsed .p-sideQuality{width:40px;height:40px;padding:0;justify-content:center;border-radius:12px}
 .p-root.p-glass .p-collapsed .p-sideQuality .p-ring{width:26px;height:26px}
 .p-root.p-glass .p-collapsed .p-sideQuality .p-ring circle{stroke-width:6}
+.p-root.p-glass .p-askScrim{background:rgba(3,8,15,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
