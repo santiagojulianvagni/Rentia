@@ -186,13 +186,14 @@ export async function fetchMetaCreatives(userId:string,since:string,until:string
   for (let index=0;index<metrics.length;index+=50) {
     const ids=metrics.slice(index,index+50).map(row=>row.adId);
     // Mismo pedido que la revisión de UTMs (cuenta → anuncios), filtrado por los anuncios del período.
-    const found=await fetchAll(`${selected.external_account_id}/ads`,token,{fields:'id,effective_status,creative{thumbnail_url,image_url,object_type,video_id}',filtering:JSON.stringify([{field:'ad.id',operator:'IN',value:ids}]),limit:'50'},2).catch(()=>[] as UnknownRecord[]);
+    const found=await fetchAll(`${selected.external_account_id}/ads`,token,{fields:'id,effective_status,creative.thumbnail_width(480).thumbnail_height(480){thumbnail_url,image_url,object_type,video_id}',filtering:JSON.stringify([{field:'ad.id',operator:'IN',value:ids}]),limit:'50'},2).catch(()=>[] as UnknownRecord[]);
     for (const row of found) details.set(text(row.id),row);
   }
   const ads=metrics.map((row):CreativeRow=>{
     const detail=details.get(row.adId)||{},creative=record(detail.creative);
     const video=row.videoViews3s>0||Boolean(text(creative.video_id))||text(creative.object_type).toUpperCase()==='VIDEO';
-    const thumbnail=text(creative.thumbnail_url)||text(creative.image_url);
+    // La imagen original si es un anuncio de imagen; si no, la miniatura grande del video.
+    const thumbnail=text(creative.image_url)||text(creative.thumbnail_url);
     return {...row,status:text(detail.effective_status),kind:video?'video':'imagen',thumbnail:/^https:\/\//.test(thumbnail)?thumbnail:null};
   });
   return {account:{id:selected.external_account_id,name:selected.name||selected.external_account_id},currency:selected.currency||'ARS',ads};

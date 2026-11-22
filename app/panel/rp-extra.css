@@ -772,3 +772,8 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-crFoot{margin:14px 0 0;font-size:12px}
 @media (max-width:900px){.p-root .p-crStats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:560px){.p-root .p-crStats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.p-root .p-crThumb{overflow:hidden}
+.p-root .p-crThumb img{position:absolute;inset:0;width:100%;height:100%;max-width:none;object-fit:cover}
+.p-root .p-crThumb .p-chip{z-index:1;background:rgba(7,17,31,.82);backdrop-filter:blur(4px)}
+.p-root .p-crThumb .p-chip.p-g{color:var(--green)}.p-root .p-crThumb .p-chip.p-r{color:#ff8c99}.p-root .p-crThumb .p-chip.p-a{color:var(--amber)}
+.p-root .p-crPlay{z-index:1}
