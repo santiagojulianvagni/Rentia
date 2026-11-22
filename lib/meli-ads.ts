@@ -10,6 +10,7 @@ type Account=AdsAccount&{selected:number;last_completed_at:string|null;last_erro
 type State={version:1;seller:string;account:AdsAccount|null;generation:string;from:string;to:string;offset:number;total:number|null;queue:Array<{id:string;name:string;status:string}>;done:boolean;error:string|null;retryAt:number};
 const guard="EXISTS (SELECT 1 FROM sync_jobs j JOIN integrations i ON i.user_id=j.user_id AND i.provider='mercadolibre' WHERE j.user_id=? AND j.provider='mercadolibre_ads' AND j.lease_token=? AND j.lease_expires_at>? AND i.external_store_id=? AND i.status IN ('authorized','connected'))";
 const values=(user:string,lease:string,seller:string)=>[user,lease,Date.now(),seller];
+const notFound=(error:unknown)=>error instanceof MeliError&&error.code==='mercadolibre_resource_unavailable';
 function fresh(seller:string):State {
   // Product Ads publishes metrics daily. Today is not a completed accounting day.
   const end=new Date(Date.now()-86400000),to=end.toISOString().slice(0,10);end.setUTCDate(end.getUTCDate()-88);
@@ -42,10 +43,17 @@ export async function syncMeliAds(user:string,force=false){
       const a=state.account;
       if(!state.queue.length){
         if(state.total!==null&&state.offset>=state.total){await publish(user,lease.token,state);state.done=true;state.error=null;state.retryAt=0;await checkpointImportJob(user,provider,lease.token,JSON.stringify(state));return {done:true};}
-        const query=new URLSearchParams({limit:'50',offset:String(state.offset)}),page=adsCampaignPage(await client.get(`/advertising/${a.site_id}/advertisers/${a.advertiser_id}/product_ads/campaigns/search?${query}`,{'api-version':'2'}),state.offset);calls++;state.queue=page.campaigns;state.total=page.total;state.offset+=page.campaigns.length;await checkpointImportJob(user,provider,lease.token,JSON.stringify(state));continue;
+        // Un anunciante sin campañas responde 404 en la búsqueda: es "sin inversión", no un error.
+        const query=new URLSearchParams({limit:'50',offset:String(state.offset)});let raw:unknown;
+        try{raw=await client.get(`/advertising/${a.site_id}/advertisers/${a.advertiser_id}/product_ads/campaigns/search?${query}`,{'api-version':'2'});}catch(error){if(!notFound(error)||state.offset!==0)throw error;raw={paging:{offset:0,total:0},results:[]};}
+        const page=adsCampaignPage(raw,state.offset);calls++;state.queue=page.campaigns;state.total=page.total;state.offset+=page.campaigns.length;await checkpointImportJob(user,provider,lease.token,JSON.stringify(state));continue;
       }
       const c=state.queue[0],query=new URLSearchParams({date_from:state.from,date_to:state.to,metrics:'clicks,prints,cost,total_amount,units_quantity',aggregation_type:'DAILY'});
-      const days=adsDays(await client.get(`/advertising/${a.site_id}/product_ads/campaigns/${c.id}?${query}`,{'api-version':'2'}),state.from,state.to);calls++;
+      // Una campaña borrada o sin datos en el período responde 404: cuenta como sin gasto y se sigue
+      // con la próxima, en vez de frenar toda la sincronización.
+      let days:ReturnType<typeof adsDays>;
+      try{days=adsDays(await client.get(`/advertising/${a.site_id}/product_ads/campaigns/${c.id}?${query}`,{'api-version':'2'}),state.from,state.to);}catch(error){if(!notFound(error))throw error;days=[];}
+      calls++;
       const rows=days.length?days:[{date:state.to,cost_cents:0,attributed_cents:0,clicks:0,impressions:0,units:0}];
       // Incomplete generations never replace previously confirmed financial data.
       const statements=rows.map(d=>db().prepare(`INSERT INTO meli_ads_stage (user_id,seller_id,advertiser_id,generation,campaign_id,date,name,status,cost_cents,attributed_cents,clicks,impressions,units) SELECT ?,?,?,?,?,?,?,?,?::bigint,?::bigint,?::bigint,?::bigint,?::double precision WHERE ${guard} ON CONFLICT (user_id,seller_id,advertiser_id,generation,campaign_id,date) DO UPDATE SET name=excluded.name,status=excluded.status,cost_cents=excluded.cost_cents,attributed_cents=excluded.attributed_cents,clicks=excluded.clicks,impressions=excluded.impressions,units=excluded.units`).bind(user,seller,a.advertiser_id,state.generation,c.id,d.date,c.name,c.status,d.cost_cents,d.attributed_cents,d.clicks,d.impressions,d.units,...values(user,lease.token,seller)));
