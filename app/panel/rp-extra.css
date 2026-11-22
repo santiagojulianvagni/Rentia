@@ -744,3 +744,31 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 @media (max-width:700px){.p-root .p-dsaleLine{grid-template-columns:1fr 1fr;grid-template-areas:"name name" "qty price" "sub del"}.p-root .p-dsaleName{grid-area:name}.p-root .p-dsaleQty{grid-area:qty}.p-root .p-dsalePrice{grid-area:price}.p-root .p-dsaleSub{grid-area:sub;text-align:left}.p-root .p-dsaleLine .p-iconBtn{grid-area:del;justify-self:end}.p-root .p-dsaleProfit{margin-left:0;text-align:left}}
 .p-root .p-dsaleLine .p-input{min-width:0;width:100%;box-sizing:border-box}.p-root .p-dsaleLine .p-input input{min-width:0;width:100%}
 .p-root .p-dsaleGrid .p-field,.p-root .p-dsaleRow .p-field{align-content:start}
+/* Creativos de Meta */
+.p-root .p-crHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.p-root .p-crHead h3{margin:4px 0 2px}
+.p-root .p-crStats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0 12px}
+.p-root .p-crStats div{display:grid;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}
+.p-root .p-crStats small{color:var(--dim);font-size:12px}
+.p-root .p-crStats b{font-size:20px}.p-root .p-crStats b.p-pos{color:var(--green)}.p-root .p-crStats b.p-neg{color:#ff8c99}
+.p-root .p-crInsight{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 12px;border:1px solid rgba(245,196,81,.25);border-radius:12px;background:rgba(245,196,81,.07);color:#e8dcb8;font-size:13.5px}
+.p-root .p-crInsight .p-i{flex:none;width:18px;height:18px;color:var(--amber)}
+.p-root .p-crTools{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.p-root .p-crSort{display:flex;align-items:center;gap:8px}
+.p-root .p-crGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.p-root .p-crCard{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--surface2);overflow:hidden}
+.p-root .p-crThumb{position:relative;display:grid;place-items:center;height:150px;background:var(--bg2);color:var(--dim)}
+.p-root .p-crThumb img{width:100%;height:100%;object-fit:cover}
+.p-root .p-crThumb>svg{width:26px;height:26px}
+.p-root .p-crThumb .p-chip{position:absolute;top:8px;left:8px}
+.p-root .p-crPlay{position:absolute;right:8px;bottom:8px;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff}
+.p-root .p-crPlay svg{width:13px;height:13px}
+.p-root .p-crBody{display:grid;gap:4px;padding:10px 12px 12px}
+.p-root .p-crName,.p-root .p-crCamp{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.p-root .p-crBody dl{display:grid;grid-template-columns:1fr auto;gap:4px 10px;margin:8px 0 2px;font-size:12.5px}
+.p-root .p-crBody dt{color:var(--dim)}.p-root .p-crBody dd{margin:0;text-align:right}
+.p-root .p-crBody dd.p-pos{color:var(--green)}.p-root .p-crBody dd.p-neg{color:#ff8c99}
+.p-root .p-crReason{color:var(--muted);font-size:12px;line-height:1.4}.p-root .p-crReason.p-neg{color:#ff8c99}
+.p-root .p-crFoot{margin:14px 0 0;font-size:12px}
+@media (max-width:900px){.p-root .p-crStats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.p-root .p-crStats{grid-template-columns:repeat(2,minmax(0,1fr))}}
