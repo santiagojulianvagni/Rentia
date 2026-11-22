@@ -54,3 +54,11 @@ test('click-only mode drops purchases Meta counts just for viewing the ad, and t
   assert.equal(clicks.summary.spendWithoutSales,63599);
   assert.equal(Math.round(clicks.summary.profit),Math.round(-63599+123748*0.6-8990));
 });
+
+test('an ad that already spent more than one sale leaves, without selling, is switched off early',()=>{
+  // Equilibrio por compra: 50.000 × 60 % = 30.000. Gastó 35.000 sin vender: ya no puede ganar.
+  const {ads}=analyzeCreatives([ad('sinVentas',{spend:35000}),ad('recien',{spend:20000})],{margin:0.6,averageTicket:50000});
+  assert.equal(ads[0].verdict,'apagar');
+  assert.match(ads[0].reason,/más de lo que te deja una venta/);
+  assert.equal(ads[1].verdict,'aprendiendo');
+});

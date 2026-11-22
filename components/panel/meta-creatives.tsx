@@ -6,7 +6,7 @@ import { analyzeCreatives, type AnalyzedCreative, type CreativeRow, type Creativ
 import RpSelect from './rp-select';
 
 type Response={connected:boolean;since:string;until:string;account:{id:string;name:string}|null;currency:string|null;ads:CreativeRow[]};
-type Preview={ad:AnalyzedCreative;format:string;src:string|null;adsManager:string|null;loading:boolean;failed:boolean};
+type Preview={ad:AnalyzedCreative;format:string;src:string|null;width:number|null;height:number|null;adsManager:string|null;loading:boolean;failed:boolean};
 const VERDICTS:Record<CreativeVerdict,[string,string]>={escalar:['Escalar','p-g'],mantener:['Mantener','p-a'],apagar:['Apagar','p-r'],aprendiendo:['Aprendiendo','']};
 const SORTS={profit:'Ganancia real',spend:'Gasto',roas:'ROAS',hook:'Hook rate'} as const;
 const FORMATS=[['INSTAGRAM_STANDARD','Instagram'],['INSTAGRAM_REELS','Reels'],['MOBILE_FEED_STANDARD','Facebook']] as const;
@@ -19,6 +19,19 @@ function adState(status:string):['activo'|'pausado'|'baja',string] {
   if(value==='ACTIVE')return ['activo','Activo'];
   if(value.includes('PAUSED')||value==='IN_PROCESS'||value==='WITH_ISSUES'||value==='PENDING_REVIEW')return ['pausado','Pausado'];
   return ['baja','Dado de baja'];
+}
+
+// La vista previa de Meta con su tamaño exacto (si no, queda corrida y con barras), achicada
+// entera si no entra en la pantalla.
+function PreviewFrame({src,width,height,title}:{src:string;width:number|null;height:number|null;title:string}) {
+  const w=width||320,h=height||600;
+  const [scale,setScale]=useState(1);
+  useEffect(()=>{
+    const fit=()=>setScale(Math.min(1,(window.innerWidth-64)/w,(window.innerHeight-220)/h));
+    fit();window.addEventListener('resize',fit);
+    return ()=>window.removeEventListener('resize',fit);
+  },[w,h]);
+  return <div className="p-crFrameBox" style={{width:w*scale,height:h*scale}}><iframe src={src} title={title} width={w} height={h} scrolling="no" loading="lazy" referrerPolicy="no-referrer" style={{transform:`scale(${scale})`}}/></div>;
 }
 
 // Pestaña "Creativos" de Publicidad: qué anuncios de Meta escalar, mantener o apagar, con su
@@ -57,12 +70,12 @@ export default function MetaCreatives({money,margin,averageTicket,onConnect}:{mo
   },[analysis,kind,sort]);
 
   async function openPreview(ad:AnalyzedCreative,format:string=FORMATS[0][0]) {
-    setPreview({ad,format,src:null,adsManager:null,loading:true,failed:false});
+    setPreview({ad,format,src:null,width:null,height:null,adsManager:null,loading:true,failed:false});
     try {
       const response=await fetch(`/api/ads/creatives/preview?ad=${encodeURIComponent(ad.adId)}&format=${format}`,{cache:'no-store'});
       if(!response.ok)throw new Error();
-      const result=await response.json() as {src:string|null;adsManager:string|null};
-      setPreview(current=>current&&current.ad.adId===ad.adId&&current.format===format?{...current,src:result.src,adsManager:result.adsManager,loading:false,failed:!result.src}:current);
+      const result=await response.json() as {src:string|null;width:number|null;height:number|null;adsManager:string|null};
+      setPreview(current=>current&&current.ad.adId===ad.adId&&current.format===format?{...current,src:result.src,width:result.width,height:result.height,adsManager:result.adsManager,loading:false,failed:!result.src}:current);
     } catch {setPreview(current=>current&&current.ad.adId===ad.adId?{...current,loading:false,failed:true}:current);}
   }
 
@@ -126,7 +139,7 @@ export default function MetaCreatives({money,margin,averageTicket,onConnect}:{mo
       <div className="p-crPreview" role="dialog" aria-label={`Vista previa de ${preview.ad.name}`}>
         <div className="p-crPreviewHead"><b title={preview.ad.name}>{preview.ad.name}</b><button type="button" className="p-askClose" onClick={()=>setPreview(null)} aria-label="Cerrar"><X size={18} aria-hidden="true"/></button></div>
         <div className="p-simChips" role="group" aria-label="Dónde se ve">{FORMATS.map(([value,name])=><button type="button" key={value} className={preview.format===value?'p-on':undefined} aria-pressed={preview.format===value} onClick={()=>void openPreview(preview.ad,value)}>{name}</button>)}</div>
-        <div className="p-crFrame">{preview.loading?<span className="p-sub">Cargando la vista previa…</span>:preview.src?<iframe src={preview.src} title={`Vista previa de ${preview.ad.name}`} loading="lazy" referrerPolicy="no-referrer"/>:<span className="p-sub">Meta no tiene vista previa de este anuncio en este formato.</span>}</div>
+        <div className="p-crFrame">{preview.loading?<span className="p-sub">Cargando la vista previa…</span>:preview.src?<PreviewFrame src={preview.src} width={preview.width} height={preview.height} title={`Vista previa de ${preview.ad.name}`}/>:<span className="p-sub">Meta no tiene vista previa de este anuncio en este formato.</span>}</div>
         {preview.adsManager&&<a className="p-btn p-small" href={preview.adsManager} target="_blank" rel="noopener noreferrer"><ExternalLink className="p-i" aria-hidden="true"/> Abrir en el Administrador de anuncios</a>}
       </div>
     </>}

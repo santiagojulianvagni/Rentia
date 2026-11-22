@@ -227,8 +227,11 @@ export async function fetchMetaAdPreview(userId:string,adId:string,format:typeof
   const body=await metaFetch(`${adId}/previews`,token,{ad_format:format});
   const html=text(record(list(body.data)[0]).body);
   const src=(html.match(/src="([^"]+)"/)?.[1]||'').replace(/&amp;/g,'&');
+  // Meta arma cada vista previa con su propio tamaño (Instagram, Reels y Facebook son distintos).
+  const size=(name:'width'|'height')=>{const value=Number((name==='width'?html.match(/\swidth="(\d+)"/):html.match(/\sheight="(\d+)"/))?.[1]);return Number.isFinite(value)&&value>=100&&value<=2000?value:null;};
+  const width=size('width'),height=size('height');
   let url:URL;
-  try { url=new URL(src); } catch { return {src:null,adsManager:`https://adsmanager.facebook.com/adsmanager/manage/ads?act=${account}&selected_ad_ids=${adId}`}; }
+  try { url=new URL(src); } catch { return {src:null,width:null,height:null,adsManager:`https://adsmanager.facebook.com/adsmanager/manage/ads?act=${account}&selected_ad_ids=${adId}`}; }
   const safe=url.protocol==='https:'&&/(^|\.)facebook\.com$/.test(url.hostname)&&url.pathname.startsWith('/ads/api/preview_iframe');
-  return {src:safe?url.toString():null,adsManager:`https://adsmanager.facebook.com/adsmanager/manage/ads?act=${account}&selected_ad_ids=${adId}`};
+  return {src:safe?url.toString():null,width,height,adsManager:`https://adsmanager.facebook.com/adsmanager/manage/ads?act=${account}&selected_ad_ids=${adId}`};
 }

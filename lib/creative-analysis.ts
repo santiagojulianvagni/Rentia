@@ -29,6 +29,9 @@ export function analyzeCreatives(source:CreativeRow[],input:{margin:number|null;
     const hookRate=row.kind==='video'?ratio(row.videoViews3s,row.impressions):null;
     const holdRate=row.kind==='video'?ratio(row.thruplays,row.videoViews3s):null;
     const base={...row,roas,profit,ctr,cpa:row.purchases>0?row.spend/row.purchases:null,hookRate,holdRate};
+    // Si ya gastó más de lo que deja una venta y no vendió nada, no puede ganar plata aunque venda
+    // la próxima: se apaga aunque todavía esté "aprendiendo".
+    if(breakEven&&breakEvenCpa&&row.purchases<=0&&row.spend>=breakEvenCpa)return {...base,verdict:'apagar' as const,reason:'Ya gastó más de lo que te deja una venta y no vendió nada.'};
     if(!breakEven||row.spend<learning||!(row.spend>0))return {...base,verdict:'aprendiendo' as const,reason:breakEven?'Todavía gastó poco para decidir.':'Cargá tus costos para saber si este anuncio gana plata.'};
     const value=roas||0;
     if(value>=breakEven*SCALE_ABOVE)return {...base,verdict:'escalar' as const,reason:'Gana bien por encima de tu equilibrio.'};
