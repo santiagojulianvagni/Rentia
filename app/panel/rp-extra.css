@@ -707,3 +707,38 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 @media (max-width:640px){.p-root .p-askFab span{display:none}.p-root .p-askFab{padding:4px 6px;right:14px;bottom:14px}.p-root .p-ask{top:auto;right:0;bottom:0;left:0;width:auto;height:85vh;border-radius:18px 18px 0 0}}
 @media (prefers-reduced-motion:reduce){.p-root .p-ask{animation:none}}
 @media print{.p-root .p-askFab,.p-root .p-ask,.p-root .p-askScrim{display:none}}
+/* Otros canales: los campos alineados aunque las ayudas tengan distinto largo. */
+.p-root .p-alertGrid label{align-content:start}
+.p-root .p-storesTitle{margin:26px 0 4px;font-size:17px}
+.p-root .p-storesLead{margin:0 0 12px}
+/* Registrar una venta directa */
+.p-root .p-dsale{margin-bottom:18px}
+.p-root .p-dsale .p-cardHead h3{margin:4px 0 2px}
+.p-root .p-dsaleRow{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:flex-start;margin-top:14px}
+.p-root .p-dsaleDate{flex:0 0 170px}
+.p-root .p-dsaleRow>.p-field:not(.p-dsaleDate){flex:1 1 320px}
+.p-root .p-dsaleBlock{margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface2)}
+.p-root .p-dsaleBlockHead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+.p-root .p-dsaleLines{display:grid;gap:8px;margin-top:10px}
+.p-root .p-dsaleLine{display:grid;grid-template-columns:minmax(0,1fr) 84px 140px 110px 32px;gap:10px;align-items:end;padding:10px 0;border-top:1px solid var(--line)}
+.p-root .p-dsaleLine label{display:grid;gap:4px}
+.p-root .p-dsaleName{display:grid;gap:2px;min-width:0;align-self:center}
+.p-root .p-dsaleName b{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.p-root .p-dsaleSub{text-align:right;align-self:center}
+.p-root .p-dsaleLine .p-iconBtn{align-self:center}
+.p-root .p-dsaleGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:14px}
+.p-root .p-dsaleSummary{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:flex-end;margin-top:16px;padding:14px 16px;border:1px solid var(--line2);border-radius:14px;background:var(--surface2)}
+.p-root .p-dsaleSummary span{display:grid;gap:2px}
+.p-root .p-dsaleSummary small{color:var(--dim);font-size:11.5px}
+.p-root .p-dsaleSummary b{font-size:15px}
+.p-root .p-dsaleProfit{margin-left:auto;text-align:right}
+.p-root .p-dsaleProfit b{font-size:20px}
+.p-root .p-dsaleProfit b.p-pos{color:var(--green)}.p-root .p-dsaleProfit b.p-neg{color:#ff8c99}
+.p-root .p-dsaleProfit em{font-style:normal;font-size:13px;color:var(--muted)}
+.p-root .p-dsaleActions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px}
+.p-root .p-dsaleList{margin-bottom:8px}
+.p-root .p-dsaleList ul{margin:6px 0 0;padding:0;list-style:none}
+.p-root .p-dsaleList li{display:grid;grid-template-columns:minmax(0,1fr) auto 32px;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.p-root .p-dsaleList li>div{display:grid;gap:2px;min-width:0}
+.p-root .p-dsaleList li small{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+@media (max-width:700px){.p-root .p-dsaleLine{grid-template-columns:1fr 1fr;grid-template-areas:"name name" "qty price" "sub del"}.p-root .p-dsaleName{grid-area:name}.p-root .p-dsaleQty{grid-area:qty}.p-root .p-dsalePrice{grid-area:price}.p-root .p-dsaleSub{grid-area:sub;text-align:left}.p-root .p-dsaleLine .p-iconBtn{grid-area:del;justify-self:end}.p-root .p-dsaleProfit{margin-left:0;text-align:left}}

@@ -180,7 +180,7 @@ export async function getOrCreateSubscription(userId:string) {
 export async function getOrderUsageLast30Days(userId:string) {
   await ensureSchema();
   const since=new Date(Date.now()-30*24*60*60*1000).toISOString();
-  const row=await database().prepare("SELECT COUNT(*) AS orders FROM orders WHERE user_id=? AND source_created_at>=? AND total>0 AND lower(status) NOT IN ('cancelled','canceled','voided') AND lower(payment_status) NOT IN ('refunded','voided')")
+  const row=await database().prepare("SELECT COUNT(*) AS orders FROM orders WHERE user_id=? AND left(provider,8)<>'directa_' AND source_created_at>=? AND total>0 AND lower(status) NOT IN ('cancelled','canceled','voided') AND lower(payment_status) NOT IN ('refunded','voided')")
     .bind(userId,since).first<{orders:number}>();
   return Number(row?.orders||0);
 }
@@ -820,7 +820,7 @@ export async function allowedOrderIds(userId:string,provider:string,orders:Array
   for(const order of fresh){const key=monthKey(order.createdAt);byMonth.set(key,[...(byMonth.get(key)||[]),order]);}
   const now=new Date().toISOString();
   for(const [month,list] of byMonth) {
-    const row=await database().prepare(`SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND ${ARGENTINA_MONTH_SQL('source_created_at')}=?`).bind(userId,month).first<{total:number}>();
+    const row=await database().prepare(`SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND left(provider,8)<>'directa_' AND ${ARGENTINA_MONTH_SQL('source_created_at')}=?`).bind(userId,month).first<{total:number}>();
     let remaining=Math.max(0,limit-Number(row?.total||0));
     for(const order of list) {
       if(remaining>0){allowed.add(order.externalId);remaining--;continue;}
@@ -838,7 +838,7 @@ export async function getOrderQuota(userId:string,now=new Date()) {
   const limit=monthlyOrderLimit(subscription,now.getTime());
   const month=argentinaMonth(now.toISOString());
   const [used,skipped,pending]=await Promise.all([
-    database().prepare(`SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND ${ARGENTINA_MONTH_SQL('source_created_at')}=?`).bind(userId,month).first<{total:number}>(),
+    database().prepare(`SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND left(provider,8)<>'directa_' AND ${ARGENTINA_MONTH_SQL('source_created_at')}=?`).bind(userId,month).first<{total:number}>(),
     database().prepare(`SELECT COUNT(*) AS total FROM skipped_orders WHERE user_id=? AND ${ARGENTINA_MONTH_SQL('source_created_at')}=?`).bind(userId,month).first<{total:number}>(),
     database().prepare('SELECT COUNT(*) AS total FROM skipped_orders WHERE user_id=?').bind(userId).first<{total:number}>(),
   ]);
@@ -856,7 +856,7 @@ export async function recoverableSkippedOrders(userId:string,provider:string,max
   const limit=monthlyOrderLimit(await getOrCreateSubscription(userId));
   const rows=limit===null
     ?await database().prepare('SELECT external_order_id FROM skipped_orders WHERE user_id=? AND provider=? ORDER BY source_created_at LIMIT ?').bind(userId,provider,max).all<{external_order_id:string}>()
-    :await database().prepare(`SELECT s.external_order_id FROM skipped_orders s WHERE s.user_id=? AND s.provider=? AND (SELECT COUNT(*) FROM orders o WHERE o.user_id=s.user_id AND ${ARGENTINA_MONTH_SQL('o.source_created_at')}=${ARGENTINA_MONTH_SQL('s.source_created_at')})<? ORDER BY s.source_created_at LIMIT ?`).bind(userId,provider,limit,max).all<{external_order_id:string}>();
+    :await database().prepare(`SELECT s.external_order_id FROM skipped_orders s WHERE s.user_id=? AND s.provider=? AND (SELECT COUNT(*) FROM orders o WHERE o.user_id=s.user_id AND left(o.provider,8)<>'directa_' AND ${ARGENTINA_MONTH_SQL('o.source_created_at')}=${ARGENTINA_MONTH_SQL('s.source_created_at')})<? ORDER BY s.source_created_at LIMIT ?`).bind(userId,provider,limit,max).all<{external_order_id:string}>();
   return rows.results.map(row=>row.external_order_id);
 }
 
@@ -1368,4 +1368,57 @@ export async function saveBusinessProfile(userId:string,profile:{category:string
   await ensureSchema();
   await database().prepare('UPDATE accounts SET business_category=COALESCE(?,business_category),monthly_orders=COALESCE(?,monthly_orders),tax_condition=COALESCE(?,tax_condition),main_goal=COALESCE(?,main_goal),updated_at=? WHERE user_id=?')
     .bind(profile.category,profile.monthlyOrders,profile.taxCondition,profile.goal,new Date().toISOString(),userId).run();
+}
+
+// Ventas directas (WhatsApp, Instagram, en persona…): se guardan como órdenes pagas de
+// provider 'directa_<canal>', con los productos del catálogo de la tienda. Descuentan el stock
+// de Rentia al cargarse y lo devuelven al borrarse. No cuentan para el límite de órdenes del plan.
+export type DirectSaleInput={date:string;provider:string;paymentLabel:string;commission:number;shipping:number;note:string|null;items:Array<{variantId:number;quantity:number;unitPrice:number}>;amount:number|null;productCost:number|null};
+const DIRECT_SQL="left(provider,8)='directa_'";
+
+export async function createDirectSale(userId:string,input:DirectSaleInput,now=new Date()) {
+  const variants=input.items.length?(await database().prepare(`SELECT pv.id,pv.provider,pv.external_product_id,pv.external_variant_id,pv.sku,pv.stock,COALESCE(pv.manual_cost,NULLIF(pv.cost,0),0) AS cost,p.name FROM product_variants pv JOIN products p ON p.user_id=pv.user_id AND p.provider=pv.provider AND p.external_product_id=pv.external_product_id WHERE pv.user_id=? AND pv.id IN (${input.items.map(()=>'?').join(',')})`).bind(userId,...input.items.map(item=>item.variantId)).all<{id:number;provider:string;external_product_id:string;external_variant_id:string;sku:string|null;stock:number|null;cost:number;name:string}>()).results:[];
+  const byId=new Map(variants.map(row=>[Number(row.id),row]));
+  if(input.items.some(item=>!byId.has(item.variantId)))return null;
+  const lines=input.items.length
+    ?input.items.map((item,index)=>{const variant=byId.get(item.variantId)!;return {line:String(index+1),sourceProvider:variant.provider,productId:variant.external_product_id,variantId:variant.external_variant_id,name:variant.name,sku:variant.sku,quantity:item.quantity,unitPrice:item.unitPrice,unitCost:Number(variant.cost||0),stockVariant:variant.stock===null?null:Number(variant.id)};})
+    :[{line:'1',sourceProvider:null,productId:null,variantId:null,name:'Venta sin detalle de productos',sku:null,quantity:1,unitPrice:Number(input.amount||0),unitCost:Number(input.productCost||0),stockVariant:null}];
+  const total=Math.round(lines.reduce((sum,line)=>sum+line.quantity*line.unitPrice,0)*100)/100;
+  if(!(total>0))return null;
+  const count=await database().prepare(`SELECT COUNT(*) AS total FROM orders WHERE user_id=? AND ${DIRECT_SQL}`).bind(userId).first<{total:number}>();
+  const orderNumber=`V-${Number(count?.total||0)+1}`,externalId=`d-${crypto.randomUUID()}`,stamp=now.toISOString();
+  // Hoy: la hora real. Otro día: el mediodía de Argentina de ese día.
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
+  const createdAt=input.date===today?stamp:`${input.date}T15:00:00.000Z`;
+  const statements:Statement[]=[
+    database().prepare("INSERT INTO orders (user_id,provider,external_order_id,order_number,currency,status,payment_status,payment_method,shipping_status,source_shipping_cost,manual_commission_cost,total,subtotal,discount,source_created_at,source_updated_at,synced_at,sale_note) VALUES (?,?,?,?,'ARS','closed','paid',?,NULL,?,?,?,?,0,?,?,?,?)")
+      .bind(userId,input.provider,externalId,orderNumber,input.paymentLabel,input.shipping,input.commission,total,total,createdAt,stamp,stamp,input.note),
+    ...lines.map(line=>database().prepare('INSERT INTO order_items (user_id,provider,external_order_id,external_line_id,external_product_id,external_variant_id,name,sku,quantity,unit_price,unit_cost,source_provider) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
+      .bind(userId,input.provider,externalId,line.line,line.productId,line.variantId,line.name,line.sku,line.quantity,line.unitPrice,line.unitCost,line.sourceProvider)),
+    // Descuenta el stock de Rentia (sin bajar de cero). Las variantes sin control de stock no cambian.
+    ...lines.filter(line=>line.stockVariant!==null).map(line=>database().prepare('UPDATE product_variants SET stock=GREATEST(stock-?,0) WHERE user_id=? AND id=? AND stock IS NOT NULL').bind(line.quantity,userId,line.stockVariant)),
+  ];
+  await database().batch(statements);
+  return {id:externalId,orderNumber,total,createdAt};
+}
+
+export async function listDirectSales(userId:string,limit=30) {
+  const orders=(await database().prepare(`SELECT external_order_id,order_number,provider,payment_method,total,source_shipping_cost,manual_commission_cost,source_created_at,sale_note FROM orders WHERE user_id=? AND ${DIRECT_SQL} ORDER BY source_created_at DESC,id DESC LIMIT ?`).bind(userId,limit).all<{external_order_id:string;order_number:string;provider:string;payment_method:string|null;total:number;source_shipping_cost:number|null;manual_commission_cost:number|null;source_created_at:string;sale_note:string|null}>()).results;
+  if(!orders.length)return [];
+  const items=(await database().prepare(`SELECT external_order_id,name,quantity,unit_price FROM order_items WHERE user_id=? AND ${DIRECT_SQL} AND external_order_id IN (${orders.map(()=>'?').join(',')}) ORDER BY id`).bind(userId,...orders.map(row=>row.external_order_id)).all<{external_order_id:string;name:string;quantity:number;unit_price:number}>()).results;
+  return orders.map(order=>({...order,total:Number(order.total),items:items.filter(item=>item.external_order_id===order.external_order_id).map(item=>({name:item.name,quantity:Number(item.quantity),unitPrice:Number(item.unit_price)}))}));
+}
+
+// Borra una venta directa y devuelve al stock de Rentia lo que había descontado.
+export async function deleteDirectSale(userId:string,externalOrderId:string) {
+  const order=await database().prepare(`SELECT provider FROM orders WHERE user_id=? AND external_order_id=? AND ${DIRECT_SQL}`).bind(userId,externalOrderId).first<{provider:string}>();
+  if(!order)return false;
+  const items=(await database().prepare('SELECT source_provider,external_variant_id,quantity FROM order_items WHERE user_id=? AND provider=? AND external_order_id=?').bind(userId,order.provider,externalOrderId).all<{source_provider:string|null;external_variant_id:string|null;quantity:number}>()).results;
+  await database().batch([
+    ...items.filter(item=>item.source_provider&&item.external_variant_id).map(item=>database().prepare('UPDATE product_variants SET stock=stock+? WHERE user_id=? AND provider=? AND external_variant_id=? AND stock IS NOT NULL').bind(Number(item.quantity),userId,item.source_provider,item.external_variant_id)),
+    database().prepare('DELETE FROM order_item_cost_overrides WHERE user_id=? AND provider=? AND external_order_id=?').bind(userId,order.provider,externalOrderId),
+    database().prepare('DELETE FROM order_items WHERE user_id=? AND provider=? AND external_order_id=?').bind(userId,order.provider,externalOrderId),
+    database().prepare('DELETE FROM orders WHERE user_id=? AND provider=? AND external_order_id=?').bind(userId,order.provider,externalOrderId),
+  ]);
+  return true;
 }

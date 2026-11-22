@@ -16,9 +16,11 @@ export function ruleIsActive(rule:CostRule,date:string|Date) {
 export function calculateOrderCosts(order:CostOrder,settings:CostSettings,rules:CostRule[]) {
   const total=Number(order.total||0);
   const marketplace=order.provider==='mercadolibre';
+  // Venta directa cargada a mano: el envío es el que informó la tienda (o ninguno), nunca el promedio.
+  const direct=String(order.provider||'').startsWith('directa_');
   const actualShipping=order.source_shipping_cost===null||order.source_shipping_cost===undefined?null:Number(order.source_shipping_cost);
-  const useActual=(marketplace||settings.shipping_mode!=='average_only')&&actualShipping!==null&&Number.isFinite(actualShipping)&&actualShipping>=0;
-  const shipping=useActual?Math.max(0,actualShipping):marketplace?0:Math.max(0,Number(settings.shipping_cost_ars||0));
+  const useActual=(marketplace||direct||settings.shipping_mode!=='average_only')&&actualShipping!==null&&Number.isFinite(actualShipping)&&actualShipping>=0;
+  const shipping=useActual?Math.max(0,actualShipping):marketplace||direct?0:Math.max(0,Number(settings.shipping_cost_ars||0));
   const method=normalized(order.payment_method);
   const commissionRule=rules.find(rule=>rule.category==='commission'&&ruleIsActive(rule,order.source_created_at)&&method&&normalized(rule.match_value)&&method.includes(normalized(rule.match_value)));
   const actualCommission=order.source_commission_cost===null||order.source_commission_cost===undefined?null:Number(order.source_commission_cost);

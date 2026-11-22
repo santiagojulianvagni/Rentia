@@ -1,4 +1,7 @@
+// Ventas directas cargadas a mano (provider directa_<canal>). Igual que DIRECT_CHANNEL_LABELS de direct-sales.
+const DIRECT_LABELS:Record<string,string>={directa_whatsapp:'WhatsApp',directa_instagram:'Instagram',directa_local:'Venta en local',directa_mayorista:'Mayorista',directa_feria:'Feria o evento',directa_otro:'Venta directa'};
 export function salesChannelLabel(provider:string) {
+  if(DIRECT_LABELS[provider])return DIRECT_LABELS[provider];
   return provider==='tiendanube'?'Tiendanube':provider==='mercadolibre'?'Mercado Libre':provider==='external'?'Facturación externa':'Otro canal';
 }
 

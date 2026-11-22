@@ -2,7 +2,7 @@
 // Retired Mercado Libre variations can survive in orders after the publication
 // becomes a single-variant item. Inherit only that exact publication's base cost,
 // never a different live variation, product, provider, or tenant.
-export const ITEM_COST_JOINS=`LEFT JOIN product_variants pv ON pv.user_id=oi.user_id AND pv.provider=oi.provider AND pv.external_variant_id=oi.external_variant_id AND (oi.external_product_id IS NULL OR pv.external_product_id=oi.external_product_id)
+export const ITEM_COST_JOINS=`LEFT JOIN product_variants pv ON pv.user_id=oi.user_id AND pv.provider=COALESCE(oi.source_provider,oi.provider) AND pv.external_variant_id=oi.external_variant_id AND (oi.external_product_id IS NULL OR pv.external_product_id=oi.external_product_id)
   LEFT JOIN product_variants base ON oi.provider='mercadolibre' AND pv.id IS NULL AND base.user_id=oi.user_id AND base.provider=oi.provider AND base.external_product_id=oi.external_product_id AND base.external_variant_id=oi.external_product_id
   LEFT JOIN order_item_cost_overrides oc ON oc.user_id=oi.user_id AND oc.provider=oi.provider AND oc.external_order_id=oi.external_order_id AND oc.external_line_id=oi.external_line_id`;
 export const ITEM_UNIT_COST_SQL='COALESCE(oc.unit_cost,pv.manual_cost,NULLIF(pv.cost,0),base.manual_cost,NULLIF(base.cost,0),oi.unit_cost,0)';

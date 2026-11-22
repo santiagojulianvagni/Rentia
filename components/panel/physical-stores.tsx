@@ -5,6 +5,7 @@ import { CalendarDays, Handshake, Package, Shirt, Store, Tag, Trash2, type Lucid
 import { CHANNEL_KINDS, CHANNEL_KIND_LABELS, type ChannelKind } from '../../lib/physical-stores';
 import ExternalRevenue from '../external-revenue';
 import StoreImport from './store-import';
+import DirectSale from './direct-sale';
 import { confirmDialog } from './rp-confirm';
 
 type PhysicalStore={id:number;name:string;kind:ChannelKind;costPercent:number;feePercent:number;taxPercent:number};
@@ -103,6 +104,9 @@ export default function PhysicalStores({money,canManage,onChanged}:{money:(value
 
   return <>
     <div className="p-head"><div><div className="p-eyebrow">VENTAS FUERA DE TU TIENDA ONLINE</div><h1>Otros <em>canales</em></h1><p>Sumá lo que vendés por mayor, en un local, showroom, ferias o revendedores. No hace falta tener local: con su costo de mercadería, cada canal aparece en el resumen con su ganancia.</p></div></div>
+    <DirectSale money={money} canManage={canManage} onChanged={onChanged}/>
+    <h3 className="p-storesTitle">Canales con ventas por día</h3>
+    <p className="p-sub p-storesLead">Para un local, un mayorista o una feria con muchas ventas: cargá el total de cada día o subí el Excel de tu sistema de caja.</p>
     {failed&&<div className="p-notice p-warning" role="alert"><div><b>No pudimos cargar tus canales</b><p>Recargá la página para intentar de nuevo.</p></div></div>}
     {stores&&<div className="p-tabs p-storeTabs" role="tablist" aria-label="Canales">
       {stores.map(item=><button type="button" role="tab" key={item.id} aria-selected={selected===item.id} className={selected===item.id?'p-on':undefined} onClick={()=>pick(item.id)}>{(()=>{const Icon=KIND_ICONS[item.kind]||Store;return <Icon aria-hidden="true"/>;})()}{item.name}</button>)}
