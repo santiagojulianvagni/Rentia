@@ -2,15 +2,19 @@
 // de publicidad), su ROAS contra el de equilibrio y un veredicto: escalar, mantener, apagar o
 // "aprendiendo" cuando todavía gastó muy poco para decidir.
 
-export type CreativeRow={adId:string;name:string;campaign:string;adset:string;status:string;kind:'video'|'imagen';thumbnail:string|null;spend:number;impressions:number;linkClicks:number;purchases:number;purchaseValue:number;videoViews3s:number;thruplays:number};
+export type CreativeRow={adId:string;name:string;campaign:string;adset:string;status:string;kind:'video'|'imagen';thumbnail:string|null;spend:number;impressions:number;linkClicks:number;purchases:number;purchaseValue:number;purchasesClick:number;purchaseValueClick:number;videoViews3s:number;thruplays:number};
 export type CreativeVerdict='escalar'|'mantener'|'apagar'|'aprendiendo';
-export type AnalyzedCreative=CreativeRow&{roas:number|null;profit:number|null;ctr:number|null;cpa:number|null;hookRate:number|null;holdRate:number|null;verdict:CreativeVerdict;reason:string};
+// purchases y purchaseValue son los que se usan (con o sin las compras por solo ver el anuncio);
+// viewPurchases son las que Meta cuenta solo porque la persona vio el anuncio, sin clic.
+export type AnalyzedCreative=CreativeRow&{viewPurchases:number;roas:number|null;profit:number|null;ctr:number|null;cpa:number|null;hookRate:number|null;holdRate:number|null;verdict:CreativeVerdict;reason:string};
 
 const SCALE_ABOVE=1.3,STOP_BELOW=0.95;
 const ratio=(part:number,total:number)=>total>0?part/total:null;
 
-export function analyzeCreatives(rows:CreativeRow[],input:{margin:number|null;averageTicket:number|null}) {
+export function analyzeCreatives(source:CreativeRow[],input:{margin:number|null;averageTicket:number|null;clickOnly?:boolean}) {
   const margin=input.margin&&input.margin>0?input.margin:null;
+  // Con clickOnly, solo cuentan las compras que llegaron después de un clic en el anuncio.
+  const rows=source.map(row=>{const viewPurchases=Math.max(0,row.purchases-row.purchasesClick);return input.clickOnly?{...row,purchases:row.purchasesClick,purchaseValue:row.purchaseValueClick,viewPurchases}:{...row,viewPurchases};});
   const breakEven=margin?1/margin:null;
   const totals=rows.reduce((sum,row)=>({spend:sum.spend+row.spend,purchases:sum.purchases+row.purchases,views:sum.views+row.videoViews3s,videoImpressions:sum.videoImpressions+(row.kind==='video'?row.impressions:0)}),{spend:0,purchases:0,views:0,videoImpressions:0});
   // Para decidir hace falta haber gastado al menos 1,5 ventas "de equilibrio" (o 1,5 veces el costo
@@ -33,7 +37,8 @@ export function analyzeCreatives(rows:CreativeRow[],input:{margin:number|null;av
     return {...base,verdict:'apagar' as const,reason};
   });
   const count=(verdict:CreativeVerdict)=>ads.filter(ad=>ad.verdict===verdict).length;
-  return {ads,breakEven,summary:{escalar:count('escalar'),mantener:count('mantener'),apagar:count('apagar'),aprendiendo:count('aprendiendo'),hookRate:ratio(totals.views,totals.videoImpressions)},insight:creativeInsight(ads)};
+  const profits=ads.map(ad=>ad.profit).filter((value):value is number=>value!==null);
+  return {ads,breakEven,summary:{escalar:count('escalar'),mantener:count('mantener'),apagar:count('apagar'),aprendiendo:count('aprendiendo'),hookRate:ratio(totals.views,totals.videoImpressions),spend:totals.spend,profit:profits.length?profits.reduce((sum,value)=>sum+value,0):null,spendWithoutSales:ads.filter(ad=>ad.purchases<=0).reduce((sum,ad)=>sum+ad.spend,0)},insight:creativeInsight(ads)};
 }
 
 // Un dato de lo que mejor le funciona a la tienda, si hay datos suficientes para decirlo.

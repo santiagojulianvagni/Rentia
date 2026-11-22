@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 // Creativos: veredicto de cada anuncio según su ROAS contra el de equilibrio, con un mínimo de
 // gasto para decidir, y el porqué cuando conviene apagarlo.
 const {analyzeCreatives}=await import('../lib/creative-analysis.ts');
-const ad=(id,extra)=>({adId:id,name:id,campaign:'Ventas',adset:'Frío',status:'ACTIVE',kind:'video',thumbnail:null,spend:0,impressions:10000,linkClicks:150,purchases:0,purchaseValue:0,videoViews3s:3000,thruplays:600,...extra});
+const ad=(id,extra)=>({adId:id,name:id,campaign:'Ventas',adset:'Frío',status:'ACTIVE',kind:'video',thumbnail:null,spend:0,impressions:10000,linkClicks:150,purchases:0,purchaseValue:0,videoViews3s:3000,thruplays:600,purchasesClick:extra?.purchases??0,purchaseValueClick:extra?.purchaseValue??0,...extra});
 
 test('creatives get a verdict against the break-even ROAS',()=>{
   // Margen 60 % → equilibrio 1,67x. Ticket 50.000 → equilibrio por compra 30.000; decidir desde 45.000.
@@ -37,4 +37,20 @@ test('without a known margin every creative waits for costs',()=>{
   assert.equal(ads[0].verdict,'aprendiendo');
   assert.equal(ads[0].profit,null);
   assert.match(ads[0].reason,/Cargá tus costos/);
+});
+
+test('click-only mode drops purchases Meta counts just for viewing the ad, and totals add up',()=>{
+  // Como el Ad9 de Naturae: 63.599 de gasto y una compra de 94.667 que Meta cuenta por haber visto el anuncio.
+  const rows=[ad('ad9',{spend:63599,purchases:1,purchaseValue:94667,purchasesClick:0,purchaseValueClick:0}),ad('ad3',{spend:8990,purchases:1,purchaseValue:123748})];
+  const all=analyzeCreatives(rows,{margin:0.6,averageTicket:50000});
+  assert.equal(all.ads.find(row=>row.adId==='ad9').purchases,1);
+  assert.equal(all.ads.find(row=>row.adId==='ad9').viewPurchases,1);
+  const clicks=analyzeCreatives(rows,{margin:0.6,averageTicket:50000,clickOnly:true});
+  const ad9=clicks.ads.find(row=>row.adId==='ad9');
+  assert.equal(ad9.purchases,0);
+  assert.equal(ad9.roas,0);
+  assert.equal(ad9.verdict,'apagar');
+  assert.equal(clicks.summary.spend,63599+8990);
+  assert.equal(clicks.summary.spendWithoutSales,63599);
+  assert.equal(Math.round(clicks.summary.profit),Math.round(-63599+123748*0.6-8990));
 });

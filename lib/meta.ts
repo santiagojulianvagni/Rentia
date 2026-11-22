@@ -163,6 +163,15 @@ export async function fetchActiveMetaAds(userId:string):Promise<{account:{id:str
 
 // Creativos: métricas por anuncio del período (gasto, compras, videos vistos 3 s y completos) y
 // la miniatura de cada uno. Solo lectura (ads_read); se consulta en el momento.
+// Compras de una ventana de atribución ("7d_click" o "1d_view") cuando se piden desglosadas.
+function actionWindow(value:unknown,window:string) {
+  const actions=list(value).map(record);
+  for (const actionType of ['omni_purchase','offsite_conversion.fb_pixel_purchase','purchase']) {
+    const match=actions.find(action=>text(action.action_type)===actionType);
+    if (match) return number(match[window]);
+  }
+  return 0;
+}
 function actionCount(value:unknown,type:string) {
   return list(value).map(record).filter(action=>text(action.action_type)===type).reduce((sum,action)=>sum+number(action.value),0);
 }
@@ -178,10 +187,12 @@ export async function fetchMetaCreatives(userId:string,since:string,until:string
     level:'ad',
     fields:'ad_id,ad_name,adset_name,campaign_name,spend,impressions,inline_link_clicks,actions,action_values,video_thruplay_watched_actions',
     time_range:JSON.stringify({since,until}),
+    // Desglosado: compras después de un clic (7 días) y por solo ver el anuncio (1 día).
+    action_attribution_windows:JSON.stringify(['7d_click','1d_view']),
     limit:'500',
   },10);
   // Los de más gasto primero; miniatura y tipo solo de los primeros 100.
-  const metrics=rows.map(row=>({adId:text(row.ad_id),name:text(row.ad_name)||'Anuncio sin nombre',campaign:text(row.campaign_name),adset:text(row.adset_name),spend:number(row.spend),impressions:Math.round(number(row.impressions)),linkClicks:Math.round(number(row.inline_link_clicks)),purchases:actionValue(row.actions),purchaseValue:actionValue(row.action_values),videoViews3s:actionCount(row.actions,'video_view'),thruplays:actionCount(row.video_thruplay_watched_actions,'video_view')})).filter(row=>row.adId&&row.spend>0).sort((a,b)=>b.spend-a.spend).slice(0,100);
+  const metrics=rows.map(row=>({adId:text(row.ad_id),name:text(row.ad_name)||'Anuncio sin nombre',campaign:text(row.campaign_name),adset:text(row.adset_name),spend:number(row.spend),impressions:Math.round(number(row.impressions)),linkClicks:Math.round(number(row.inline_link_clicks)),purchases:actionValue(row.actions),purchaseValue:actionValue(row.action_values),purchasesClick:actionWindow(row.actions,'7d_click'),purchaseValueClick:actionWindow(row.action_values,'7d_click'),videoViews3s:actionCount(row.actions,'video_view'),thruplays:actionCount(row.video_thruplay_watched_actions,'video_view')})).filter(row=>row.adId&&row.spend>0).sort((a,b)=>b.spend-a.spend).slice(0,100);
   const details=new Map<string,UnknownRecord>();
   for (let index=0;index<metrics.length;index+=50) {
     const ids=metrics.slice(index,index+50).map(row=>row.adId);
@@ -197,4 +208,27 @@ export async function fetchMetaCreatives(userId:string,since:string,until:string
     return {...row,status:text(detail.effective_status),kind:video?'video':'imagen',thumbnail:/^https:\/\//.test(thumbnail)?thumbnail:null};
   });
   return {account:{id:selected.external_account_id,name:selected.name||selected.external_account_id},currency:selected.currency||'ARS',ads};
+}
+
+// Vista previa de un anuncio tal como lo muestra Meta (un iframe de facebook.com). Solo de la cuenta
+// publicitaria elegida por la tienda; devuelve la dirección del iframe, nunca HTML de Meta.
+export const AD_PREVIEW_FORMATS=['INSTAGRAM_STANDARD','INSTAGRAM_REELS','MOBILE_FEED_STANDARD'] as const;
+export async function fetchMetaAdPreview(userId:string,adId:string,format:typeof AD_PREVIEW_FORMATS[number]) {
+  const runtime=metaRuntime();
+  const integration=await getIntegrationCredentials(userId,'meta');
+  if (!integration) throw new Error('meta_not_connected');
+  if (!runtime.TOKEN_ENCRYPTION_KEY) throw new Error('Falta la clave de cifrado del servidor');
+  const selected=await getSelectedMetaAdAccount(userId);
+  if (!selected) return null;
+  const token=await decryptToken(integration.encrypted_access_token,integration.token_iv,runtime.TOKEN_ENCRYPTION_KEY);
+  const ad=await metaFetch(adId,token,{fields:'account_id'});
+  const account=selected.external_account_id.replace(/^act_/,'');
+  if (text(ad.account_id)!==account) return null;
+  const body=await metaFetch(`${adId}/previews`,token,{ad_format:format});
+  const html=text(record(list(body.data)[0]).body);
+  const src=(html.match(/src="([^"]+)"/)?.[1]||'').replace(/&amp;/g,'&');
+  let url:URL;
+  try { url=new URL(src); } catch { return {src:null,adsManager:`https://adsmanager.facebook.com/adsmanager/manage/ads?act=${account}&selected_ad_ids=${adId}`}; }
+  const safe=url.protocol==='https:'&&/(^|\.)facebook\.com$/.test(url.hostname)&&url.pathname.startsWith('/ads/api/preview_iframe');
+  return {src:safe?url.toString():null,adsManager:`https://adsmanager.facebook.com/adsmanager/manage/ads?act=${account}&selected_ad_ids=${adId}`};
 }
