@@ -7,7 +7,7 @@ const {analyzeCreatives}=await import('../lib/creative-analysis.ts');
 const ad=(id,extra)=>({adId:id,name:id,campaign:'Ventas',adset:'Frío',status:'ACTIVE',kind:'video',thumbnail:null,spend:0,impressions:10000,linkClicks:150,purchases:0,purchaseValue:0,videoViews3s:3000,thruplays:600,...extra});
 
 test('creatives get a verdict against the break-even ROAS',()=>{
-  // Margen 60 % → equilibrio 1,67x. Ticket 50.000 → equilibrio por compra 30.000; decidir desde 60.000.
+  // Margen 60 % → equilibrio 1,67x. Ticket 50.000 → equilibrio por compra 30.000; decidir desde 45.000.
   const {ads,breakEven,summary,insight}=analyzeCreatives([
     ad('gana',{spend:100000,purchaseValue:580000,purchases:10,videoViews3s:3800}),
     ad('justo',{spend:100000,purchaseValue:180000,purchases:4}),

@@ -13,11 +13,11 @@ export function analyzeCreatives(rows:CreativeRow[],input:{margin:number|null;av
   const margin=input.margin&&input.margin>0?input.margin:null;
   const breakEven=margin?1/margin:null;
   const totals=rows.reduce((sum,row)=>({spend:sum.spend+row.spend,purchases:sum.purchases+row.purchases,views:sum.views+row.videoViews3s,videoImpressions:sum.videoImpressions+(row.kind==='video'?row.impressions:0)}),{spend:0,purchases:0,views:0,videoImpressions:0});
-  // Para decidir hace falta haber gastado al menos dos ventas "de equilibrio" (o dos veces el costo
+  // Para decidir hace falta haber gastado al menos 1,5 ventas "de equilibrio" (o 1,5 veces el costo
   // por compra promedio de la cuenta si todavía no sabemos el margen).
   const breakEvenCpa=margin&&input.averageTicket?input.averageTicket*margin:null;
   const accountCpa=totals.purchases>0?totals.spend/totals.purchases:null;
-  const learning=2*(breakEvenCpa??accountCpa??0);
+  const learning=1.5*(breakEvenCpa??accountCpa??0);
   const ads:AnalyzedCreative[]=rows.map(row=>{
     const roas=row.spend>0?row.purchaseValue/row.spend:null;
     const profit=margin?row.purchaseValue*margin-row.spend:null;

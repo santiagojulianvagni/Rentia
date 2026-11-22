@@ -184,9 +184,10 @@ export async function fetchMetaCreatives(userId:string,since:string,until:string
   const metrics=rows.map(row=>({adId:text(row.ad_id),name:text(row.ad_name)||'Anuncio sin nombre',campaign:text(row.campaign_name),adset:text(row.adset_name),spend:number(row.spend),impressions:Math.round(number(row.impressions)),linkClicks:Math.round(number(row.inline_link_clicks)),purchases:actionValue(row.actions),purchaseValue:actionValue(row.action_values),videoViews3s:actionCount(row.actions,'video_view'),thruplays:actionCount(row.video_thruplay_watched_actions,'video_view')})).filter(row=>row.adId&&row.spend>0).sort((a,b)=>b.spend-a.spend).slice(0,100);
   const details=new Map<string,UnknownRecord>();
   for (let index=0;index<metrics.length;index+=50) {
-    const ids=metrics.slice(index,index+50).map(row=>row.adId).join(',');
-    const body=await metaFetch('',token,{ids,fields:'effective_status,creative{thumbnail_url,image_url,object_type,video_id}'}).catch(()=>({}));
-    for (const [id,value] of Object.entries(body)) details.set(id,record(value));
+    const ids=metrics.slice(index,index+50).map(row=>row.adId);
+    // Mismo pedido que la revisión de UTMs (cuenta → anuncios), filtrado por los anuncios del período.
+    const found=await fetchAll(`${selected.external_account_id}/ads`,token,{fields:'id,effective_status,creative{thumbnail_url,image_url,object_type,video_id}',filtering:JSON.stringify([{field:'ad.id',operator:'IN',value:ids}]),limit:'50'},2).catch(()=>[] as UnknownRecord[]);
+    for (const row of found) details.set(text(row.id),row);
   }
   const ads=metrics.map((row):CreativeRow=>{
     const detail=details.get(row.adId)||{},creative=record(detail.creative);
