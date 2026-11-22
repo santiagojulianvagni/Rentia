@@ -34,6 +34,7 @@ import './rp-glass.css';
 // Cada sección del panel se carga recién cuando se abre.
 const SubscriptionSection=dynamic(()=>import('./sections/subscription').then(module=>module.SubscriptionSection),{loading:sectionLoading});
 const LaunchSimulator=dynamic(()=>import('../../components/panel/launch-simulator'),{loading:sectionLoading});
+const AskRentia=dynamic(()=>import('../../components/panel/ask-rentia'));
 const IncomeStatement=dynamic(()=>import('../../components/panel/income-statement'),{loading:sectionLoading});
 const AchievementsPage=dynamic(()=>import('../../components/panel/achievements-page'),{loading:sectionLoading});
 const TeamSection=dynamic(()=>import('./sections/team').then(module=>module.TeamSection),{loading:sectionLoading});
@@ -649,6 +650,7 @@ function PanelApp() {
       </fieldset>
       </main>
     </div></div>
+    <AskRentia/>
     {canManage&&dashboardEditorOpen&&<DashboardEditor layout={dashboardLayout} saving={savingDashboard} message={dashboardPreferenceMessage} onClose={()=>setDashboardEditorOpen(false)} onSave={layout=>void saveDashboardPreferences(layout)} onPreview={setDashboardLayout}/>}
     {paletteOpen&&<><button type="button" className="p-scrim p-open" onClick={()=>setPaletteOpen(false)} aria-label="Cerrar búsqueda"/><div className="p-palette p-open" role="dialog" aria-label="Buscar en Rentia"><label className="p-search"><Search className="p-i" aria-hidden="true"/><input autoFocus value={paletteQuery} onChange={event=>{setPaletteQuery(event.target.value);setPaletteIndex(0);}} onKeyDown={event=>{if(event.key==='ArrowDown'){event.preventDefault();setPaletteIndex(index=>Math.min(paletteItems.length-1,index+1));}if(event.key==='ArrowUp'){event.preventDefault();setPaletteIndex(index=>Math.max(0,index-1));}if(event.key==='Enter'&&paletteItems[paletteIndex]){setPaletteOpen(false);paletteItems[paletteIndex].run();}}} placeholder="Ir a una sección o acción…"/></label><div className="p-palList">{paletteItems.map((item,index)=><button type="button" key={item.label} className={index===paletteIndex?'p-sel':''} onMouseEnter={()=>setPaletteIndex(index)} onClick={()=>{setPaletteOpen(false);item.run();}}>{item.hint==='acción'?<Sparkles className="p-i" aria-hidden="true"/>:<ArrowRight className="p-i" aria-hidden="true"/>}{item.label}<small>{item.hint}</small></button>)}{!paletteItems.length&&<div className="p-empty">Sin resultados</div>}</div></div></>}
   </div></AccessContext.Provider>;
