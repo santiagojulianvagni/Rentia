@@ -742,3 +742,5 @@ dialog.p-confirm::backdrop{background:rgba(3,8,15,.6);backdrop-filter:blur(3px)}
 .p-root .p-dsaleList li>div{display:grid;gap:2px;min-width:0}
 .p-root .p-dsaleList li small{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 @media (max-width:700px){.p-root .p-dsaleLine{grid-template-columns:1fr 1fr;grid-template-areas:"name name" "qty price" "sub del"}.p-root .p-dsaleName{grid-area:name}.p-root .p-dsaleQty{grid-area:qty}.p-root .p-dsalePrice{grid-area:price}.p-root .p-dsaleSub{grid-area:sub;text-align:left}.p-root .p-dsaleLine .p-iconBtn{grid-area:del;justify-self:end}.p-root .p-dsaleProfit{margin-left:0;text-align:left}}
+.p-root .p-dsaleLine .p-input{min-width:0;width:100%;box-sizing:border-box}.p-root .p-dsaleLine .p-input input{min-width:0;width:100%}
+.p-root .p-dsaleGrid .p-field,.p-root .p-dsaleRow .p-field{align-content:start}
